@@ -13,6 +13,11 @@ struct GlassPanelView: View {
     @State private var selection: MetricKind = .cpu
     @Namespace private var glassNamespace
 
+    private static let panelPadding: CGFloat = 16
+    private static let gaugeSpacing: CGFloat = 10
+    /// Breathing room drawn around each ring, inside its own glass surface.
+    private static let gaugePadding: CGFloat = 6
+
     var body: some View {
         VStack(spacing: 14) {
             header
@@ -35,7 +40,7 @@ struct GlassPanelView: View {
 
             footer
         }
-        .padding(16)
+        .padding(Self.panelPadding)
         .frame(width: Theme.panelWidth)
         .task {
             monitor.samplesProcesses = preferences.showsProcesses
@@ -68,32 +73,38 @@ struct GlassPanelView: View {
     }
 
     private var gauges: some View {
-        HStack(spacing: 10) {
-            ForEach(availableMetrics) { kind in
-                Button {
-                    withAnimation(.smooth(duration: 0.4)) { selection = kind }
-                } label: {
-                    GaugeRing(
-                        kind: kind,
-                        fraction: monitor.snapshot.fraction(for: kind),
-                        headline: monitor.snapshot.headline(for: kind),
-                        size: gaugeSize,
-                        lineWidth: 8,
-                        isSelected: selection == kind
-                    )
-                    .padding(6)
+        VStack(spacing: Self.gaugeSpacing) {
+            ForEach(Array(gaugeRows.enumerated()), id: \.offset) { _, row in
+                HStack(spacing: Self.gaugeSpacing) {
+                    ForEach(row) { gauge(for: $0) }
                 }
-                .buttonStyle(.plain)
-                .glassSurface(cornerRadius: gaugeSize, interactive: true)
-                .glassMorph(id: kind, in: glassNamespace)
-                .overlay {
-                    if selection == kind {
-                        Circle().strokeBorder(Theme.accent(kind).opacity(0.55), lineWidth: 1.2)
-                    }
-                }
-                .help("\(kind.title): \(monitor.snapshot.caption(for: kind))")
             }
         }
+    }
+
+    private func gauge(for kind: MetricKind) -> some View {
+        Button {
+            withAnimation(.smooth(duration: 0.4)) { selection = kind }
+        } label: {
+            GaugeRing(
+                kind: kind,
+                fraction: monitor.snapshot.fraction(for: kind),
+                headline: monitor.snapshot.headline(for: kind),
+                size: gaugeSize,
+                lineWidth: 8,
+                isSelected: selection == kind
+            )
+            .padding(Self.gaugePadding)
+        }
+        .buttonStyle(.plain)
+        .glassSurface(cornerRadius: gaugeSize, interactive: true)
+        .glassMorph(id: kind, in: glassNamespace)
+        .overlay {
+            if selection == kind {
+                Circle().strokeBorder(Theme.accent(kind).opacity(0.55), lineWidth: 1.2)
+            }
+        }
+        .help("\(kind.title): \(monitor.snapshot.caption(for: kind))")
     }
 
     /// Metrics this Mac cannot actually report are hidden rather than shown as "n/a".
@@ -101,13 +112,32 @@ struct GlassPanelView: View {
         preferences.dashboardMetrics.filter { monitor.snapshot.supports($0) }
     }
 
-    /// Gauges shrink as more metrics are enabled so the panel keeps its width.
+    /// Gauges shrink as more metrics are enabled, down to the smallest size that
+    /// still reads at a glance. Below that they wrap onto another row instead:
+    /// `GaugeRing` has a fixed frame, so a row that does not fit does not
+    /// compress — it simply draws past the edge of the panel.
     private var gaugeSize: CGFloat {
         switch availableMetrics.count {
         case ...3: 92
-        case 4: 76
-        case 5: 66
-        default: 56
+        case 4: 70
+        default: 66
+        }
+    }
+
+    /// The gauges split into rows that fit the panel's width, spread evenly so
+    /// that nine metrics read as 3 · 3 · 3 rather than 4 · 4 · 1.
+    private var gaugeRows: [[MetricKind]] {
+        let metrics = availableMetrics
+        guard !metrics.isEmpty else { return [] }
+
+        let itemWidth = gaugeSize + Self.gaugePadding * 2
+        let usable = Theme.panelWidth - Self.panelPadding * 2
+        let fitting = max(1, Int((usable + Self.gaugeSpacing) / (itemWidth + Self.gaugeSpacing)))
+        let rows = max(1, Int((Double(metrics.count) / Double(fitting)).rounded(.up)))
+        let perRow = max(1, Int((Double(metrics.count) / Double(rows)).rounded(.up)))
+
+        return stride(from: 0, to: metrics.count, by: perRow).map {
+            Array(metrics[$0..<min($0 + perRow, metrics.count)])
         }
     }
 
