@@ -11,6 +11,8 @@ public enum MetricKind: String, Sendable, CaseIterable, Codable, Identifiable {
     case network
     case fans
     case battery
+    case temperature
+    case power
 
     public var id: String { rawValue }
 
@@ -24,6 +26,8 @@ public enum MetricKind: String, Sendable, CaseIterable, Codable, Identifiable {
         case .network: "Network"
         case .fans: "Fans"
         case .battery: "Battery"
+        case .temperature: "Temperature"
+        case .power: "Power"
         }
     }
 
@@ -37,6 +41,8 @@ public enum MetricKind: String, Sendable, CaseIterable, Codable, Identifiable {
         case .network: "NET"
         case .fans: "FAN"
         case .battery: "BAT"
+        case .temperature: "TMP"
+        case .power: "PWR"
         }
     }
 
@@ -50,6 +56,8 @@ public enum MetricKind: String, Sendable, CaseIterable, Codable, Identifiable {
         case .network: "network"
         case .fans: "fanblades"
         case .battery: "battery.100"
+        case .temperature: "thermometer.medium"
+        case .power: "bolt"
         }
     }
 
@@ -64,6 +72,8 @@ public enum MetricKind: String, Sendable, CaseIterable, Codable, Identifiable {
         case .network: 0.94 // pink
         case .fans: 0.5    // teal
         case .battery: 0.33 // green
+        case .temperature: 0.03 // red-orange
+        case .power: 0.14  // yellow
         }
     }
 

@@ -8,8 +8,8 @@ public final class FanSampler {
     private let smc: SMCService?
     private let descriptors: [(index: Int, minimum: Double, maximum: Double)]
 
-    public init() {
-        smc = SMCService()
+    init(smc: SMCService?) {
+        self.smc = smc
 
         guard let smc, let count = smc.readNumber("FNum"), count > 0 else {
             descriptors = []

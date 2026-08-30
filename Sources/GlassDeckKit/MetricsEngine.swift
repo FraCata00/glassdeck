@@ -10,11 +10,22 @@ public actor MetricsEngine {
     private let memory = MemorySampler()
     private let disk = DiskSampler()
     private let network = NetworkSampler()
-    private let fans = FanSampler()
     private let battery = BatterySampler()
+
+    // One SMC connection, shared by every sampler that needs it, and one sensor
+    // catalogue built from it at start-up.
+    private let smc = SMCService()
+    private let fans: FanSampler
+    private let thermal: ThermalSampler
+    private let power: PowerSampler
     private let processes = ProcessSampler()
 
-    public init() {}
+    public init() {
+        let catalogue = SensorCatalogue(smc: smc)
+        fans = FanSampler(smc: smc)
+        thermal = ThermalSampler(smc: smc, catalogue: catalogue)
+        power = PowerSampler(smc: smc, catalogue: catalogue)
+    }
 
     /// Reads every metric once. The first call primes the delta baselines and
     /// therefore reports zero for the rate-based metrics.
@@ -28,7 +39,9 @@ public actor MetricsEngine {
             disk: disk.sample(at: now),
             network: network.sample(at: now),
             fans: fans.sample(),
-            battery: battery.sample()
+            battery: battery.sample(),
+            thermal: thermal.sample(),
+            power: power.sample()
         )
     }
 

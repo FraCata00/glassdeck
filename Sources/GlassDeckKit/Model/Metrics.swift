@@ -13,6 +13,8 @@ public struct MetricsSnapshot: Sendable, Equatable {
     public var network: NetworkThroughput
     public var fans: FanUsage
     public var battery: BatteryUsage
+    public var thermal: ThermalUsage
+    public var power: PowerUsage
 
     public init(
         timestamp: Date = Date(),
@@ -22,7 +24,9 @@ public struct MetricsSnapshot: Sendable, Equatable {
         disk: DiskUsage = .zero,
         network: NetworkThroughput = .zero,
         fans: FanUsage = .unavailable,
-        battery: BatteryUsage = .unavailable
+        battery: BatteryUsage = .unavailable,
+        thermal: ThermalUsage = .unavailable,
+        power: PowerUsage = .unavailable
     ) {
         self.timestamp = timestamp
         self.cpu = cpu
@@ -32,6 +36,8 @@ public struct MetricsSnapshot: Sendable, Equatable {
         self.network = network
         self.fans = fans
         self.battery = battery
+        self.thermal = thermal
+        self.power = power
     }
 
     public static let empty = MetricsSnapshot()
@@ -46,6 +52,8 @@ public struct MetricsSnapshot: Sendable, Equatable {
         case .network: network.loadFraction
         case .fans: fans.loadFraction
         case .battery: battery.fraction
+        case .temperature: thermal.fraction
+        case .power: power.fraction
         }
     }
 
@@ -55,6 +63,8 @@ public struct MetricsSnapshot: Sendable, Equatable {
         switch kind {
         case .fans: fans.isAvailable
         case .battery: battery.isAvailable
+        case .temperature: thermal.isAvailable
+        case .power: power.isAvailable
         case .gpu: gpu.isAvailable
         case .cpu, .memory, .disk, .network: true
         }
@@ -70,6 +80,8 @@ public struct MetricsSnapshot: Sendable, Equatable {
         case .network: ValueFormatter.rate(network.downloadBytesPerSecond)
         case .fans: fans.headline
         case .battery: battery.headline
+        case .temperature: thermal.headline
+        case .power: power.headline
         }
     }
 
@@ -90,6 +102,10 @@ public struct MetricsSnapshot: Sendable, Equatable {
             fans.caption
         case .battery:
             battery.caption
+        case .temperature:
+            thermal.caption
+        case .power:
+            power.caption
         }
     }
 }
@@ -393,5 +409,98 @@ public struct BatteryUsage: Sendable, Equatable {
         case ..<0.88: return "battery.75"
         default: return "battery.100"
         }
+    }
+}
+
+
+/// What the machine's thermometers report, in degrees Celsius.
+public struct ThermalUsage: Sendable, Equatable {
+    public var cpu: Double?
+    public var gpu: Double?
+    public var battery: Double?
+    public var enclosure: Double?
+    /// How many sensors the catalogue found, shown so the reading can be trusted.
+    public var sensorCount: Int
+    public var isAvailable: Bool
+
+    public init(
+        cpu: Double? = nil,
+        gpu: Double? = nil,
+        battery: Double? = nil,
+        enclosure: Double? = nil,
+        sensorCount: Int = 0,
+        isAvailable: Bool = false
+    ) {
+        self.cpu = cpu
+        self.gpu = gpu
+        self.battery = battery
+        self.enclosure = enclosure
+        self.sensorCount = sensorCount
+        self.isAvailable = isAvailable
+    }
+
+    public static let unavailable = ThermalUsage()
+
+    /// The reading the gauge shows: the hottest part of the machine.
+    public var hottest: Double? {
+        [cpu, gpu, battery, enclosure].compactMap { $0 }.max()
+    }
+
+    /// Mapped so that 30 °C reads as empty and 100 °C as full, which spans the
+    /// range between idle and thermal throttling on every Mac.
+    public var fraction: Double {
+        guard let hottest else { return 0 }
+        return ((hottest - 30) / 70).clamped01
+    }
+
+    public var headline: String {
+        guard let hottest else { return "n/a" }
+        return "\(Int(hottest.rounded()))°C"
+    }
+
+    public var caption: String {
+        guard isAvailable else { return "no sensors" }
+        var parts: [String] = []
+        if let cpu { parts.append("CPU \(Int(cpu.rounded()))°") }
+        if let gpu { parts.append("GPU \(Int(gpu.rounded()))°") }
+        if let battery { parts.append("battery \(Int(battery.rounded()))°") }
+        if let enclosure, parts.count < 3 { parts.append("case \(Int(enclosure.rounded()))°") }
+        return parts.isEmpty ? "no sensors" : parts.joined(separator: " · ")
+    }
+}
+
+/// Instantaneous power draw of the whole machine.
+public struct PowerUsage: Sendable, Equatable {
+    public var watts: Double
+    /// Rating of the attached power adapter, when the SMC reports one.
+    public var adapterWatts: Double?
+    public var isAvailable: Bool
+
+    public init(watts: Double = 0, adapterWatts: Double? = nil, isAvailable: Bool = false) {
+        self.watts = watts
+        self.adapterWatts = adapterWatts
+        self.isAvailable = isAvailable
+    }
+
+    public static let unavailable = PowerUsage()
+
+    /// Full scale is the adapter's rating when it is known, since that is the
+    /// most the machine can draw; otherwise a 60 W stand-in.
+    public var referenceWatts: Double {
+        guard let adapterWatts, adapterWatts > 5 else { return 60 }
+        return adapterWatts
+    }
+
+    public var fraction: Double { (watts / referenceWatts).clamped01 }
+
+    public var headline: String {
+        guard isAvailable else { return "n/a" }
+        return watts < 10 ? String(format: "%.1f W", watts) : "\(Int(watts.rounded())) W"
+    }
+
+    public var caption: String {
+        guard isAvailable else { return "not reported" }
+        guard let adapterWatts, adapterWatts > 5 else { return "system total" }
+        return "of a \(Int(adapterWatts.rounded())) W adapter"
     }
 }

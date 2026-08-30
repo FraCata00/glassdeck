@@ -59,6 +59,7 @@ final class SMCService {
         /// `kSMCHandleYPCEvent`, the only user-client method needed for reads.
         static let handleEvent: UInt32 = 2
         static let readKey: UInt8 = 5
+        static let getKeyFromIndex: UInt8 = 8
         static let getKeyInfo: UInt8 = 9
     }
 
@@ -74,6 +75,22 @@ final class SMCService {
 
     deinit {
         if connection != 0 { IOServiceClose(connection) }
+    }
+
+    /// Every key the SMC publishes, in registry order.
+    ///
+    /// Sensor keys differ per model — an M1 exposes `Tp*` clusters where an Intel
+    /// Mac exposes `TC0P` — so GlassDeck discovers them instead of hard-coding a
+    /// table. Enumerating all ~1800 names costs about 10 ms and happens once.
+    func allKeys() -> [String] {
+        guard let count = readNumber("#KEY"), count > 0 else { return [] }
+        return (0..<UInt32(count)).compactMap { index in
+            var request = ParamStruct()
+            request.data8 = Selector.getKeyFromIndex
+            request.data32 = index
+            guard let response = call(request) else { return nil }
+            return Self.string(from: response.key)
+        }
     }
 
     /// Reads a four-character SMC key and decodes it as a number.
