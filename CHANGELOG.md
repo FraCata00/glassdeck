@@ -5,6 +5,26 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-08-30
+
+### Added
+
+- **Temperature** and **power** metrics. Sensor keys differ per model, so the SMC
+  is enumerated once at start-up and only the keys returning plausible readings
+  are kept; power is scaled against the attached adapter's rating.
+- **Expandable Touch Bar panels**: tapping a panel — or the battery chip — opens
+  that metric across the bar with the numbers behind its headline and its history.
+- **Italian localisation**, following the system language.
+- A default app Touch Bar, so opening a GlassDeck window no longer leaves the
+  Touch Bar black while the bar is released.
+
+### Changed
+
+- The battery chip shows the charge only; the power draw moved to the battery's
+  expanded bar, where it does not crowd the number people glance at.
+- Touch Bar panel and button widths are measured against the space the system
+  actually grants, instead of being estimated.
+
 ## [1.1.0] - 2026-08-30
 
 ### Added
@@ -45,5 +65,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[1.2.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.2.0
 [1.1.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.1.0
 [1.0.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.0.0

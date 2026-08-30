@@ -35,6 +35,11 @@ untouched:
 
 <img src="docs/images/touchbar-compact.png" alt="GlassDeck beside the Control Strip">
 
+**Expanded metric** — tap any panel to open its own bar with the numbers behind
+the headline:
+
+<img src="docs/images/touchbar-detail.png" alt="The CPU panel expanded across the Touch Bar">
+
 **Mini** — just the meters, parked next to the Control Strip:
 
 <img src="docs/images/touchbar-mini.png" alt="GlassDeck as a small meter beside the Control Strip">
@@ -47,6 +52,7 @@ single tap can never make GlassDeck vanish:
 | **Full width** | Every metric plus **fan RPM**, across the whole bar | ⤢ from compact |
 | **Compact** | Four live graphs, battery, controls; Control Strip stays visible | ⌄ from full width, or ⤢ from mini |
 | **Mini** | The four meters and two buttons | ⌄ from compact |
+| **One metric** | A single metric across the bar, with its details and history | Tap any panel or the battery chip |
 | **Released** | The Touch Bar goes back to the system and the frontmost app | ✕ on the mini bar |
 
 Once released, tapping the meter in the Control Strip brings GlassDeck straight
@@ -66,8 +72,13 @@ the centre, or beside the Control Strip (the default).
 - **Disk** — capacity of the boot volume and live read/write throughput.
 - **Network** — aggregate up/down throughput across active interfaces.
 - **Fans** — live RPM and each fan's rated range, read from the SMC.
+- **Temperature** — CPU, GPU, battery and enclosure sensors, discovered by
+  enumerating the SMC rather than guessing per-model key names.
+- **Power** — what the machine is drawing right now, scaled against the rating of
+  the adapter that is plugged in.
 - **Battery** — charge, charging state and time to full/empty.
 - **Top processes** — the busiest processes, sampled only while a window is open.
+- **English and Italian**, following the system language.
 - **Liquid Glass everywhere** — real `glassEffect` surfaces on macOS 26+, with a
   vibrant-material fallback on macOS 15.
 
@@ -120,6 +131,8 @@ Everything is read directly from public kernel interfaces — no shelling out to
 | Disk | `URLResourceValues` + `IOBlockStorageDriver` → `Statistics` |
 | Network | `getifaddrs` → `if_data` counters |
 | Fans | `AppleSMC` user client (`FNum`, `F<n>Ac/Mn/Mx`), read-only |
+| Temperature | `AppleSMC`, keys discovered at start-up and filtered to plausible readings |
+| Power | `AppleSMC` (`PSTR` and friends), with the adapter rating as full scale |
 | Battery | `IOPSCopyPowerSourcesInfo` |
 | Processes | `libproc` (`proc_listpids`, `proc_pidinfo`) |
 
