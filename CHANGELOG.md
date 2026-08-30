@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-08-30
+
+### Changed
+
+- GlassDeck is markedly lighter at rest. Profiling the running app put its
+  largest single cost in AppKit's redraw of the menu bar status item — about
+  22 ms every time the label changes, more than all the sampling put together —
+  so the status item now updates on its own two-second cadence instead of on
+  every sample. Measured over alternating 45-second runs at the default cadence,
+  1.47% of a core down to 0.93%. Sampling, the graphs, the dashboard and the
+  Touch Bar are as live as they were.
+- Temperatures are read every five seconds rather than on every sample. A Mac
+  publishes dozens of thermometers — 83 on the machine this was measured on —
+  and each is its own round trip to the SMC, which made temperature alone cost
+  more than every other metric combined: 19 ms against well under 1 ms. A sample
+  now costs 4.7 ms instead of 18.9 ms. Nothing changes in what is read: when the
+  sensors are read, all of them still are, and the hottest still wins.
+- **GlassDeckKit API**: `SystemMonitor` gains `coarseSnapshot` and
+  `coarseInterval`, a reading republished on a slower cadence for surfaces whose
+  redraw costs more than the freshness buys. `ThermalSampler.sample()` takes an
+  optional `at:` date, so its cadence can be driven in tests.
+
 ## [1.3.0] - 2026-08-30
 
 ### Fixed
@@ -112,6 +134,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[1.4.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.4.0
 [1.3.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.3.0
 [1.2.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.2.0
 [1.1.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.1.0
