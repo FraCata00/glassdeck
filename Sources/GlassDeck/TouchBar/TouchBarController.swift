@@ -81,6 +81,8 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     private static let itemSpacing: CGFloat = 8
     /// Pinned width of the shrink, grow and dashboard buttons.
     private static let controlWidth: CGFloat = 46
+    /// Narrowest a metric panel gets before its graph stops being worth a glance.
+    private static let minimumPanelWidth: CGFloat = 84
 
     /// True when this Mac actually has a Touch Bar and the private hooks resolved.
     let isSupported: Bool
@@ -389,11 +391,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         }
         metrics = metrics.filter { monitor.snapshot.supports($0) }
 
-        let controls = (monitor.snapshot.battery.isAvailable ? batteryView.intrinsicContentSize.width + Self.itemSpacing : 0)
-            + 3 * (Self.controlWidth + Self.itemSpacing)
-        let room = Self.fullRegionWidth - controls
-        let fitting = max(1, Int(room / (metricPanelWidth(for: mode) + Self.itemSpacing)))
-        return Array(metrics.prefix(fitting))
+        return Array(metrics.prefix(maximumFullscreenPanels))
     }
 
     /// The bar is built before the first sample lands, so battery and fan
@@ -457,20 +455,58 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
 
     /// Measured width of the items, used to work out how far they can shift.
     private func contentWidth(of content: [NSTouchBarItem.Identifier], for mode: Mode) -> CGFloat {
+        let panels = content.filter { $0.rawValue.hasPrefix(Self.metricItemPrefix) }.count
         var width: CGFloat = 0
         for identifier in content {
             switch identifier {
             case Self.miniMeterItem: width += miniStripView.intrinsicContentSize.width
             case Self.batteryItem: width += batteryView.intrinsicContentSize.width
             case Self.resizeItem, Self.collapseItem, Self.dashboardItem: width += Self.controlWidth
-            default: width += metricPanelWidth(for: mode)
+            default: width += metricPanelWidth(for: mode, count: panels)
             }
         }
         return width + CGFloat(content.count - 1) * Self.itemSpacing
     }
 
-    private func metricPanelWidth(for mode: Mode) -> CGFloat {
-        mode == .fullscreen ? 108 : 84
+    /// Width of one metric panel.
+    ///
+    /// In full width the panels are stretched to use the whole bar, so enabling
+    /// or disabling a metric widens or narrows the rest rather than changing how
+    /// much of the bar sits empty — five metrics used to leave a fifth of it
+    /// black. The shared bar keeps a fixed width on purpose: there the leftover
+    /// space is exactly what the alignment setting slides the bar around in.
+    private func metricPanelWidth(for mode: Mode, count: Int) -> CGFloat {
+        guard mode == .fullscreen, count > 0 else { return Self.minimumPanelWidth }
+
+        let items = count + fullscreenFixedItems
+        let free = Self.fullRegionWidth - fullscreenFixedWidth
+            - Self.itemSpacing * CGFloat(items - 1)
+        // Rounded down, not just divided: a fractional width is rounded up again
+        // when the panel is laid out, and seven of those pushed the last button
+        // off the end of the bar.
+        return max(Self.minimumPanelWidth, (free / CGFloat(count)).rounded(.down))
+    }
+
+    /// The battery chip and the three buttons that ride along in full width.
+    private var fullscreenFixedItems: Int {
+        (monitor.snapshot.battery.isAvailable ? 1 : 0) + 3
+    }
+
+    private var fullscreenFixedWidth: CGFloat {
+        (monitor.snapshot.battery.isAvailable ? batteryView.intrinsicContentSize.width : 0)
+            + 3 * Self.controlWidth
+    }
+
+    /// The most panels full width can hold before they stop being legible.
+    /// Panels shrink to make room now, so this is a floor on the width rather
+    /// than a count worked out from a fixed one.
+    private var maximumFullscreenPanels: Int {
+        var count = 1
+        while count < MetricKind.allCases.count,
+              metricPanelWidth(for: .fullscreen, count: count + 1) > Self.minimumPanelWidth {
+            count += 1
+        }
+        return count
     }
 
     func touchBar(
@@ -562,7 +598,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
 
         let item = NSCustomTouchBarItem(identifier: identifier)
         let view = TouchBarMetricView(kind: kind)
-        view.width = metricPanelWidth(for: mode)
+        view.width = metricPanelWidth(for: mode, count: metrics(for: mode).count)
         view.snapshot = monitor.snapshot
         view.history = monitor.history(for: kind)
         view.onTap = { [weak self] in self?.expand(kind) }
