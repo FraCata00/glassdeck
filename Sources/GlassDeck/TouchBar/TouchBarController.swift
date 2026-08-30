@@ -22,14 +22,21 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         case mini
         case expanded
         case fullscreen
+        /// One metric expanded across the bar, reached by tapping its panel.
+        case detail(MetricKind)
 
         /// Placement passed to the system: `0` keeps the Control Strip, `1` covers it.
-        var placement: Int { self == .fullscreen ? 1 : 0 }
+        var placement: Int {
+            switch self {
+            case .fullscreen, .detail: 1
+            case .collapsed, .mini, .expanded: 0
+            }
+        }
 
         /// One step smaller. Shrinking stops at `mini` rather than at nothing.
         var smaller: Mode {
             switch self {
-            case .fullscreen: .expanded
+            case .fullscreen, .detail: .expanded
             case .expanded, .mini, .collapsed: .mini
             }
         }
@@ -38,8 +45,13 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         var larger: Mode {
             switch self {
             case .collapsed, .mini: .expanded
-            case .expanded, .fullscreen: .fullscreen
+            case .expanded, .fullscreen, .detail: .fullscreen
             }
+        }
+
+        var expandedMetric: MetricKind? {
+            if case let .detail(kind) = self { return kind }
+            return nil
         }
     }
 
@@ -51,6 +63,9 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     private static let batteryItem = NSTouchBarItem.Identifier("dev.fracata00.glassdeck.battery")
     private static let metricItemPrefix = "dev.fracata00.glassdeck.metric."
     private static let miniMeterItem = NSTouchBarItem.Identifier("dev.fracata00.glassdeck.mini")
+    private static let detailItem = NSTouchBarItem.Identifier("dev.fracata00.glassdeck.detail")
+    private static let backItem = NSTouchBarItem.Identifier("dev.fracata00.glassdeck.back")
+    private static let applicationMeterItem = NSTouchBarItem.Identifier("dev.fracata00.glassdeck.appmeter")
     private static let leadingSpacerItem = NSTouchBarItem.Identifier("dev.fracata00.glassdeck.spacer")
 
     /// Room a bar presented at placement 0 has beside the system Control Strip,
@@ -79,10 +94,18 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     /// and a view cannot live in two places at once.
     private let miniStripView = TouchBarStripView()
     private let tapView = TouchBarTapView()
+    private let applicationTapView = TouchBarTapView()
     private var stripItem: NSCustomTouchBarItem?
     private var presentedBar: NSTouchBar?
     private var metricViews: [MetricKind: TouchBarMetricView] = [:]
     private let batteryView = TouchBarBatteryView()
+    private let detailView = TouchBarDetailView(width: 856)
+    /// Shown by the system whenever GlassDeck itself is frontmost and no bar of
+    /// its own is presented — without it the Touch Bar would simply go black,
+    /// because a menu bar app defines no Touch Bar of its own.
+    private let applicationStripView = TouchBarStripView()
+    /// The size to return to when the expanded metric is dismissed.
+    private var modeBeforeDetail: Mode = .fullscreen
     private var activationObserver: NSObjectProtocol?
     private var presentedSignature: String?
     /// Set when the user releases the Touch Bar from the bar itself. It lasts for
@@ -106,6 +129,12 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         stripView.autoresizingMask = [.width, .height]
         tapView.addSubview(stripView)
         tapView.onTap = { [weak self] in self?.handleStripTap() }
+        batteryView.onTap = { [weak self] in self?.expand(.battery) }
+        detailView.onTap = { [weak self] in self?.dismissDetail() }
+        applicationTapView.onTap = { [weak self] in self?.present(.expanded) }
+        applicationStripView.frame = applicationTapView.bounds
+        applicationStripView.autoresizingMask = [.width, .height]
+        applicationTapView.addSubview(applicationStripView)
     }
 
     // MARK: - Lifecycle
@@ -132,6 +161,14 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
             if mode == .collapsed, !isReleasedForSession { present(.expanded) }
             startReasserting()
         }
+    }
+
+    /// The app's own Touch Bar, used by the system when GlassDeck is frontmost.
+    func makeApplicationTouchBar() -> NSTouchBar {
+        let bar = NSTouchBar()
+        bar.delegate = self
+        bar.defaultItemIdentifiers = [.flexibleSpace, Self.applicationMeterItem, .flexibleSpace]
+        return bar
     }
 
     private func install() {
@@ -221,6 +258,21 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         mode = .collapsed
     }
 
+    /// Expands a single metric across the bar. Tapping a panel is how the extra
+    /// numbers are reached without crowding the compact layouts.
+    func expand(_ kind: MetricKind) {
+        guard isSupported else { return }
+        // Before the first sample nothing is known to be supported yet; the panel
+        // that was tapped is proof enough that the metric exists.
+        guard monitor.snapshot.supports(kind) || monitor.snapshot == .empty else { return }
+        if mode.expandedMetric == nil { modeBeforeDetail = mode }
+        present(.detail(kind))
+    }
+
+    @objc private func dismissDetail() {
+        present(modeBeforeDetail == .collapsed ? .expanded : modeBeforeDetail)
+    }
+
     /// The shrink button. It steps down one size at a time and stops at the
     /// compact meter, so a single tap can never make GlassDeck vanish; only a tap
     /// on the already-minimal bar hands the Touch Bar back.
@@ -274,8 +326,12 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         let snapshot = monitor.snapshot
         stripView.snapshot = snapshot
         miniStripView.snapshot = snapshot
+        applicationStripView.snapshot = snapshot
         batteryView.battery = snapshot.battery
-        if mode == .fullscreen { batteryView.power = snapshot.power }
+        if let kind = mode.expandedMetric {
+            detailView.snapshot = snapshot
+            detailView.history = monitor.history(for: kind)
+        }
         for (kind, view) in metricViews {
             view.snapshot = snapshot
             view.history = monitor.history(for: kind)
@@ -301,6 +357,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
                 guard let self else { return }
                 self.stripView.metrics = self.preferences.touchBarMetrics
                 self.miniStripView.metrics = self.preferences.touchBarMetrics
+                self.applicationStripView.metrics = self.preferences.touchBarMetrics
                 self.rebuildBarIfNeeded()
                 self.refresh()
                 self.observe()
@@ -314,7 +371,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     /// for a fifth panel without squeezing the graphs into illegibility. Battery
     /// is never a panel — it rides along as the compact chip on the right.
     private func metrics(for mode: Mode) -> [MetricKind] {
-        guard mode != .mini else { return [] }
+        guard mode != .mini, mode.expandedMetric == nil else { return [] }
 
         // Battery rides in the chip on the right, and power rides along with it.
         var metrics = preferences.touchBarMetrics.filter { $0 != .battery && $0 != .power }
@@ -352,7 +409,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
 
     private func layoutSignature(for mode: Mode) -> String {
         let metrics = metrics(for: mode).map(\.rawValue).joined(separator: ",")
-        return "\(mode)|\(metrics)|battery:\(monitor.snapshot.battery.isAvailable)|align:\(preferences.touchBarAlignment.rawValue)"
+        return "\(mode)|\(mode.expandedMetric?.rawValue ?? "-")|\(metrics)|battery:\(monitor.snapshot.battery.isAvailable)|align:\(preferences.touchBarAlignment.rawValue)"
     }
 
     private func makeBar(for mode: Mode) -> NSTouchBar {
@@ -367,6 +424,11 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         // Strip claims about 400 whenever GlassDeck is not full width. Items are
         // dropped rather than squeezed — the Dashboard button only earns its place
         // in full width, where the menu bar panel is not the closer alternative.
+        if mode.expandedMetric != nil {
+            bar.defaultItemIdentifiers = [Self.backItem, Self.detailItem, Self.collapseItem]
+            return bar
+        }
+
         let content: [NSTouchBarItem.Identifier] = mode == .mini
             ? [Self.miniMeterItem, Self.resizeItem, Self.collapseItem]
             : metrics(for: mode).map { NSTouchBarItem.Identifier(Self.metricItemPrefix + $0.rawValue) }
@@ -377,9 +439,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
 
         // Full width has nowhere to move to; the other sizes honour the alignment
         // setting, with flexible spaces doing the pushing.
-        bar.defaultItemIdentifiers = mode == .fullscreen
-            ? content
-            : aligned(content, for: mode)
+        bar.defaultItemIdentifiers = mode == .fullscreen ? content : aligned(content, for: mode)
         return bar
     }
 
@@ -422,6 +482,28 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
             let item = NSCustomTouchBarItem(identifier: identifier)
             item.view = FixedWidthSpacer(width: leadingSpacerWidth)
             return item
+        case Self.backItem:
+            return button(
+                identifier: identifier,
+                symbol: "chevron.backward",
+                accessibilityDescription: "Back to the meters",
+                action: #selector(dismissDetail)
+            )
+        case Self.detailItem:
+            let item = NSCustomTouchBarItem(identifier: identifier)
+            if let kind = mode.expandedMetric {
+                detailView.kind = kind
+                detailView.snapshot = monitor.snapshot
+                detailView.history = monitor.history(for: kind)
+            }
+            item.view = detailView
+            return item
+        case Self.applicationMeterItem:
+            let item = NSCustomTouchBarItem(identifier: identifier)
+            applicationStripView.metrics = preferences.touchBarMetrics
+            applicationStripView.snapshot = monitor.snapshot
+            item.view = applicationTapView
+            return item
         case Self.miniMeterItem:
             let item = NSCustomTouchBarItem(identifier: identifier)
             miniStripView.metrics = preferences.touchBarMetrics
@@ -449,8 +531,6 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         case Self.batteryItem:
             let item = NSCustomTouchBarItem(identifier: identifier)
             batteryView.battery = monitor.snapshot.battery
-            // Full width has room to spell out the draw next to the charge.
-            batteryView.power = mode == .fullscreen ? monitor.snapshot.power : .unavailable
             item.view = batteryView
             return item
         case Self.dashboardItem:
@@ -483,6 +563,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         view.width = metricPanelWidth(for: mode)
         view.snapshot = monitor.snapshot
         view.history = monitor.history(for: kind)
+        view.onTap = { [weak self] in self?.expand(kind) }
         metricViews[kind] = view
         item.view = view
         return item

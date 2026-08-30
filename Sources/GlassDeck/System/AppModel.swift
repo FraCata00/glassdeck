@@ -33,6 +33,7 @@ final class AppModel {
 
     func start() {
         monitor.start()
+        NSApp.touchBar = touchBar.makeApplicationTouchBar()
         touchBar.synchroniseWithPreferences()
         observePreferences()
         installSignalHandlers()
@@ -61,7 +62,8 @@ final class AppModel {
     /// Neither the Touch Bar nor a menu bar extra can be driven by scripted
     /// clicks, so two environment variables let a build come up in a given state
     /// for screenshots and manual testing:
-    /// `GLASSDECK_TOUCHBAR_MODE=fullscreen|expanded|mini` and `GLASSDECK_OPEN_DASHBOARD=1`.
+    /// `GLASSDECK_TOUCHBAR_MODE=fullscreen|expanded|mini|detail:<metric>` and
+    /// `GLASSDECK_OPEN_DASHBOARD=1`.
     private func applyDevelopmentOverrides() {
         let environment = ProcessInfo.processInfo.environment
 
@@ -69,6 +71,13 @@ final class AppModel {
         case "fullscreen": touchBar.present(.fullscreen)
         case "expanded": touchBar.present(.expanded)
         case "mini": touchBar.present(.mini)
+        case let requested? where requested.hasPrefix("detail:"):
+            let kind = MetricKind(rawValue: String(requested.dropFirst("detail:".count)))
+            Task { @MainActor in
+                // Wait for a sample so hardware-dependent metrics are known.
+                try? await Task.sleep(for: .seconds(2))
+                kind.map(self.touchBar.expand)
+            }
         default: break
         }
 
