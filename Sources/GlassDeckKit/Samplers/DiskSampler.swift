@@ -11,6 +11,7 @@ public final class DiskSampler {
 
     private var previousCounters: IOCounters?
     private var previousSampleTime: Date?
+    private var peak = PeakTracker(floor: DiskUsage.minimumReference)
     private let volumeURL: URL
 
     public init(volumeURL: URL = URL(fileURLWithPath: "/")) {
@@ -30,6 +31,7 @@ public final class DiskSampler {
         }
         previousCounters = counters
         previousSampleTime = now
+        usage.referenceBytesPerSecond = peak.observe(usage.busiestBytesPerSecond)
         return usage
     }
 

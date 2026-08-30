@@ -113,11 +113,45 @@ struct MetricsModelTests {
         #expect(onBattery.headline == "6.0 W")
     }
 
-    @Test("Network load is scaled against a 100 Mbit reference")
+    @Test("Network load is scaled against the fastest rate seen, not a constant")
     func networkScaling() {
-        #expect(NetworkThroughput(downloadBytesPerSecond: 12_500_000).loadFraction == 1)
-        #expect(NetworkThroughput(downloadBytesPerSecond: 6_250_000).loadFraction == 0.5)
+        // On a fast link a fixed 100 Mbit ceiling pinned the gauge to full for
+        // any real download; the scale follows the machine instead.
+        let fast = NetworkThroughput(
+            downloadBytesPerSecond: 60_000_000,
+            referenceBytesPerSecond: 120_000_000
+        )
+        #expect(fast.loadFraction == 0.5)
+
+        let atPeak = NetworkThroughput(
+            downloadBytesPerSecond: 120_000_000,
+            referenceBytesPerSecond: 120_000_000
+        )
+        #expect(atPeak.loadFraction == 1)
+
         #expect(NetworkThroughput.zero.loadFraction == 0)
+    }
+
+    @Test("An idle network cannot amplify into a full gauge")
+    func networkFloor() {
+        // A reference below the floor is ignored, so a trickle on a quiet
+        // machine does not read as saturation.
+        let trickle = NetworkThroughput(downloadBytesPerSecond: 2_000, referenceBytesPerSecond: 2_000)
+        #expect(trickle.loadFraction < 0.01)
+    }
+
+    @Test("The disk gauge follows the disk working, not the space it holds")
+    func diskActivity() {
+        let busy = DiskUsage(
+            total: 1_000, free: 100,          // 90% full, and irrelevant here
+            readBytesPerSecond: 40_000_000,
+            referenceBytesPerSecond: 80_000_000
+        )
+        #expect(busy.loadFraction == 0.5)
+        #expect(busy.usedFraction == 0.9)     // still reported, just not graphed
+
+        let idleButFull = DiskUsage(total: 1_000, free: 10)
+        #expect(idleButFull.loadFraction == 0)
     }
 
     @Test("Metric identifiers are stable, because settings persist them")

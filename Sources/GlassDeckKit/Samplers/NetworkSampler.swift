@@ -24,6 +24,7 @@ public final class NetworkSampler {
 
     private var previous: [String: Counters] = [:]
     private var previousSampleTime: Date?
+    private var peak = PeakTracker(floor: NetworkThroughput.minimumReference)
 
     public init() {}
 
@@ -39,9 +40,13 @@ public final class NetworkSampler {
         guard interval > 0 else { return .zero }
 
         let moved = Self.bytesMoved(from: previous, to: counters)
+        let download = Double(moved.received) / interval
+        let upload = Double(moved.sent) / interval
+
         return NetworkThroughput(
-            downloadBytesPerSecond: Double(moved.received) / interval,
-            uploadBytesPerSecond: Double(moved.sent) / interval
+            downloadBytesPerSecond: download,
+            uploadBytesPerSecond: upload,
+            referenceBytesPerSecond: peak.observe(max(download, upload))
         )
     }
 

@@ -48,7 +48,7 @@ public struct MetricsSnapshot: Sendable, Equatable {
         case .cpu: cpu.total
         case .gpu: gpu.utilisation
         case .memory: memory.usedFraction
-        case .disk: disk.usedFraction
+        case .disk: disk.loadFraction
         case .network: network.loadFraction
         case .fans: fans.loadFraction
         case .battery: battery.fraction
@@ -195,7 +195,7 @@ public struct MetricsSnapshot: Sendable, Equatable {
         case .cpu: ValueFormatter.percent(cpu.total)
         case .gpu: gpu.isAvailable ? ValueFormatter.percent(gpu.utilisation) : L.t("value.na", "n/a")
         case .memory: ValueFormatter.bytes(memory.used)
-        case .disk: ValueFormatter.bytes(disk.used)
+        case .disk: ValueFormatter.rate(disk.busiestBytesPerSecond)
         case .network: ValueFormatter.rate(network.downloadBytesPerSecond)
         case .fans: fans.headline
         case .battery: battery.headline
@@ -371,26 +371,46 @@ public struct DiskUsage: Sendable, Equatable {
     public var readBytesPerSecond: Double
     public var writeBytesPerSecond: Double
 
+    /// Full scale for the activity gauge, tracked the same way the network's is.
+    public var referenceBytesPerSecond: Double
+
+    /// Slowest full scale the activity gauge will use.
+    public static let minimumReference = 20_000_000.0
+
     public init(
         volumeName: String = "Macintosh HD",
         total: UInt64 = 0,
         free: UInt64 = 0,
         readBytesPerSecond: Double = 0,
-        writeBytesPerSecond: Double = 0
+        writeBytesPerSecond: Double = 0,
+        referenceBytesPerSecond: Double = DiskUsage.minimumReference
     ) {
         self.volumeName = volumeName
         self.total = total
         self.free = free
         self.readBytesPerSecond = readBytesPerSecond
         self.writeBytesPerSecond = writeBytesPerSecond
+        self.referenceBytesPerSecond = referenceBytesPerSecond
     }
 
     public static let zero = DiskUsage()
 
     public var used: UInt64 { total > free ? total - free : 0 }
 
+    /// How full the volume is. Still reported — it is just no longer what the
+    /// graph draws, since capacity barely moves and made the sparkline a flat
+    /// line while the disk was plainly busy.
     public var usedFraction: Double {
         total == 0 ? 0 : (Double(used) / Double(total)).clamped01
+    }
+
+    public var busiestBytesPerSecond: Double {
+        max(readBytesPerSecond, writeBytesPerSecond)
+    }
+
+    public var loadFraction: Double {
+        let reference = max(referenceBytesPerSecond, Self.minimumReference)
+        return (busiestBytesPerSecond / reference).clamped01
     }
 }
 
@@ -398,19 +418,34 @@ public struct DiskUsage: Sendable, Equatable {
 public struct NetworkThroughput: Sendable, Equatable {
     public var downloadBytesPerSecond: Double
     public var uploadBytesPerSecond: Double
+    /// Full scale for the gauge: the fastest this machine has recently been seen
+    /// to move bytes. A fixed ceiling cannot suit both a 10 Mbit line and a
+    /// 10 Gbit one — at 100 Mbit, any real download pinned the gauge to full.
+    public var referenceBytesPerSecond: Double
 
-    public init(downloadBytesPerSecond: Double = 0, uploadBytesPerSecond: Double = 0) {
+    /// Slowest full scale the gauge will use, so background chatter on an idle
+    /// machine does not read as a busy network.
+    public static let minimumReference = 1_250_000.0
+
+    public init(
+        downloadBytesPerSecond: Double = 0,
+        uploadBytesPerSecond: Double = 0,
+        referenceBytesPerSecond: Double = NetworkThroughput.minimumReference
+    ) {
         self.downloadBytesPerSecond = downloadBytesPerSecond
         self.uploadBytesPerSecond = uploadBytesPerSecond
+        self.referenceBytesPerSecond = referenceBytesPerSecond
     }
 
     public static let zero = NetworkThroughput()
 
-    /// Traffic mapped onto `0...1` with a 12.5 MB/s (≈100 Mbit) reference ceiling,
-    /// so the gauge stays readable on everyday connections.
+    public var busiestBytesPerSecond: Double {
+        max(downloadBytesPerSecond, uploadBytesPerSecond)
+    }
+
     public var loadFraction: Double {
-        let reference = 12_500_000.0
-        return (max(downloadBytesPerSecond, uploadBytesPerSecond) / reference).clamped01
+        let reference = max(referenceBytesPerSecond, Self.minimumReference)
+        return (busiestBytesPerSecond / reference).clamped01
     }
 }
 
