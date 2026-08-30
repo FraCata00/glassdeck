@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-08-30
+
+### Fixed
+
+- The full-width Touch Bar fills the bar. Metric panels were pinned at 108 pt, so
+  the leftover width simply sat black and turning a metric off widened the gap
+  rather than the panels that remained — five metrics left a fifth of the bar
+  empty, four left a third, two left over half. Panels are now sized from the
+  room the bar actually has, so it is always full and enabling or disabling a
+  metric resizes the rest: five come out at 148 pt where they were 108. Full
+  width can also show all seven panels now, because the limit is a floor on how
+  narrow a panel may get rather than a count derived from a fixed width.
+- The bar beside the Control Strip is deliberately unchanged, since there the
+  leftover width is what the **Position** setting slides the bar around in.
+- The menu bar panel's gauges fill it too. Their size came from a ladder of three
+  fixed values, so enabling or disabling a metric usually left the gauges exactly
+  as they were and only changed how much empty panel sat beside them: five
+  metrics used 70% of the width, and so did nine. The split is now chosen for how
+  little it wastes — nine metrics read as three rows of three at 103 pt, filling
+  every row.
+
 ## [1.4.0] - 2026-08-30
 
 ### Changed
@@ -134,6 +155,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[1.4.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.4.1
 [1.4.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.4.0
 [1.3.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.3.0
 [1.2.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.2.0
