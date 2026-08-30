@@ -82,6 +82,12 @@ the centre, or beside the Control Strip (the default).
 - **Liquid Glass everywhere** — real `glassEffect` surfaces on macOS 26+, with a
   vibrant-material fallback on macOS 15.
 
+> **On signing:** releases are signed ad hoc, not notarised — notarising requires
+> a paid Apple Developer account. Every build is produced in the open by the
+> [release workflow](.github/workflows/release.yml) from a tagged commit, and the
+> archive's SHA-256 is published beside it, so you can check what you downloaded:
+> `shasum -a 256 GlassDeck.zip`.
+
 ## Requirements
 
 - macOS 15 or later (Liquid Glass surfaces need macOS 26+; older systems get the
@@ -97,21 +103,23 @@ the centre, or beside the Control Strip (the default).
 brew tap fracata00/tap
 brew trust fracata00/tap          # Homebrew asks this of every third-party tap
 brew install --cask glassdeck
-xattr -dr com.apple.quarantine /Applications/GlassDeck.app
 ```
 
-The last step is needed because the build is signed ad hoc rather than notarised;
-Homebrew 6 removed the `--no-quarantine` install flag.
+Then open GlassDeck from `/Applications` and look for the meters in the menu bar.
 
 ### From a release
 
 1. Download `GlassDeck.zip` from the [latest release](https://github.com/FraCata00/glassdeck/releases/latest).
 2. Move `GlassDeck.app` to `/Applications`.
-3. The build is signed ad hoc, not notarised, so Gatekeeper needs one nudge:
+3. GlassDeck is signed ad hoc rather than notarised, so Gatekeeper needs one
+   nudge the first time. Either right-click the app and choose **Open** (then
+   **Open** again in the dialog), or run:
 
    ```sh
    xattr -dr com.apple.quarantine /Applications/GlassDeck.app
    ```
+
+   The Homebrew cask above does this for you.
 
 ### From source
 
