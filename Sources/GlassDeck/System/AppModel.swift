@@ -62,8 +62,11 @@ final class AppModel {
     /// Neither the Touch Bar nor a menu bar extra can be driven by scripted
     /// clicks, so two environment variables let a build come up in a given state
     /// for screenshots and manual testing:
-    /// `GLASSDECK_TOUCHBAR_MODE=fullscreen|expanded|mini|detail:<metric>` and
-    /// `GLASSDECK_OPEN_DASHBOARD=1`.
+    /// `GLASSDECK_TOUCHBAR_MODE=fullscreen|expanded|mini|detail:<metric>`,
+    /// `GLASSDECK_OPEN_DASHBOARD=1` and `GLASSDECK_OPEN_PANEL=1`, which puts the
+    /// menu bar panel in an ordinary window: a `MenuBarExtra` cannot be opened
+    /// any other way, so without it the panel is the one surface that cannot be
+    /// looked at except by hand.
     private func applyDevelopmentOverrides() {
         let environment = ProcessInfo.processInfo.environment
 
@@ -83,6 +86,10 @@ final class AppModel {
 
         if environment["GLASSDECK_OPEN_DASHBOARD"] == "1" {
             showDashboard()
+        }
+
+        if environment["GLASSDECK_OPEN_PANEL"] == "1" {
+            showPanel()
         }
 
     }
@@ -130,6 +137,24 @@ final class AppModel {
         )
         window.isReleasedWhenClosed = false
         settingsWindow = window
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// The menu bar panel in a window of its own. Only reachable through the
+    /// development override above.
+    func showPanel() {
+        let window = makeGlassWindow(
+            title: "GlassDeck",
+            size: NSSize(width: Theme.panelWidth, height: 900),
+            content: GlassPanelView()
+                .environment(monitor)
+                .environment(preferences)
+                .environment(self),
+            isResizable: false
+        )
+        window.isReleasedWhenClosed = false
         window.center()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

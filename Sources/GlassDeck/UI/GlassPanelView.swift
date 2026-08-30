@@ -1,3 +1,4 @@
+import AppKit
 import GlassDeckKit
 import SwiftUI
 
@@ -11,6 +12,7 @@ struct GlassPanelView: View {
     @Environment(AppModel.self) private var model
 
     @State private var selection: MetricKind = .cpu
+    @State private var contentHeight: CGFloat = 0
     @Namespace private var glassNamespace
 
     private static let panelPadding: CGFloat = 16
@@ -23,6 +25,13 @@ struct GlassPanelView: View {
     private static let maximumGaugeSize: CGFloat = 110
 
     private static var usableWidth: CGFloat { Theme.panelWidth - panelPadding * 2 }
+
+    /// How tall the panel may grow before it starts scrolling. Measured against
+    /// the screen the menu bar is on, less the room the bar itself takes.
+    private static var maximumPanelHeight: CGFloat {
+        let screen = NSScreen.main?.visibleFrame.height ?? 800
+        return max(420, screen - 40)
+    }
 
     /// The gauge size that makes a row of `count` fill the panel exactly.
     private static func fillingSize(forRowOf count: Int) -> CGFloat {
@@ -65,29 +74,42 @@ struct GlassPanelView: View {
     }
 
     var body: some View {
-        VStack(spacing: 14) {
-            header
+        // Every metric enabled, with the process list, runs past 800 pt. The
+        // panel used to be exactly as tall as its content and simply lost the
+        // bottom of itself on a short screen, with no way to reach it.
+        ScrollView {
+            VStack(spacing: 14) {
+                header
 
-            GlassStack(spacing: 20) {
-                VStack(spacing: 14) {
-                    gauges
-                    MetricDetailCard(
-                        kind: selectedMetric,
-                        snapshot: monitor.snapshot,
-                        history: monitor.history(for: selectedMetric)
-                    )
-                    .glassMorph(id: "detail", in: glassNamespace)
+                GlassStack(spacing: 20) {
+                    VStack(spacing: 14) {
+                        gauges
+                        MetricDetailCard(
+                            kind: selectedMetric,
+                            snapshot: monitor.snapshot,
+                            history: monitor.history(for: selectedMetric)
+                        )
+                        .glassMorph(id: "detail", in: glassNamespace)
+                    }
                 }
-            }
 
-            if preferences.showsProcesses {
-                ProcessListView(processes: monitor.topProcesses)
-            }
+                if preferences.showsProcesses {
+                    ProcessListView(processes: monitor.topProcesses)
+                }
 
-            footer
+                footer
+            }
+            .padding(Self.panelPadding)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
         }
-        .padding(Self.panelPadding)
+        .scrollIndicators(.never)
+        .scrollBounceBehavior(.basedOnSize)
         .frame(width: Theme.panelWidth)
+        // Measured rather than capped with `maxHeight`: a scroll view is greedy
+        // in its axis, so a maximum would have made every panel that tall and
+        // left a short one mostly empty. This is the content's own height until
+        // it outgrows the screen, and the cap only after that.
+        .frame(height: min(max(contentHeight, 1), Self.maximumPanelHeight))
         .task { await monitor.refreshNow() }
         .samplesProcesses(with: monitor, while: preferences.showsProcesses)
     }
