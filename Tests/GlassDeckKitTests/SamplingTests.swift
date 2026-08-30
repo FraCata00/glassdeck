@@ -33,7 +33,7 @@ struct SamplingTests {
 
     @Test("Every fan the SMC reports has a sane rated range")
     func fansAreConsistent() {
-        let usage = FanSampler().sample()
+        let usage = FanSampler(smc: SMCService()).sample()
         guard usage.isAvailable else { return }  // Fanless Mac: nothing to assert.
 
         for fan in usage.fans {
@@ -52,6 +52,29 @@ struct SamplingTests {
         #expect((0...1).contains(battery.fraction))
         #expect((0...100).contains(battery.percentage))
         if battery.isCharging { #expect(battery.isPluggedIn) }
+    }
+
+    @Test("Discovered sensors report plausible temperatures and power")
+    func sensorsAreConsistent() {
+        let smc = SMCService()
+        let catalogue = SensorCatalogue(smc: smc)
+
+        let thermal = ThermalSampler(smc: smc, catalogue: catalogue).sample()
+        if thermal.isAvailable {
+            #expect(thermal.sensorCount > 0)
+            for reading in [thermal.cpu, thermal.gpu, thermal.battery, thermal.enclosure].compactMap({ $0 }) {
+                #expect(SensorCatalogue.plausibleTemperature.contains(reading))
+            }
+            #expect((0...1).contains(thermal.fraction))
+        }
+
+        let power = PowerSampler(smc: smc, catalogue: catalogue).sample()
+        if power.isAvailable {
+            #expect(power.watts > 0)
+            // A Mac drawing more than its adapter can supply would be a bad reading.
+            #expect(power.watts < 400)
+            #expect((0...1).contains(power.fraction))
+        }
     }
 
     @Test("The monitor keeps a bounded history per metric")

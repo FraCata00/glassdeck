@@ -81,6 +81,10 @@ final class TouchBarStripView: NSView {
             TouchBarPalette.compactRPM(snapshot.fans.topRPM, isAvailable: snapshot.fans.isAvailable)
         case .battery:
             snapshot.battery.headline
+        case .temperature:
+            snapshot.thermal.hottest.map { "\(Int($0.rounded()))°" } ?? "–"
+        case .power:
+            snapshot.power.isAvailable ? "\(Int(snapshot.power.watts.rounded()))W" : "–"
         }
     }
 

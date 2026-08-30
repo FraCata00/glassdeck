@@ -87,6 +87,29 @@ struct MetricsModelTests {
         #expect(charging.caption == "charging · 20m to full")
     }
 
+    @Test("Temperature maps idle-to-throttling onto the gauge")
+    func thermalScaling() {
+        #expect(ThermalUsage(cpu: 30, isAvailable: true).fraction == 0)
+        #expect(ThermalUsage(cpu: 65, isAvailable: true).fraction == 0.5)
+        #expect(ThermalUsage(cpu: 110, isAvailable: true).fraction == 1)
+        // The hottest sensor wins, whichever group it belongs to.
+        #expect(ThermalUsage(cpu: 50, gpu: 71, battery: 32, isAvailable: true).headline == "71°C")
+        #expect(ThermalUsage.unavailable.headline == "n/a")
+    }
+
+    @Test("Power is scaled against the adapter's rating when one is attached")
+    func powerScaling() {
+        let onCharger = PowerUsage(watts: 32.5, adapterWatts: 65, isAvailable: true)
+        #expect(onCharger.fraction == 0.5)
+        #expect(onCharger.headline == "33 W")
+        #expect(onCharger.caption == "of a 65 W adapter")
+
+        // No adapter reading: a 60 W stand-in keeps the gauge meaningful.
+        let onBattery = PowerUsage(watts: 6, isAvailable: true)
+        #expect(onBattery.referenceWatts == 60)
+        #expect(onBattery.headline == "6.0 W")
+    }
+
     @Test("Network load is scaled against a 100 Mbit reference")
     func networkScaling() {
         #expect(NetworkThroughput(downloadBytesPerSecond: 12_500_000).loadFraction == 1)
@@ -96,7 +119,11 @@ struct MetricsModelTests {
 
     @Test("Metric identifiers are stable, because settings persist them")
     func metricIdentifiers() {
-        #expect(MetricKind.allCases.map(\.rawValue) == ["cpu", "gpu", "memory", "disk", "network", "fans", "battery"])
+        #expect(
+            MetricKind.allCases.map(\.rawValue) == [
+                "cpu", "gpu", "memory", "disk", "network", "fans", "battery", "temperature", "power",
+            ]
+        )
         #expect(MetricKind(rawValue: "memory") == .memory)
     }
 }

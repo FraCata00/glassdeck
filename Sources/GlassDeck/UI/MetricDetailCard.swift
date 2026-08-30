@@ -124,6 +124,41 @@ struct MetricDetailCard: View {
                 )
             }
             return items
+        case .temperature:
+            guard snapshot.thermal.isAvailable else {
+                return [Detail(label: "sensors", value: "none")]
+            }
+            var items: [Detail] = []
+            if let cpu = snapshot.thermal.cpu {
+                items.append(Detail(label: "cpu", value: "\(Int(cpu.rounded()))°C"))
+            }
+            if let gpu = snapshot.thermal.gpu {
+                items.append(Detail(label: "gpu", value: "\(Int(gpu.rounded()))°C"))
+            }
+            if let battery = snapshot.thermal.battery {
+                items.append(Detail(label: "battery", value: "\(Int(battery.rounded()))°C"))
+            }
+            if let enclosure = snapshot.thermal.enclosure {
+                items.append(Detail(label: "case", value: "\(Int(enclosure.rounded()))°C"))
+            }
+            return items
+        case .power:
+            guard snapshot.power.isAvailable else {
+                return [Detail(label: "power", value: "n/a")]
+            }
+            var items = [Detail(label: "now", value: snapshot.power.headline)]
+            if let adapter = snapshot.power.adapterWatts, adapter > 5 {
+                items.append(Detail(label: "adapter", value: "\(Int(adapter.rounded())) W"))
+            }
+            if snapshot.battery.isAvailable {
+                items.append(
+                    Detail(
+                        label: "source",
+                        value: snapshot.battery.isPluggedIn ? "wall" : "battery"
+                    )
+                )
+            }
+            return items
         }
     }
 }

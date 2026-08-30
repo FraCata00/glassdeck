@@ -13,7 +13,18 @@ final class TouchBarBatteryView: NSView {
         }
     }
 
-    override var intrinsicContentSize: NSSize { NSSize(width: 62, height: 30) }
+    /// Shown beside the charge where the bar has room for it.
+    var power: PowerUsage = .unavailable {
+        didSet {
+            guard power != oldValue else { return }
+            invalidateIntrinsicContentSize()
+            needsDisplay = true
+        }
+    }
+
+    override var intrinsicContentSize: NSSize {
+        NSSize(width: power.isAvailable ? 116 : 62, height: 30)
+    }
     override var allowsVibrancy: Bool { true }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -96,6 +107,11 @@ final class TouchBarBatteryView: NSView {
         bolt.stroke()
     }
 
+    /// Width the charge label gets, leaving room for the wattage when it is shown.
+    private func percentageWidth(from x: CGFloat) -> CGFloat {
+        bounds.width - x - 6 - (power.isAvailable ? 52 : 0)
+    }
+
     private func drawPercentage(after x: CGFloat, tint: NSColor) {
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .right
@@ -106,6 +122,18 @@ final class TouchBarBatteryView: NSView {
                 .foregroundColor: tint,
                 .paragraphStyle: paragraph,
             ]
-        ).draw(in: NSRect(x: x, y: 8, width: bounds.width - x - 6, height: 15))
+        ).draw(in: NSRect(x: x, y: 8, width: percentageWidth(from: x), height: 15))
+
+        guard power.isAvailable else { return }
+        let paragraphRight = NSMutableParagraphStyle()
+        paragraphRight.alignment = .right
+        NSAttributedString(
+            string: power.headline,
+            attributes: [
+                .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium),
+                .foregroundColor: NSColor.white.withAlphaComponent(0.72),
+                .paragraphStyle: paragraphRight,
+            ]
+        ).draw(in: NSRect(x: x + percentageWidth(from: x), y: 8, width: 52, height: 15))
     }
 }

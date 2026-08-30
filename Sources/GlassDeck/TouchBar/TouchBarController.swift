@@ -60,7 +60,12 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     /// are clipped, so panels are sized to fit this budget and alignment uses a
     /// spacer only as wide as the leftover space.
     private static let sharedRegionWidth: CGFloat = 540
+
+    /// Usable width when GlassDeck owns the whole bar.
+    private static let fullRegionWidth: CGFloat = 1004
     private static let itemSpacing: CGFloat = 8
+    /// Pinned width of the shrink, grow and dashboard buttons.
+    private static let controlWidth: CGFloat = 46
 
     /// True when this Mac actually has a Touch Bar and the private hooks resolved.
     let isSupported: Bool
@@ -270,6 +275,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         stripView.snapshot = snapshot
         miniStripView.snapshot = snapshot
         batteryView.battery = snapshot.battery
+        if mode == .fullscreen { batteryView.power = snapshot.power }
         for (kind, view) in metricViews {
             view.snapshot = snapshot
             view.history = monitor.history(for: kind)
@@ -309,14 +315,28 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     /// is never a panel — it rides along as the compact chip on the right.
     private func metrics(for mode: Mode) -> [MetricKind] {
         guard mode != .mini else { return [] }
-        var metrics = preferences.touchBarMetrics.filter { $0 != .fans && $0 != .battery }
-        if mode == .fullscreen {
-            if monitor.snapshot.fans.isAvailable { metrics.append(.fans) }
-            return metrics
+
+        // Battery rides in the chip on the right, and power rides along with it.
+        var metrics = preferences.touchBarMetrics.filter { $0 != .battery && $0 != .power }
+
+        guard mode == .fullscreen else {
+            // Sharing the bar with the Control Strip leaves roughly 540 pt: four
+            // narrow panels plus the controls is the most that stays legible.
+            return Array(metrics.filter { $0 != .fans && $0 != .temperature }.prefix(4))
         }
-        // Sharing the bar with the Control Strip leaves roughly 640 pt: four
-        // narrow panels plus the controls is the most that stays legible.
-        return Array(metrics.prefix(4))
+
+        // Hardware readings that only full width has room for, appended in the
+        // order they earn their place.
+        for extra in [MetricKind.fans, .temperature] where !metrics.contains(extra) {
+            if monitor.snapshot.supports(extra) { metrics.append(extra) }
+        }
+        metrics = metrics.filter { monitor.snapshot.supports($0) }
+
+        let controls = (monitor.snapshot.battery.isAvailable ? batteryView.intrinsicContentSize.width + Self.itemSpacing : 0)
+            + 3 * (Self.controlWidth + Self.itemSpacing)
+        let room = Self.fullRegionWidth - controls
+        let fitting = max(1, Int(room / (metricPanelWidth(for: mode) + Self.itemSpacing)))
+        return Array(metrics.prefix(fitting))
     }
 
     /// The bar is built before the first sample lands, so battery and fan
@@ -382,7 +402,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
             switch identifier {
             case Self.miniMeterItem: width += miniStripView.intrinsicContentSize.width
             case Self.batteryItem: width += batteryView.intrinsicContentSize.width
-            case Self.resizeItem, Self.collapseItem, Self.dashboardItem: width += 46
+            case Self.resizeItem, Self.collapseItem, Self.dashboardItem: width += Self.controlWidth
             default: width += metricPanelWidth(for: mode)
             }
         }
@@ -390,7 +410,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     }
 
     private func metricPanelWidth(for mode: Mode) -> CGFloat {
-        mode == .fullscreen ? 124 : 84
+        mode == .fullscreen ? 108 : 84
     }
 
     func touchBar(
@@ -429,6 +449,8 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         case Self.batteryItem:
             let item = NSCustomTouchBarItem(identifier: identifier)
             batteryView.battery = monitor.snapshot.battery
+            // Full width has room to spell out the draw next to the charge.
+            batteryView.power = mode == .fullscreen ? monitor.snapshot.power : .unavailable
             item.view = batteryView
             return item
         case Self.dashboardItem:
@@ -477,6 +499,11 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         let control = NSButton(image: image, target: self, action: action)
         control.bezelStyle = .rounded
         control.setAccessibilityLabel(accessibilityDescription)
+        // A bezelled button sizes itself to about 75 pt, which is a metric panel's
+        // worth of space per button; pinning the width keeps the layout inside the
+        // budget the bar actually grants.
+        control.translatesAutoresizingMaskIntoConstraints = false
+        control.widthAnchor.constraint(equalToConstant: Self.controlWidth).isActive = true
         item.view = control
         return item
     }
