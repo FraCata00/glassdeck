@@ -21,13 +21,13 @@ public enum MetricKind: String, Sendable, CaseIterable, Codable, Identifiable {
         switch self {
         case .cpu: "CPU"
         case .gpu: "GPU"
-        case .memory: "Memory"
-        case .disk: "Disk"
-        case .network: "Network"
-        case .fans: "Fans"
-        case .battery: "Battery"
-        case .temperature: "Temperature"
-        case .power: "Power"
+        case .memory: L.t("metric.memory", "Memory")
+        case .disk: L.t("metric.disk", "Disk")
+        case .network: L.t("metric.network", "Network")
+        case .fans: L.t("metric.fans", "Fans")
+        case .battery: L.t("metric.battery", "Battery")
+        case .temperature: L.t("metric.temperature", "Temperature")
+        case .power: L.t("metric.power", "Power")
         }
     }
 

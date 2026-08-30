@@ -155,9 +155,9 @@ enum SystemIdentity {
         let days = uptime / 86_400
         let hours = (uptime % 86_400) / 3_600
         let minutes = (uptime % 3_600) / 60
-        if days > 0 { return "up \(days)d \(hours)h" }
-        if hours > 0 { return "up \(hours)h \(minutes)m" }
-        return "up \(minutes)m"
+        if days > 0 { return String(format: String(localized: "up %1$lldd %2$lldh"), days, hours) }
+        if hours > 0 { return String(format: String(localized: "up %1$lldh %2$lldm"), hours, minutes) }
+        return String(format: String(localized: "up %lldm"), minutes)
     }
 
     /// `machdep.cpu.brand_string` is the friendliest name available without IOKit.

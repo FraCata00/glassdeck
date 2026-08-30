@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "GlassDeck",
+    defaultLocalization: "en",
     platforms: [.macOS(.v15)],
     products: [
         .executable(name: "GlassDeck", targets: ["GlassDeck"]),
@@ -11,6 +12,7 @@ let package = Package(
     targets: [
         .target(
             name: "GlassDeckKit",
+            resources: [.process("Resources")],
             swiftSettings: [.swiftLanguageMode(.v6)],
             linkerSettings: [.linkedFramework("IOKit")]
         ),

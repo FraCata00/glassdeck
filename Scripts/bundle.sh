@@ -47,6 +47,14 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 cp "$BINARY" "$APP/Contents/MacOS/GlassDeck"
 cp Resources/GlassDeck.icns "$APP/Contents/Resources/GlassDeck.icns"
+
+# Localisations: the app reads its own tables from the bundle, while GlassDeckKit
+# carries the SwiftPM resource bundle holding the words the samplers produce.
+cp -R Resources/Localizations/*.lproj "$APP/Contents/Resources/"
+BIN_DIR="$(dirname "$BINARY")"
+if [[ -d "$BIN_DIR/GlassDeck_GlassDeckKit.bundle" ]]; then
+    cp -R "$BIN_DIR/GlassDeck_GlassDeckKit.bundle" "$APP/Contents/Resources/"
+fi
 sed -e "s/__VERSION__/$VERSION/" -e "s/__BUILD__/$BUILD_NUMBER/" \
     Resources/Info.plist > "$APP/Contents/Info.plist"
 

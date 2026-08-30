@@ -1,0 +1,44 @@
+/* Pannello e dashboard */
+"Dashboard" = "Dashboard";
+"Settings" = "Impostazioni";
+"Quit GlassDeck" = "Esci da GlassDeck";
+"Top processes" = "Processi principali";
+"Sampling…" = "Campionamento…";
+"load %@" = "carico %@";
+"up %1$lldd %2$lldh" = "accesa da %1$lldg %2$lldh";
+"up %1$lldh %2$lldm" = "accesa da %1$lldh %2$lldm";
+"up %lldm" = "accesa da %lldm";
+
+/* Sezioni impostazioni */
+"General" = "Generali";
+"Metrics" = "Metriche";
+"Touch Bar" = "Touch Bar";
+
+/* Generali */
+"Refresh interval" = "Intervallo di aggiornamento";
+"Sampling every %@s. Lower is snappier, higher is kinder to the battery." = "Campionamento ogni %@ s. Più basso è più reattivo, più alto consuma meno batteria.";
+"Menu bar" = "Barra dei menu";
+"Menu bar metric" = "Metrica nella barra dei menu";
+"Show top processes" = "Mostra i processi principali";
+"Open at login" = "Apri all'accesso";
+"Live bars" = "Barre live";
+"Icon + value" = "Icona e valore";
+"Icon only" = "Solo icona";
+
+/* Metriche */
+"Shown in the panel and dashboard" = "Visibili nel pannello e nella dashboard";
+
+/* Touch Bar */
+"Show GlassDeck on the Touch Bar" = "Mostra GlassDeck sulla Touch Bar";
+"Placement" = "Collocazione";
+"Position" = "Posizione";
+"Metrics in the Touch Bar strip" = "Metriche nella striscia Touch Bar";
+"Control Strip button" = "Pulsante nel Control Strip";
+"Take over the whole Touch Bar" = "Occupa tutta la Touch Bar";
+"A compact meter sits in the expanded Control Strip. Tap it for the full-width graphs." = "Un misuratore compatto resta nel Control Strip esteso. Toccalo per aprire i grafici a piena larghezza.";
+"GlassDeck occupies the entire Touch Bar. Other apps' bars still take priority while they are frontmost." = "GlassDeck occupa tutta la Touch Bar. Le barre delle altre app hanno comunque la precedenza mentre sono in primo piano.";
+"The shrink button steps down through full width, the compact bar and a small meter; only a tap on the smallest one hands the Touch Bar back, and the Control Strip meter brings it straight back." = "Il pulsante di riduzione scala tra piena larghezza, barra compatta e misuratore ridotto: solo toccandolo sul più piccolo la Touch Bar torna al sistema, e il misuratore nel Control Strip la riporta subito indietro.";
+"No Touch Bar detected on this Mac. The setting is kept for when GlassDeck runs on one." = "Nessuna Touch Bar rilevata su questo Mac. L'impostazione resta salvata per quando GlassDeck girerà su un Mac che ce l'ha.";
+"Left" = "Sinistra";
+"Centre" = "Centro";
+"Right, beside the Control Strip" = "Destra, accanto al Control Strip";

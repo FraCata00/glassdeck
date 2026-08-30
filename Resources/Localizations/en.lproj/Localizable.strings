@@ -1,0 +1,44 @@
+/* Panel and dashboard */
+"Dashboard" = "Dashboard";
+"Settings" = "Settings";
+"Quit GlassDeck" = "Quit GlassDeck";
+"Top processes" = "Top processes";
+"Sampling…" = "Sampling…";
+"load %@" = "load %@";
+"up %1$lldd %2$lldh" = "up %1$lldd %2$lldh";
+"up %1$lldh %2$lldm" = "up %1$lldh %2$lldm";
+"up %lldm" = "up %lldm";
+
+/* Settings tabs */
+"General" = "General";
+"Metrics" = "Metrics";
+"Touch Bar" = "Touch Bar";
+
+/* General tab */
+"Refresh interval" = "Refresh interval";
+"Sampling every %@s. Lower is snappier, higher is kinder to the battery." = "Sampling every %@s. Lower is snappier, higher is kinder to the battery.";
+"Menu bar" = "Menu bar";
+"Menu bar metric" = "Menu bar metric";
+"Show top processes" = "Show top processes";
+"Open at login" = "Open at login";
+"Live bars" = "Live bars";
+"Icon + value" = "Icon + value";
+"Icon only" = "Icon only";
+
+/* Metrics tab */
+"Shown in the panel and dashboard" = "Shown in the panel and dashboard";
+
+/* Touch Bar tab */
+"Show GlassDeck on the Touch Bar" = "Show GlassDeck on the Touch Bar";
+"Placement" = "Placement";
+"Position" = "Position";
+"Metrics in the Touch Bar strip" = "Metrics in the Touch Bar strip";
+"Control Strip button" = "Control Strip button";
+"Take over the whole Touch Bar" = "Take over the whole Touch Bar";
+"A compact meter sits in the expanded Control Strip. Tap it for the full-width graphs." = "A compact meter sits in the expanded Control Strip. Tap it for the full-width graphs.";
+"GlassDeck occupies the entire Touch Bar. Other apps' bars still take priority while they are frontmost." = "GlassDeck occupies the entire Touch Bar. Other apps' bars still take priority while they are frontmost.";
+"The shrink button steps down through full width, the compact bar and a small meter; only a tap on the smallest one hands the Touch Bar back, and the Control Strip meter brings it straight back." = "The shrink button steps down through full width, the compact bar and a small meter; only a tap on the smallest one hands the Touch Bar back, and the Control Strip meter brings it straight back.";
+"No Touch Bar detected on this Mac. The setting is kept for when GlassDeck runs on one." = "No Touch Bar detected on this Mac. The setting is kept for when GlassDeck runs on one.";
+"Left" = "Left";
+"Centre" = "Centre";
+"Right, beside the Control Strip" = "Right, beside the Control Strip";

@@ -63,8 +63,8 @@ public struct MetricsSnapshot: Sendable, Equatable {
         switch kind {
         case .cpu:
             var items = [
-                MetricDetail(label: "user", value: ValueFormatter.percent(cpu.user)),
-                MetricDetail(label: "system", value: ValueFormatter.percent(cpu.system)),
+                MetricDetail(label: L.t("detail.user", "user"), value: ValueFormatter.percent(cpu.user)),
+                MetricDetail(label: L.t("detail.system", "system"), value: ValueFormatter.percent(cpu.system)),
             ]
             if let performance = cpu.performanceClusterLoad {
                 items.append(MetricDetail(label: "P-cores", value: ValueFormatter.percent(performance)))
@@ -73,65 +73,67 @@ public struct MetricsSnapshot: Sendable, Equatable {
                 items.append(MetricDetail(label: "E-cores", value: ValueFormatter.percent(efficiency)))
             }
             if let load = cpu.loadAverage.first {
-                items.append(MetricDetail(label: "load 1m", value: ValueFormatter.decimal(load)))
+                items.append(MetricDetail(label: L.t("detail.load", "load 1m"), value: ValueFormatter.decimal(load)))
             }
             return items
 
         case .gpu:
-            guard gpu.isAvailable else { return [MetricDetail(label: "gpu", value: "n/a")] }
+            guard gpu.isAvailable else { return [MetricDetail(label: L.t("detail.gpu", "gpu"), value: L.t("value.na", "n/a"))] }
             return [
-                MetricDetail(label: "device", value: ValueFormatter.percent(gpu.utilisation)),
-                MetricDetail(label: "renderer", value: ValueFormatter.percent(gpu.rendererUtilisation)),
-                MetricDetail(label: "tiler", value: ValueFormatter.percent(gpu.tilerUtilisation)),
+                MetricDetail(label: L.t("detail.device", "device"), value: ValueFormatter.percent(gpu.utilisation)),
+                MetricDetail(label: L.t("detail.renderer", "renderer"), value: ValueFormatter.percent(gpu.rendererUtilisation)),
+                MetricDetail(label: L.t("detail.tiler", "tiler"), value: ValueFormatter.percent(gpu.tilerUtilisation)),
                 MetricDetail(label: "vram", value: ValueFormatter.bytes(gpu.allocatedMemory)),
             ]
 
         case .memory:
             return [
-                MetricDetail(label: "used", value: ValueFormatter.bytes(memory.used)),
-                MetricDetail(label: "wired", value: ValueFormatter.bytes(memory.wired)),
-                MetricDetail(label: "compressed", value: ValueFormatter.bytes(memory.compressed)),
-                MetricDetail(label: "swap", value: ValueFormatter.bytes(memory.swapUsed)),
+                MetricDetail(label: L.t("detail.used", "used"), value: ValueFormatter.bytes(memory.used)),
+                MetricDetail(label: L.t("detail.wired", "wired"), value: ValueFormatter.bytes(memory.wired)),
+                MetricDetail(label: L.t("detail.compressed", "compressed"), value: ValueFormatter.bytes(memory.compressed)),
+                MetricDetail(label: L.t("detail.swap", "swap"), value: ValueFormatter.bytes(memory.swapUsed)),
             ]
 
         case .disk:
             return [
-                MetricDetail(label: "used", value: ValueFormatter.bytes(disk.used)),
-                MetricDetail(label: "free", value: ValueFormatter.bytes(disk.free)),
-                MetricDetail(label: "read", value: ValueFormatter.rate(disk.readBytesPerSecond)),
-                MetricDetail(label: "write", value: ValueFormatter.rate(disk.writeBytesPerSecond)),
+                MetricDetail(label: L.t("detail.used", "used"), value: ValueFormatter.bytes(disk.used)),
+                MetricDetail(label: L.t("detail.free", "free"), value: ValueFormatter.bytes(disk.free)),
+                MetricDetail(label: L.t("detail.read", "read"), value: ValueFormatter.rate(disk.readBytesPerSecond)),
+                MetricDetail(label: L.t("detail.write", "write"), value: ValueFormatter.rate(disk.writeBytesPerSecond)),
             ]
 
         case .network:
             return [
-                MetricDetail(label: "down", value: ValueFormatter.rate(network.downloadBytesPerSecond)),
-                MetricDetail(label: "up", value: ValueFormatter.rate(network.uploadBytesPerSecond)),
+                MetricDetail(label: L.t("detail.down", "down"), value: ValueFormatter.rate(network.downloadBytesPerSecond)),
+                MetricDetail(label: L.t("detail.up", "up"), value: ValueFormatter.rate(network.uploadBytesPerSecond)),
             ]
 
         case .fans:
-            guard fans.isAvailable else { return [MetricDetail(label: "fans", value: "none")] }
+            guard fans.isAvailable else { return [MetricDetail(label: L.t("detail.fans", "fans"), value: L.t("value.none", "none"))] }
             let speeds = fans.fans.map { fan in
                 MetricDetail(
-                    label: fans.fans.count > 1 ? "fan \(fan.index + 1)" : "speed",
-                    value: fan.rpm > 0 ? "\(Int(fan.rpm.rounded())) rpm" : "idle"
+                    label: fans.fans.count > 1
+                        ? L.t("detail.fanIndex", "fan %lld", fan.index + 1)
+                        : L.t("detail.speed", "speed"),
+                    value: fan.rpm > 0 ? L.t("value.rpm", "%lld rpm", Int(fan.rpm.rounded())) : L.t("value.idle", "idle")
                 )
             }
             let maximum = fans.fans.map(\.maximumRPM).max() ?? 0
-            return speeds + [MetricDetail(label: "max", value: "\(Int(maximum)) rpm")]
+            return speeds + [MetricDetail(label: L.t("detail.max", "max"), value: "\(Int(maximum)) rpm")]
 
         case .battery:
-            guard battery.isAvailable else { return [MetricDetail(label: "battery", value: "none")] }
+            guard battery.isAvailable else { return [MetricDetail(label: L.t("detail.battery", "battery"), value: L.t("value.none", "none"))] }
             var items = [
-                MetricDetail(label: "charge", value: battery.headline),
+                MetricDetail(label: L.t("detail.charge", "charge"), value: battery.headline),
                 MetricDetail(
-                    label: "state",
-                    value: battery.isCharging ? "charging" : (battery.isPluggedIn ? "on power" : "on battery")
+                    label: L.t("detail.state", "state"),
+                    value: battery.isCharging ? L.t("battery.charging", "charging") : (battery.isPluggedIn ? L.t("battery.onPower", "on power") : L.t("battery.onBattery", "on battery"))
                 ),
             ]
             if let minutes = battery.minutesRemaining {
                 items.append(
                     MetricDetail(
-                        label: battery.isCharging ? "to full" : "remaining",
+                        label: battery.isCharging ? L.t("detail.toFull", "to full") : L.t("detail.remaining", "remaining"),
                         value: minutes >= 60 ? "\(minutes / 60)h \(minutes % 60)m" : "\(minutes)m"
                     )
                 )
@@ -139,31 +141,31 @@ public struct MetricsSnapshot: Sendable, Equatable {
             // Draw belongs here rather than in the battery chip: it is the number
             // you want once you are already asking about power.
             if power.isAvailable {
-                items.append(MetricDetail(label: "draw", value: power.headline))
+                items.append(MetricDetail(label: L.t("detail.draw", "draw"), value: power.headline))
             }
             return items
 
         case .temperature:
-            guard thermal.isAvailable else { return [MetricDetail(label: "sensors", value: "none")] }
+            guard thermal.isAvailable else { return [MetricDetail(label: L.t("detail.sensors", "sensors"), value: L.t("value.none", "none"))] }
             var items: [MetricDetail] = []
-            if let cpu = thermal.cpu { items.append(MetricDetail(label: "cpu", value: "\(Int(cpu.rounded()))°C")) }
-            if let gpu = thermal.gpu { items.append(MetricDetail(label: "gpu", value: "\(Int(gpu.rounded()))°C")) }
+            if let cpu = thermal.cpu { items.append(MetricDetail(label: L.t("detail.cpu", "cpu"), value: "\(Int(cpu.rounded()))°C")) }
+            if let gpu = thermal.gpu { items.append(MetricDetail(label: L.t("detail.gpu", "gpu"), value: "\(Int(gpu.rounded()))°C")) }
             if let battery = thermal.battery {
-                items.append(MetricDetail(label: "battery", value: "\(Int(battery.rounded()))°C"))
+                items.append(MetricDetail(label: L.t("detail.battery", "battery"), value: "\(Int(battery.rounded()))°C"))
             }
             if let enclosure = thermal.enclosure {
-                items.append(MetricDetail(label: "case", value: "\(Int(enclosure.rounded()))°C"))
+                items.append(MetricDetail(label: L.t("detail.case", "case"), value: "\(Int(enclosure.rounded()))°C"))
             }
             return items
 
         case .power:
-            guard power.isAvailable else { return [MetricDetail(label: "power", value: "n/a")] }
-            var items = [MetricDetail(label: "now", value: power.headline)]
+            guard power.isAvailable else { return [MetricDetail(label: L.t("detail.power", "power"), value: L.t("value.na", "n/a"))] }
+            var items = [MetricDetail(label: L.t("detail.now", "now"), value: power.headline)]
             if let adapter = power.adapterWatts, adapter > 5 {
-                items.append(MetricDetail(label: "adapter", value: "\(Int(adapter.rounded())) W"))
+                items.append(MetricDetail(label: L.t("detail.adapter", "adapter"), value: "\(Int(adapter.rounded())) W"))
             }
             if battery.isAvailable {
-                items.append(MetricDetail(label: "source", value: battery.isPluggedIn ? "wall" : "battery"))
+                items.append(MetricDetail(label: L.t("detail.source", "source"), value: battery.isPluggedIn ? L.t("value.wall", "wall") : L.t("value.battery", "battery")))
             }
             return items
         }
@@ -201,13 +203,13 @@ public struct MetricsSnapshot: Sendable, Equatable {
     public func caption(for kind: MetricKind) -> String {
         switch kind {
         case .cpu:
-            "\(ValueFormatter.percent(cpu.user)) user · \(ValueFormatter.percent(cpu.system)) sys"
+            L.t("cpu.caption", "%1$@ user · %2$@ sys", ValueFormatter.percent(cpu.user), ValueFormatter.percent(cpu.system))
         case .gpu:
-            gpu.isAvailable ? gpu.name : "no accelerator"
+            gpu.isAvailable ? gpu.name : L.t("gpu.none", "no accelerator")
         case .memory:
-            "\(ValueFormatter.bytes(memory.total)) total · \(ValueFormatter.bytes(memory.swapUsed)) swap"
+            L.t("memory.caption", "%1$@ total · %2$@ swap", ValueFormatter.bytes(memory.total), ValueFormatter.bytes(memory.swapUsed))
         case .disk:
-            "\(ValueFormatter.bytes(disk.free)) free of \(ValueFormatter.bytes(disk.total))"
+            L.t("disk.caption", "%1$@ free of %2$@", ValueFormatter.bytes(disk.free), ValueFormatter.bytes(disk.total))
         case .network:
             "↓ \(ValueFormatter.rate(network.downloadBytesPerSecond)) ↑ \(ValueFormatter.rate(network.uploadBytesPerSecond))"
         case .fans:
@@ -468,18 +470,18 @@ public struct FanUsage: Sendable, Equatable {
     public var topRPM: Double { fans.map(\.rpm).max() ?? 0 }
 
     public var headline: String {
-        guard isAvailable else { return "n/a" }
-        guard topRPM > 0 else { return "idle" }
-        return "\(Int(topRPM.rounded())) rpm"
+        guard isAvailable else { return L.t("value.na", "n/a") }
+        guard topRPM > 0 else { return L.t("value.idle", "idle") }
+        return L.t("value.rpm", "%lld rpm", Int(topRPM.rounded()))
     }
 
     public var caption: String {
-        guard isAvailable else { return "fanless Mac" }
+        guard isAvailable else { return L.t("fans.none", "fanless Mac") }
         if fans.count > 1 {
             return fans.map { "\(Int($0.rpm.rounded()))" }.joined(separator: " · ") + " rpm"
         }
-        guard let fan = fans.first else { return "no fan" }
-        return "range \(Int(fan.minimumRPM))–\(Int(fan.maximumRPM)) rpm"
+        guard let fan = fans.first else { return L.t("fans.missing", "no fan") }
+        return L.t("fans.range", "range %1$lld–%2$lld rpm", Int(fan.minimumRPM), Int(fan.maximumRPM))
     }
 }
 
@@ -514,13 +516,15 @@ public struct BatteryUsage: Sendable, Equatable {
     public var headline: String { isAvailable ? "\(percentage)%" : "n/a" }
 
     public var caption: String {
-        guard isAvailable else { return "no battery" }
-        let state = isCharging ? "charging" : (isPluggedIn ? "on power" : "on battery")
+        guard isAvailable else { return L.t("battery.none", "no battery") }
+        let state = isCharging ? L.t("battery.charging", "charging") : (isPluggedIn ? L.t("battery.onPower", "on power") : L.t("battery.onBattery", "on battery"))
         guard let minutesRemaining else { return state }
         let hours = minutesRemaining / 60
         let minutes = minutesRemaining % 60
         let remaining = hours > 0 ? "\(hours)h \(minutes)m" : "\(minutes)m"
-        return isCharging ? "\(state) · \(remaining) to full" : "\(state) · \(remaining) left"
+        return isCharging
+            ? L.t("battery.toFull", "%1$@ · %2$@ to full", state, remaining)
+            : L.t("battery.left", "%1$@ · %2$@ left", state, remaining)
     }
 
     /// SF Symbol matching the current level, mirroring the system's own glyph set.
@@ -584,13 +588,13 @@ public struct ThermalUsage: Sendable, Equatable {
     }
 
     public var caption: String {
-        guard isAvailable else { return "no sensors" }
+        guard isAvailable else { return L.t("thermal.none", "no sensors") }
         var parts: [String] = []
         if let cpu { parts.append("CPU \(Int(cpu.rounded()))°") }
         if let gpu { parts.append("GPU \(Int(gpu.rounded()))°") }
-        if let battery { parts.append("battery \(Int(battery.rounded()))°") }
-        if let enclosure, parts.count < 3 { parts.append("case \(Int(enclosure.rounded()))°") }
-        return parts.isEmpty ? "no sensors" : parts.joined(separator: " · ")
+        if let battery { parts.append(L.t("thermal.battery", "battery %lld°", Int(battery.rounded()))) }
+        if let enclosure, parts.count < 3 { parts.append(L.t("thermal.case", "case %lld°", Int(enclosure.rounded()))) }
+        return parts.isEmpty ? L.t("thermal.none", "no sensors") : parts.joined(separator: " · ")
     }
 }
 
@@ -619,13 +623,13 @@ public struct PowerUsage: Sendable, Equatable {
     public var fraction: Double { (watts / referenceWatts).clamped01 }
 
     public var headline: String {
-        guard isAvailable else { return "n/a" }
+        guard isAvailable else { return L.t("value.na", "n/a") }
         return watts < 10 ? String(format: "%.1f W", watts) : "\(Int(watts.rounded())) W"
     }
 
     public var caption: String {
-        guard isAvailable else { return "not reported" }
-        guard let adapterWatts, adapterWatts > 5 else { return "system total" }
-        return "of a \(Int(adapterWatts.rounded())) W adapter"
+        guard isAvailable else { return L.t("power.none", "not reported") }
+        guard let adapterWatts, adapterWatts > 5 else { return L.t("power.total", "system total") }
+        return L.t("power.adapter", "of a %lld W adapter", Int(adapterWatts.rounded()))
     }
 }

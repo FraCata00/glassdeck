@@ -27,9 +27,9 @@ final class Preferences {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .graph: "Live bars"
-            case .percentage: "Icon + value"
-            case .icon: "Icon only"
+            case .graph: String(localized: "Live bars")
+            case .percentage: String(localized: "Icon + value")
+            case .icon: String(localized: "Icon only")
             }
         }
     }
@@ -44,17 +44,17 @@ final class Preferences {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .controlStrip: "Control Strip button"
-            case .alwaysOn: "Take over the whole Touch Bar"
+            case .controlStrip: String(localized: "Control Strip button")
+            case .alwaysOn: String(localized: "Take over the whole Touch Bar")
             }
         }
 
         var explanation: String {
             switch self {
             case .controlStrip:
-                "A compact meter sits in the expanded Control Strip. Tap it for the full-width graphs."
+                String(localized: "A compact meter sits in the expanded Control Strip. Tap it for the full-width graphs.")
             case .alwaysOn:
-                "GlassDeck occupies the entire Touch Bar. Other apps' bars still take priority while they are frontmost."
+                String(localized: "GlassDeck occupies the entire Touch Bar. Other apps' bars still take priority while they are frontmost.")
             }
         }
     }
@@ -68,9 +68,9 @@ final class Preferences {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .leading: "Left"
-            case .center: "Centre"
-            case .trailing: "Right, beside the Control Strip"
+            case .leading: String(localized: "Left")
+            case .center: String(localized: "Centre")
+            case .trailing: String(localized: "Right, beside the Control Strip")
             }
         }
     }
