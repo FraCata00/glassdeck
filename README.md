@@ -96,8 +96,12 @@ the centre, or beside the Control Strip (the default).
 ```sh
 brew tap fracata00/tap
 brew trust fracata00/tap          # Homebrew asks this of every third-party tap
-brew install --cask --no-quarantine glassdeck
+brew install --cask glassdeck
+xattr -dr com.apple.quarantine /Applications/GlassDeck.app
 ```
+
+The last step is needed because the build is signed ad hoc rather than notarised;
+Homebrew 6 removed the `--no-quarantine` install flag.
 
 ### From a release
 
