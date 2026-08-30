@@ -11,19 +11,20 @@ concurrency:
 
 jobs:
   kit:
-    name: Kit (build + test)
+    name: Kit portability (macOS 15)
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v5
       - name: Show toolchain
         run: swift --version
+      # Only the kit: it must stay free of the Liquid Glass APIs, which need the
+      # macOS 26 SDK. `swift test` would build the app target too, so it runs in
+      # the job below instead.
       - name: Build GlassDeckKit
         run: swift build --target GlassDeckKit
-      - name: Test
-        run: swift test --filter GlassDeckKitTests
 
   app:
-    name: App (macOS 26 SDK)
+    name: App and tests (macOS 26)
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v5
@@ -33,6 +34,8 @@ jobs:
           swift --version
       - name: Build the app
         run: swift build -c release
+      - name: Test
+        run: swift test
       - name: Bundle GlassDeck.app
         run: Scripts/bundle.sh --version 0.0.0-ci
       - name: Check the bundle
