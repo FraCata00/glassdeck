@@ -55,7 +55,7 @@ public actor MetricsEngine {
             network: network.sample(at: now),
             fans: sensors.fans.sample(),
             battery: battery.sample(),
-            thermal: sensors.thermal.sample(),
+            thermal: sensors.thermal.sample(at: now),
             power: sensors.power.sample()
         )
     }

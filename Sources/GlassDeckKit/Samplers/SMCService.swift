@@ -65,6 +65,11 @@ final class SMCService {
 
     private var connection: io_connect_t = 0
 
+    /// A key's size and type are fixed for a given key on a given machine, but
+    /// asking for them is a full round trip to the SMC — and every read asked
+    /// again. Caching them halves what each sensor costs.
+    private var keyInfoCache: [UInt32: KeyInfoData] = [:]
+
     /// `nil` when no SMC user client could be opened (virtual machines, future OSes).
     init?() {
         let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSMC"))
@@ -101,22 +106,34 @@ final class SMCService {
     }
 
     private func read(_ key: String) -> (type: String, bytes: [UInt8])? {
-        var info = ParamStruct()
-        info.key = Self.fourCharCode(key)
-        info.data8 = Selector.getKeyInfo
-        guard let metadata = call(info) else { return nil }
+        let code = Self.fourCharCode(key)
+        guard let metadata = keyInfo(for: code) else { return nil }
 
         var request = ParamStruct()
-        request.key = info.key
-        request.keyInfo.dataSize = metadata.keyInfo.dataSize
+        request.key = code
+        request.keyInfo.dataSize = metadata.dataSize
         request.data8 = Selector.readKey
         guard let response = call(request) else { return nil }
 
         let payload = withUnsafeBytes(of: response.bytes) { Array($0) }
         return (
-            Self.string(from: metadata.keyInfo.dataType),
-            Array(payload.prefix(Int(metadata.keyInfo.dataSize)))
+            Self.string(from: metadata.dataType),
+            Array(payload.prefix(Int(metadata.dataSize)))
         )
+    }
+
+    private func keyInfo(for code: UInt32) -> KeyInfoData? {
+        if let cached = keyInfoCache[code] { return cached }
+
+        var info = ParamStruct()
+        info.key = code
+        info.data8 = Selector.getKeyInfo
+        // A key the machine does not have is left uncached, so it stays a miss
+        // rather than being remembered as a bad answer.
+        guard let response = call(info) else { return nil }
+
+        keyInfoCache[code] = response.keyInfo
+        return response.keyInfo
     }
 
     private func call(_ input: ParamStruct) -> ParamStruct? {

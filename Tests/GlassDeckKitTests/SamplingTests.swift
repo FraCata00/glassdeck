@@ -120,3 +120,46 @@ struct SamplingTests {
         #expect(monitor.snapshot.timestamp.timeIntervalSinceNow > -5)
     }
 }
+
+/// Reading every thermometer costs about 19 ms — more than every other metric
+/// put together — and temperature moves with the machine's thermal mass, not
+/// with the sampling cadence.
+@Suite("Thermal sampling cadence")
+struct ThermalCadenceTests {
+    @Test("A reading stands for the refresh interval, then the sensors are read again")
+    func readingsAreReused() {
+        let smc = SMCService()
+        let sampler = ThermalSampler(
+            smc: smc,
+            catalogue: SensorCatalogue(smc: smc),
+            refreshInterval: 5
+        )
+        let start = Date()
+
+        _ = sampler.sample(at: start)
+        #expect(sampler.readCount == 1)
+
+        // Ticks inside the window reuse it, whatever the cadence.
+        for offset in [1.5, 3.0, 4.5, 4.99] {
+            _ = sampler.sample(at: start.addingTimeInterval(offset))
+        }
+        #expect(sampler.readCount == 1)
+
+        // The first tick past it reads again.
+        _ = sampler.sample(at: start.addingTimeInterval(5))
+        #expect(sampler.readCount == 2)
+
+        _ = sampler.sample(at: start.addingTimeInterval(9.9))
+        #expect(sampler.readCount == 2)
+    }
+
+    @Test("A reused reading is the same reading, not a fresh zero")
+    func reusedReadingIsUnchanged() {
+        let smc = SMCService()
+        let sampler = ThermalSampler(smc: smc, catalogue: SensorCatalogue(smc: smc), refreshInterval: 5)
+        let start = Date()
+
+        let first = sampler.sample(at: start)
+        #expect(sampler.sample(at: start.addingTimeInterval(2)) == first)
+    }
+}
