@@ -56,3 +56,9 @@
 
 /* Metrics tab */
 "Drag to reorder. The order is shared by the panel, the Touch Bar and the menu bar." = "Drag to reorder. The order is shared by the panel, the Touch Bar and the menu bar.";
+
+/* Temperature alert */
+"Warn when the Mac runs hot" = "Warn when the Mac runs hot";
+"Warn above" = "Warn above";
+"A notification once the hottest sensor passes %lld°C, and not again until it has cooled down." = "A notification once the hottest sensor passes %lld°C, and not again until it has cooled down.";
+"Running hot: %1$lld°C, above the %2$lld°C you asked about." = "Running hot: %1$lld°C, above the %2$lld°C you asked about.";

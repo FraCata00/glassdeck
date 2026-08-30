@@ -18,6 +18,7 @@ final class AppModel {
     let monitor: SystemMonitor
     let touchBar: TouchBarController
 
+    @ObservationIgnored private let alerts: ThresholdAlerts
     @ObservationIgnored private var dashboardWindow: NSWindow?
     @ObservationIgnored private var settingsWindow: NSWindow?
     @ObservationIgnored private var signalSources: [any DispatchSourceSignal] = []
@@ -28,6 +29,7 @@ final class AppModel {
         self.preferences = preferences
         self.monitor = monitor
         self.touchBar = TouchBarController(monitor: monitor, preferences: preferences)
+        self.alerts = ThresholdAlerts(preferences: preferences, monitor: monitor)
         touchBar.onOpenDashboard = { [weak self] in self?.showDashboard() }
     }
 
@@ -36,6 +38,7 @@ final class AppModel {
         NSApp.touchBar = touchBar.makeApplicationTouchBar()
         touchBar.synchroniseWithPreferences()
         observePreferences()
+        alerts.start()
         installSignalHandlers()
 
         applyDevelopmentOverrides()

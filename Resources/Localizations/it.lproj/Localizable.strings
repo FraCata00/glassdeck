@@ -56,3 +56,9 @@
 
 /* Metrics tab */
 "Drag to reorder. The order is shared by the panel, the Touch Bar and the menu bar." = "Trascina per riordinare. L'ordine vale per il pannello, la Touch Bar e la barra dei menu.";
+
+/* Temperature alert */
+"Warn when the Mac runs hot" = "Avvisami quando il Mac scalda";
+"Warn above" = "Avvisa sopra";
+"A notification once the hottest sensor passes %lld°C, and not again until it has cooled down." = "Una notifica quando il sensore più caldo supera %lld°C, e non di nuovo finché non si è raffreddato.";
+"Running hot: %1$lld°C, above the %2$lld°C you asked about." = "Sta scaldando: %1$lld°C, sopra i %2$lld°C che avevi impostato.";

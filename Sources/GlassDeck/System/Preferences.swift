@@ -17,6 +17,8 @@ final class Preferences {
         static let touchBarAlignment = "touchBarAlignment"
         static let showsProcesses = "showsProcesses"
         static let metricOrder = "metricOrder"
+        static let temperatureAlert = "temperatureAlert"
+        static let temperatureThreshold = "temperatureThreshold"
     }
 
     /// How the status item renders in the menu bar.
@@ -97,6 +99,17 @@ final class Preferences {
     /// not, so turning one off and on again does not lose its place.
     var metricOrder: [MetricKind] { didSet { store(metricOrder, forKey: Key.metricOrder) } }
 
+    /// Off by default: an app that asks to send notifications before it has been
+    /// asked to do anything is a bad guest.
+    var isTemperatureAlertEnabled: Bool {
+        didSet { defaults.set(isTemperatureAlertEnabled, forKey: Key.temperatureAlert) }
+    }
+
+    /// Degrees Celsius. 85 is where a Mac is working hard but not yet throttling.
+    var temperatureThreshold: Double {
+        didSet { defaults.set(temperatureThreshold, forKey: Key.temperatureThreshold) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         let storedInterval = defaults.double(forKey: Key.interval)
@@ -112,6 +125,9 @@ final class Preferences {
             .flatMap(TouchBarAlignment.init(rawValue:)) ?? .trailing
         showsProcesses = defaults.object(forKey: Key.showsProcesses) as? Bool ?? true
         metricOrder = Self.repairedOrder(Self.read(Key.metricOrder, from: defaults))
+        isTemperatureAlertEnabled = defaults.object(forKey: Key.temperatureAlert) as? Bool ?? false
+        let storedThreshold = defaults.double(forKey: Key.temperatureThreshold)
+        temperatureThreshold = storedThreshold > 0 ? storedThreshold : 85
 
         // Selections stored before the order was changed — or before this
         // version — are brought into line. Assigned here rather than through the

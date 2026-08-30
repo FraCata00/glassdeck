@@ -58,6 +58,32 @@ struct SettingsView: View {
 
                 Toggle("Show top processes", isOn: preferences.showsProcesses)
 
+                if monitor.snapshot.supports(.temperature) {
+                    Toggle("Warn when the Mac runs hot", isOn: Binding(
+                        get: { preferences.wrappedValue.isTemperatureAlertEnabled },
+                        set: { enabled in
+                            preferences.wrappedValue.isTemperatureAlertEnabled = enabled
+                            // Permission is asked for only when it is turned on.
+                            if enabled { ThresholdAlerts.requestAuthorization() }
+                        }
+                    ))
+
+                    if preferences.wrappedValue.isTemperatureAlertEnabled {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Slider(value: preferences.temperatureThreshold, in: 60...100, step: 5) {
+                                Text("Warn above")
+                            } minimumValueLabel: {
+                                Text("60°C").font(.caption2)
+                            } maximumValueLabel: {
+                                Text("100°C").font(.caption2)
+                            }
+                            Text("A notification once the hottest sensor passes \(Int(preferences.wrappedValue.temperatureThreshold))°C, and not again until it has cooled down.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
                 // Written through a binding rather than `onChange` so that only
                 // the user's own taps register the login item: refreshing the
                 // toggle from the system below must not write back.
@@ -97,6 +123,9 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        // A list renders toggles as checkboxes by default, which would not match
+        // the switches in the other two tabs.
+        .toggleStyle(.switch)
     }
 
     private func touchBarSettings(preferences: Bindable<Preferences>) -> some View {
