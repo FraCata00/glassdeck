@@ -5,6 +5,56 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-08-31
+
+### Added
+
+- **Reorderable metrics.** The order was whichever one they happened to be
+  declared in, and nothing could change it. Drag them in Settings → Metrics and
+  the panel's gauges, the Touch Bar's panels and the status item's bars all
+  follow the one list. A metric added in a later version appends itself rather
+  than resetting the order.
+- **A warning when the Mac runs hot.** Set a threshold and GlassDeck posts a
+  notification once the hottest sensor passes it. Off by default, permission is
+  asked for only when it is switched on, and the alert re-arms only after the
+  temperature has fallen five degrees, so a reading sitting on the line notifies
+  once instead of repeatedly. The setting appears only on a Mac with sensors.
+
+### Changed
+
+- **The throughput gauges scale against the machine rather than a constant.**
+  Network used a fixed 100 Mbit ceiling, so on anything faster any real download
+  pinned the meter to full and it said nothing for the rest of the transfer. The
+  full scale is now the fastest rate seen recently, faded a little each sample so
+  one burst does not flatten the gauge, with a floor so background chatter cannot
+  read as a busy network.
+- **The disk graph follows the disk working.** It drew capacity where network
+  drew throughput, so its sparkline was a flat line at however full the volume is
+  while the disk was plainly busy. The graph, the ring and the value now follow
+  the busier of read and write. Capacity has not gone: it stays in the caption as
+  "x free of y", and used, free, read and write remain in the details.
+- **The panel scrolls** rather than losing its own bottom. With every metric
+  enabled and the process list on it runs past 800 pt, and it used to be exactly
+  as tall as its content, so on a short screen the footer was simply cut off.
+- **GlassDeckKit API**: `NetworkThroughput` and `DiskUsage` gain
+  `referenceBytesPerSecond`, `busiestBytesPerSecond`, `loadFraction` and a
+  `minimumReference`. Nothing was removed or renamed.
+
+### Fixed
+
+- Turning off the selected metric no longer leaves the panel's detail card, or
+  the dashboard's hero gauge, describing a gauge that is no longer on screen —
+  and a first run with CPU disabled no longer opens on CPU regardless.
+- The menu bar metric picker offered all nine kinds whatever the hardware, so
+  "Fans" could be chosen on a fanless Mac and pin the status item to n/a for
+  good. It offers what the machine reports, and an older stored choice falls back.
+- VoiceOver reads the Touch Bar's content. The panels, the strip meter, the
+  battery chip and the expanded bar were drawn rather than composed of controls,
+  so they had no accessibility at all — only GlassDeck's buttons did.
+- Touch Bar panel text is measured against the room it has instead of guessed
+  from the panel's width, so "TEMPERATURE" is no longer clipped to "TEMPERATU"
+  at widths where "TMP" fits.
+
 ## [1.4.1] - 2026-08-30
 
 ### Fixed
@@ -155,6 +205,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[1.5.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.5.0
 [1.4.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.4.1
 [1.4.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.4.0
 [1.3.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.3.0
