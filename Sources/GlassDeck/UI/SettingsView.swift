@@ -1,3 +1,5 @@
+import AppKit
+import Combine
 import GlassDeckKit
 import SwiftUI
 
@@ -34,7 +36,7 @@ struct SettingsView: View {
                     } maximumValueLabel: {
                         Text("5s").font(.caption2)
                     }
-                    Text("Sampling every \(ValueFormatter.decimal(preferences.wrappedValue.refreshInterval))s. Lower is snappier, higher is kinder to the battery.")
+                    Text("Sampling every \(ValueFormatter.seconds(preferences.wrappedValue.refreshInterval))s. Lower is snappier, higher is kinder to the battery.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -53,12 +55,21 @@ struct SettingsView: View {
 
                 Toggle("Show top processes", isOn: preferences.showsProcesses)
 
-                Toggle("Open at login", isOn: $launchesAtLogin)
-                    .onChange(of: launchesAtLogin) { _, enabled in
-                        if !LoginItem.setEnabled(enabled) {
-                            launchesAtLogin = LoginItem.isEnabled
-                        }
+                // Written through a binding rather than `onChange` so that only
+                // the user's own taps register the login item: refreshing the
+                // toggle from the system below must not write back.
+                Toggle("Open at login", isOn: Binding(
+                    get: { launchesAtLogin },
+                    set: { wanted in
+                        launchesAtLogin = LoginItem.setEnabled(wanted) ? wanted : LoginItem.isEnabled
                     }
+                ))
+                // The switch also lives in System Settings, so the window can be
+                // sitting on a stale answer by the time it is looked at again.
+                .onAppear { launchesAtLogin = LoginItem.isEnabled }
+                .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                    launchesAtLogin = LoginItem.isEnabled
+                }
             }
         }
         .formStyle(.grouped)

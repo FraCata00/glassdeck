@@ -33,8 +33,14 @@ public enum ValueFormatter {
         return "\(bytes(value))/s"
     }
 
-    /// One decimal place, used for load averages.
+    /// Two decimal places, matching how `uptime` prints load averages.
     public static func decimal(_ value: Double) -> String {
         String(format: "%.2f", value.isFinite ? value : 0)
+    }
+
+    /// One decimal place, for a cadence the user picked on a slider: the
+    /// half-second steps read as `1.5`, not as `1.50`.
+    public static func seconds(_ value: Double) -> String {
+        String(format: "%.1f", value.isFinite ? value : 0)
     }
 }
