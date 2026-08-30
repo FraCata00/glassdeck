@@ -91,6 +91,14 @@ the centre, or beside the Control Strip (the default).
 
 ## Install
 
+### Homebrew
+
+```sh
+brew tap fracata00/tap
+brew trust fracata00/tap          # Homebrew asks this of every third-party tap
+brew install --cask --no-quarantine glassdeck
+```
+
 ### From a release
 
 1. Download `GlassDeck.zip` from the [latest release](https://github.com/FraCata00/glassdeck/releases/latest).
