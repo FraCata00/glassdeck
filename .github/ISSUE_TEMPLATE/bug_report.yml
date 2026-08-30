@@ -1,0 +1,31 @@
+name: Bug report
+description: Something in GlassDeck misbehaves
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got instead.
+    validations:
+      required: true
+  - type: input
+    id: mac
+    attributes:
+      label: Mac and macOS version
+      placeholder: MacBook Pro (M1, 2020), macOS 26.1 — has a Touch Bar
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: GlassDeck version
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Anything in the log
+      description: "`log show --predicate 'process == \"GlassDeck\"' --last 5m`"
+      render: shell

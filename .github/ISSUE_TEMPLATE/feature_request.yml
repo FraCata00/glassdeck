@@ -1,0 +1,15 @@
+name: Feature request
+description: Suggest a metric or a behaviour
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like GlassDeck to do
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it matters
+      description: What you are trying to see or decide at a glance.

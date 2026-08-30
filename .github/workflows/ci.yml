@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kit:
+    name: Kit (build + test)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Show toolchain
+        run: swift --version
+      - name: Build GlassDeckKit
+        run: swift build --target GlassDeckKit
+      - name: Test
+        run: swift test --filter GlassDeckKitTests
+
+  app:
+    name: App (macOS 26 SDK)
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Build the app
+        run: swift build -c release
+      - name: Bundle GlassDeck.app
+        run: Scripts/bundle.sh --version 0.0.0-ci
+      - name: Check the bundle
+        run: |
+          test -x .build/bundle/GlassDeck.app/Contents/MacOS/GlassDeck
+          plutil -lint .build/bundle/GlassDeck.app/Contents/Info.plist
+          codesign --verify --verbose .build/bundle/GlassDeck.app
+
+  commits:
+    name: Conventional commits
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: wagoid/commitlint-github-action@v6
