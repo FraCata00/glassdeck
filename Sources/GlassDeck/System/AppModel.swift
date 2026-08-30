@@ -20,6 +20,7 @@ final class AppModel {
 
     @ObservationIgnored private var dashboardWindow: NSWindow?
     @ObservationIgnored private var settingsWindow: NSWindow?
+    @ObservationIgnored private var signalSources: [any DispatchSourceSignal] = []
 
     private init() {
         let preferences = Preferences()
@@ -34,20 +35,40 @@ final class AppModel {
         monitor.start()
         touchBar.synchroniseWithPreferences()
         observePreferences()
+        installSignalHandlers()
 
         applyDevelopmentOverrides()
+    }
+
+    /// A presented system-modal Touch Bar outlives the process that put it there:
+    /// if GlassDeck is killed while its bar is up, the Touch Bar stays stuck on a
+    /// dead bar until the system's Touch Bar server is restarted. `applicationWillTerminate`
+    /// does not run for a signal, so SIGINT and SIGTERM are handled explicitly and
+    /// the bar is taken down before exiting.
+    private func installSignalHandlers() {
+        for signalNumber in [SIGINT, SIGTERM, SIGHUP] {
+            signal(signalNumber, SIG_IGN)
+            let source = DispatchSource.makeSignalSource(signal: signalNumber, queue: .main)
+            source.setEventHandler { [weak self] in
+                self?.touchBar.shutDown()
+                exit(0)
+            }
+            source.resume()
+            signalSources.append(source)
+        }
     }
 
     /// Neither the Touch Bar nor a menu bar extra can be driven by scripted
     /// clicks, so two environment variables let a build come up in a given state
     /// for screenshots and manual testing:
-    /// `GLASSDECK_TOUCHBAR_MODE=fullscreen|expanded` and `GLASSDECK_OPEN_DASHBOARD=1`.
+    /// `GLASSDECK_TOUCHBAR_MODE=fullscreen|expanded|mini` and `GLASSDECK_OPEN_DASHBOARD=1`.
     private func applyDevelopmentOverrides() {
         let environment = ProcessInfo.processInfo.environment
 
         switch environment["GLASSDECK_TOUCHBAR_MODE"] {
         case "fullscreen": touchBar.present(.fullscreen)
         case "expanded": touchBar.present(.expanded)
+        case "mini": touchBar.present(.mini)
         default: break
         }
 
@@ -57,10 +78,12 @@ final class AppModel {
 
     }
 
+    /// Tears everything down on quit *without* touching stored settings: writing
+    /// preferences here meant a single quit left the Touch Bar switched off for
+    /// every later launch.
     func stop() {
         monitor.stop()
-        preferences.isTouchBarEnabled = false
-        touchBar.synchroniseWithPreferences()
+        touchBar.shutDown()
     }
 
     // MARK: - Windows
