@@ -9,7 +9,7 @@
 [![CI](https://github.com/FraCata00/glassdeck/actions/workflows/ci.yml/badge.svg)](https://github.com/FraCata00/glassdeck/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/FraCata00/glassdeck?color=blue)](https://github.com/FraCata00/glassdeck/releases/latest)
 [![Platform](https://img.shields.io/badge/macOS-15%2B-black?logo=apple)](https://www.apple.com/macos/)
-[![Swift](https://img.shields.io/badge/Swift-6.2-orange?logo=swift)](https://swift.org)
+[![Swift](https://img.shields.io/badge/Swift-6.1%2B-orange?logo=swift)](https://swift.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 </div>
