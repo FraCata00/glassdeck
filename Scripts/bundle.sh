@@ -33,9 +33,13 @@ fi
 BUILD_NUMBER="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 
 echo "▸ Building GlassDeck $VERSION ($CONFIGURATION)"
-swift build -c "$CONFIGURATION" "${ARCH_FLAGS[@]}"
+# `${a[@]}` on an empty array trips `set -u` under the bash 3.2 that ships with
+# macOS, so the expansion is guarded.
+ARCHS=(${ARCH_FLAGS[@]+"${ARCH_FLAGS[@]}"})
 
-BINARY="$(swift build -c "$CONFIGURATION" "${ARCH_FLAGS[@]}" --show-bin-path)/GlassDeck"
+swift build -c "$CONFIGURATION" ${ARCHS[@]+"${ARCHS[@]}"}
+
+BINARY="$(swift build -c "$CONFIGURATION" ${ARCHS[@]+"${ARCHS[@]}"} --show-bin-path)/GlassDeck"
 APP=".build/bundle/GlassDeck.app"
 
 rm -rf "$APP"
