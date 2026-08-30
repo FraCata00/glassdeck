@@ -107,6 +107,26 @@ struct SamplingTests {
         #expect(monitor.samplesProcesses == false)
     }
 
+    @Test("The coarse snapshot is held back between publications")
+    @MainActor
+    func coarseSnapshotIsThrottled() async {
+        let monitor = SystemMonitor(interval: 0.1)
+        #expect(monitor.coarseSnapshot == .empty)
+
+        // The first sample publishes straight away, so the menu bar is not blank
+        // for the length of the coarse interval at launch.
+        await monitor.refreshNow()
+        let first = monitor.coarseSnapshot
+        #expect(first != .empty)
+        #expect(first == monitor.snapshot)
+
+        // A second sample well inside the interval moves the fine snapshot but
+        // not the coarse one — which is what keeps the status item still.
+        await monitor.refreshNow()
+        #expect(monitor.snapshot != first)
+        #expect(monitor.coarseSnapshot == first)
+    }
+
     @Test("The monitor keeps a bounded history per metric")
     @MainActor
     func monitorHistory() async {

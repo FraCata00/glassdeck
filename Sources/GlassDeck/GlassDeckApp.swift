@@ -28,13 +28,16 @@ private struct MenuBarLabel: View {
     @Bindable var preferences: Preferences
 
     var body: some View {
+        // Reads `coarseSnapshot`, never `snapshot`: redrawing the status item is
+        // the app's largest single cost, and this body re-runs — and the status
+        // item redraws — on every property it touches that changes.
         switch preferences.menuBarStyle {
         case .graph:
-            Image(nsImage: MenuBarGlyph.bars(for: monitor.snapshot, metrics: preferences.dashboardMetrics))
+            Image(nsImage: MenuBarGlyph.bars(for: monitor.coarseSnapshot, metrics: preferences.dashboardMetrics))
         case .percentage:
             HStack(spacing: 3) {
                 Image(systemName: preferences.menuBarMetric.symbolName)
-                Text(monitor.snapshot.headline(for: preferences.menuBarMetric))
+                Text(monitor.coarseSnapshot.headline(for: preferences.menuBarMetric))
                     .monospacedDigit()
             }
         case .icon:

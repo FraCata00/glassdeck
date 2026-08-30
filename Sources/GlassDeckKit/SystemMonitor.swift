@@ -10,6 +10,20 @@ public final class SystemMonitor {
     public static let historyLength = 60
 
     public private(set) var snapshot: MetricsSnapshot = .empty
+
+    /// The same reading, republished on a slower cadence for surfaces whose
+    /// redraw costs more than the freshness buys.
+    ///
+    /// The menu bar status item is the case this exists for. Updating it costs
+    /// about 22 ms of CPU every time — profiling the running app found it to be
+    /// the single largest cost, well above all the sampling — for a glyph 15 pt
+    /// tall. Because `@Observable` tracks each property separately, a view that
+    /// reads this and not `snapshot` is invalidated only when this is assigned.
+    public private(set) var coarseSnapshot: MetricsSnapshot = .empty
+
+    /// Shortest gap between two `coarseSnapshot` publications. At the default
+    /// cadence this halves how often the status item is redrawn.
+    public static let coarseInterval: TimeInterval = 2
     public private(set) var topProcesses: [ProcessSample] = []
     public private(set) var isRunning = false
 
@@ -32,6 +46,7 @@ public final class SystemMonitor {
     /// the scan off under the other.
     private var processObservers = 0
 
+    private var lastCoarsePublish: Date?
     private var history: [MetricKind: RingBuffer<Double>] = [:]
     private let engine = MetricsEngine()
     private var task: Task<Void, Never>?
@@ -109,5 +124,15 @@ public final class SystemMonitor {
         for kind in MetricKind.allCases {
             history[kind]?.append(snapshot.fraction(for: kind))
         }
+
+        // Held back until enough time has passed, so the expensive surfaces are
+        // not redrawn at the sampling cadence. Sampling faster than the coarse
+        // interval speeds up the graphs without speeding up the status item.
+        if let lastCoarsePublish,
+           snapshot.timestamp.timeIntervalSince(lastCoarsePublish) < Self.coarseInterval {
+            return
+        }
+        lastCoarsePublish = snapshot.timestamp
+        coarseSnapshot = snapshot
     }
 }
