@@ -23,8 +23,13 @@ public enum ValueFormatter {
     }
 
     /// Throughput with a `/s` suffix: `"1.4 MB/s"`.
+    ///
+    /// Converting a `Double` at or above `UInt64.max` is a hard trap, not a
+    /// rounding error, so the value saturates instead: a rate that large can only
+    /// be a bad reading, and a wrong label beats a crashed menu bar.
     public static func rate(_ bytesPerSecond: Double) -> String {
-        let value = bytesPerSecond.isFinite && bytesPerSecond > 0 ? UInt64(bytesPerSecond) : 0
+        guard bytesPerSecond.isFinite, bytesPerSecond > 0 else { return "\(bytes(0))/s" }
+        let value = bytesPerSecond >= Double(UInt64.max) ? UInt64.max : UInt64(bytesPerSecond)
         return "\(bytes(value))/s"
     }
 

@@ -24,13 +24,22 @@ public final class DiskSampler {
         if let previous = previousCounters, let previousTime = previousSampleTime {
             let interval = now.timeIntervalSince(previousTime)
             if interval > 0 {
-                usage.readBytesPerSecond = Double(counters.read &- previous.read) / interval
-                usage.writeBytesPerSecond = Double(counters.written &- previous.written) / interval
+                usage.readBytesPerSecond = Self.rate(counters.read, since: previous.read, over: interval)
+                usage.writeBytesPerSecond = Self.rate(counters.written, since: previous.written, over: interval)
             }
         }
         previousCounters = counters
         previousSampleTime = now
         return usage
+    }
+
+    /// The counters are a sum across every block storage driver, so unmounting an
+    /// external disk makes the total go *down*. That is a smaller set of devices,
+    /// not negative I/O: reporting nothing for one tick beats letting the
+    /// subtraction wrap into a rate of billions of gigabytes per second.
+    private static func rate(_ current: UInt64, since previous: UInt64, over interval: TimeInterval) -> Double {
+        guard current >= previous else { return 0 }
+        return Double(current - previous) / interval
     }
 
     private func capacity() -> DiskUsage {
