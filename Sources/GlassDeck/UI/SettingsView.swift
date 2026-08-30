@@ -87,7 +87,16 @@ struct SettingsView: View {
                     }
                 }
                 .disabled(!preferences.wrappedValue.isTouchBarEnabled)
+                Picker("Position", selection: preferences.touchBarAlignment) {
+                    ForEach(Preferences.TouchBarAlignment.allCases) { alignment in
+                        Text(alignment.title).tag(alignment)
+                    }
+                }
+                .disabled(!preferences.wrappedValue.isTouchBarEnabled)
                 Text(preferences.wrappedValue.touchBarPresentation.explanation)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("The shrink button steps down through full width, the compact bar and a small meter; only a tap on the smallest one hands the Touch Bar back, and the Control Strip meter brings it straight back.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if !touchBar.isSupported {

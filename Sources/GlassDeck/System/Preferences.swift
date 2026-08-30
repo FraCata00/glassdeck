@@ -14,6 +14,7 @@ final class Preferences {
         static let menuBarStyle = "menuBarStyle"
         static let touchBarEnabled = "touchBarEnabled"
         static let touchBarPresentation = "touchBarPresentation"
+        static let touchBarAlignment = "touchBarAlignment"
         static let showsProcesses = "showsProcesses"
     }
 
@@ -58,6 +59,22 @@ final class Preferences {
         }
     }
 
+    /// Where the meters sit on the bar when they are not using its full width.
+    enum TouchBarAlignment: String, CaseIterable, Identifiable {
+        case leading
+        case center
+        case trailing
+
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .leading: "Left"
+            case .center: "Centre"
+            case .trailing: "Right, beside the Control Strip"
+            }
+        }
+    }
+
     private let defaults: UserDefaults
 
     var refreshInterval: Double { didSet { defaults.set(refreshInterval, forKey: Key.interval) } }
@@ -68,6 +85,9 @@ final class Preferences {
     var isTouchBarEnabled: Bool { didSet { defaults.set(isTouchBarEnabled, forKey: Key.touchBarEnabled) } }
     var touchBarPresentation: TouchBarPresentation {
         didSet { defaults.set(touchBarPresentation.rawValue, forKey: Key.touchBarPresentation) }
+    }
+    var touchBarAlignment: TouchBarAlignment {
+        didSet { defaults.set(touchBarAlignment.rawValue, forKey: Key.touchBarAlignment) }
     }
     var showsProcesses: Bool { didSet { defaults.set(showsProcesses, forKey: Key.showsProcesses) } }
 
@@ -82,6 +102,8 @@ final class Preferences {
         isTouchBarEnabled = defaults.object(forKey: Key.touchBarEnabled) as? Bool ?? true
         touchBarPresentation = defaults.string(forKey: Key.touchBarPresentation)
             .flatMap(TouchBarPresentation.init(rawValue:)) ?? .controlStrip
+        touchBarAlignment = defaults.string(forKey: Key.touchBarAlignment)
+            .flatMap(TouchBarAlignment.init(rawValue:)) ?? .trailing
         showsProcesses = defaults.object(forKey: Key.showsProcesses) as? Bool ?? true
     }
 
