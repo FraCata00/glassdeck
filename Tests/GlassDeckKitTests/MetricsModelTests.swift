@@ -3,16 +3,19 @@ import Testing
 
 @Suite("Metric models")
 struct MetricsModelTests {
-    @Test("Memory counts active, wired and compressed pages as used")
+    @Test("Memory used is app memory plus wired plus compressed, as Activity Monitor counts it")
     func memoryUsed() {
         let memory = MemoryUsage(
             total: 8_000,
-            active: 2_000,
+            appMemory: 2_000,
+            active: 3_500,
             wired: 1_000,
             compressed: 1_000,
             inactive: 3_000,
             free: 1_000
         )
+        // `active` is larger than app memory here on purpose: it counts evictable
+        // file-backed pages, and using it would report 5,500 as used.
         #expect(memory.used == 4_000)
         #expect(memory.usedFraction == 0.5)
         #expect(memory.pressure == 0.25)

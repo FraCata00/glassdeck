@@ -309,6 +309,9 @@ public struct GPUUsage: Sendable, Equatable {
 /// Physical memory breakdown, mirroring the categories Activity Monitor reports.
 public struct MemoryUsage: Sendable, Equatable {
     public var total: UInt64
+    /// Anonymous pages an app has actually asked for, net of what it has marked
+    /// purgeable — what Activity Monitor calls "App Memory".
+    public var appMemory: UInt64
     public var active: UInt64
     public var wired: UInt64
     public var compressed: UInt64
@@ -319,6 +322,7 @@ public struct MemoryUsage: Sendable, Equatable {
 
     public init(
         total: UInt64 = 0,
+        appMemory: UInt64 = 0,
         active: UInt64 = 0,
         wired: UInt64 = 0,
         compressed: UInt64 = 0,
@@ -328,6 +332,7 @@ public struct MemoryUsage: Sendable, Equatable {
         swapTotal: UInt64 = 0
     ) {
         self.total = total
+        self.appMemory = appMemory
         self.active = active
         self.wired = wired
         self.compressed = compressed
@@ -339,8 +344,14 @@ public struct MemoryUsage: Sendable, Equatable {
 
     public static let zero = MemoryUsage()
 
-    /// Memory that cannot be reclaimed on demand — the number users think of as "used".
-    public var used: UInt64 { active &+ wired &+ compressed }
+    /// What Activity Monitor calls "Memory Used": app memory, plus the pages the
+    /// kernel has wired down, plus whatever the compressor is holding.
+    ///
+    /// `active` is deliberately not part of this. It counts file-backed pages
+    /// that are in use but evictable on demand, so building the figure from it
+    /// both counts cache as used and misses anonymous pages that have gone
+    /// inactive — a number close to the right one for the wrong reasons.
+    public var used: UInt64 { appMemory &+ wired &+ compressed }
 
     public var usedFraction: Double {
         total == 0 ? 0 : (Double(used) / Double(total)).clamped01

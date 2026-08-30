@@ -18,8 +18,14 @@ public final class MemorySampler {
         }
 
         let swap = Self.swapUsage()
+        // App memory is the anonymous pages an app asked for, less the ones it
+        // has told the kernel it may throw away.
+        let anonymous = UInt64(stats.internal_page_count)
+        let purgeable = UInt64(stats.purgeable_count)
+
         return MemoryUsage(
             total: physicalMemory,
+            appMemory: (anonymous > purgeable ? anonymous - purgeable : 0) * pageSize,
             active: UInt64(stats.active_count) * pageSize,
             wired: UInt64(stats.wire_count) * pageSize,
             compressed: UInt64(stats.compressor_page_count) * pageSize,
