@@ -77,6 +77,36 @@ struct SamplingTests {
         }
     }
 
+    @Test("Both open views have to close before the process scan stops")
+    @MainActor
+    func processObserversAreCounted() {
+        let monitor = SystemMonitor(interval: 1)
+        #expect(monitor.samplesProcesses == false)
+
+        monitor.beginSamplingProcesses()   // the menu bar panel opens
+        monitor.beginSamplingProcesses()   // the dashboard opens too
+        #expect(monitor.samplesProcesses)
+
+        monitor.endSamplingProcesses()     // the panel closes
+        #expect(monitor.samplesProcesses)  // the dashboard still wants the list
+
+        monitor.endSamplingProcesses()
+        #expect(monitor.samplesProcesses == false)
+    }
+
+    @Test("An unbalanced end cannot drive the count below zero")
+    @MainActor
+    func processObserverCountFloorsAtZero() {
+        let monitor = SystemMonitor(interval: 1)
+        monitor.endSamplingProcesses()
+        monitor.endSamplingProcesses()
+
+        monitor.beginSamplingProcesses()
+        #expect(monitor.samplesProcesses)
+        monitor.endSamplingProcesses()
+        #expect(monitor.samplesProcesses == false)
+    }
+
     @Test("The monitor keeps a bounded history per metric")
     @MainActor
     func monitorHistory() async {

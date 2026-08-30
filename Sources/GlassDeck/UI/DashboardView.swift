@@ -48,14 +48,8 @@ struct DashboardView: View {
         }
         .background(WindowChrome())
         .frame(minWidth: 560, minHeight: 480)
-        .task {
-            monitor.samplesProcesses = preferences.showsProcesses
-            await monitor.refreshNow()
-        }
-        .onDisappear { monitor.samplesProcesses = false }
-        .onChange(of: preferences.showsProcesses) { _, shows in
-            monitor.samplesProcesses = shows
-        }
+        .task { await monitor.refreshNow() }
+        .samplesProcesses(with: monitor, while: preferences.showsProcesses)
     }
 
     private var metrics: [MetricKind] {

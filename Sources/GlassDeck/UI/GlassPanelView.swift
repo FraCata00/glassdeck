@@ -42,14 +42,8 @@ struct GlassPanelView: View {
         }
         .padding(Self.panelPadding)
         .frame(width: Theme.panelWidth)
-        .task {
-            monitor.samplesProcesses = preferences.showsProcesses
-            await monitor.refreshNow()
-        }
-        .onDisappear { monitor.samplesProcesses = false }
-        .onChange(of: preferences.showsProcesses) { _, shows in
-            monitor.samplesProcesses = shows
-        }
+        .task { await monitor.refreshNow() }
+        .samplesProcesses(with: monitor, while: preferences.showsProcesses)
     }
 
     private var header: some View {

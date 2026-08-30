@@ -44,3 +44,35 @@ struct ProcessListView: View {
         .animation(.smooth(duration: 0.3), value: processes)
     }
 }
+
+/// Ties process sampling to a view's time on screen.
+///
+/// The panel and the dashboard both show the list and can both be open, so
+/// neither may simply switch the monitor's flag off when it goes away — the
+/// monitor counts the interested views instead.
+private struct ProcessSamplingLifetime: ViewModifier {
+    let monitor: SystemMonitor
+    let isEnabled: Bool
+
+    @State private var isRegistered = false
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { register(isEnabled) }
+            .onDisappear { register(false) }
+            .onChange(of: isEnabled) { _, wanted in register(wanted) }
+    }
+
+    /// Idempotent, so a repeated `onAppear` cannot register the same view twice.
+    private func register(_ wanted: Bool) {
+        guard wanted != isRegistered else { return }
+        isRegistered = wanted
+        if wanted { monitor.beginSamplingProcesses() } else { monitor.endSamplingProcesses() }
+    }
+}
+
+extension View {
+    func samplesProcesses(with monitor: SystemMonitor, while isEnabled: Bool) -> some View {
+        modifier(ProcessSamplingLifetime(monitor: monitor, isEnabled: isEnabled))
+    }
+}

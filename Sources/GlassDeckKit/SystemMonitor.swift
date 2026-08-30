@@ -21,8 +21,16 @@ public final class SystemMonitor {
         }
     }
 
-    /// Set while the dashboard is visible; keeps the process scan off the hot path otherwise.
-    public var samplesProcesses = false
+    /// True while at least one view showing the process list is on screen; keeps
+    /// the process scan off the hot path otherwise.
+    public private(set) var samplesProcesses = false
+
+    /// How many views currently want the process list.
+    ///
+    /// Counted rather than flagged: the menu bar panel and the dashboard can be
+    /// open at the same time, and whichever of them closes first must not switch
+    /// the scan off under the other.
+    private var processObservers = 0
 
     private var history: [MetricKind: RingBuffer<Double>] = [:]
     private let engine = MetricsEngine()
@@ -33,6 +41,18 @@ public final class SystemMonitor {
         for kind in MetricKind.allCases {
             history[kind] = RingBuffer<Double>(capacity: Self.historyLength)
         }
+    }
+
+    /// Registers interest in the process list. Balance every call with
+    /// `endSamplingProcesses()`.
+    public func beginSamplingProcesses() {
+        processObservers += 1
+        samplesProcesses = true
+    }
+
+    public func endSamplingProcesses() {
+        processObservers = max(0, processObservers - 1)
+        samplesProcesses = processObservers > 0
     }
 
     /// Rolling history for a metric, oldest sample first.
