@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-08-31
+
+### Fixed
+
+- The Touch Bar shows only the controls that do something. In full width the
+  resize button called "grow", and there is nothing larger than full width, so
+  it did nothing at all — while drawing a shrink glyph and telling VoiceOver it
+  would "leave full width", next to the chevron that actually shrinks. It is now
+  drawn only where there is a larger size to reach, and the width it was holding
+  goes to the panels: measured on the bar, five metrics go from 148 pt to 158 pt
+  each.
+
 ## [1.5.0] - 2026-08-31
 
 ### Added
@@ -205,6 +217,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[1.5.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.5.1
 [1.5.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.5.0
 [1.4.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.4.1
 [1.4.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.4.0
