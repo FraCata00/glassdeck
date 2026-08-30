@@ -10,6 +10,8 @@ final class TouchBarMetricView: NSView {
     var history: [Double] = [] { didSet { needsDisplay = true } }
     /// Panels are narrower on the shorter bar that leaves the Control Strip in place.
     var width: CGFloat = 168 { didSet { invalidateIntrinsicContentSize(); needsDisplay = true } }
+    /// Tapping a panel expands it into the metric's own bar.
+    var onTap: (() -> Void)?
 
     init(kind: MetricKind) {
         self.kind = kind
@@ -21,6 +23,16 @@ final class TouchBarMetricView: NSView {
 
     override var intrinsicContentSize: NSSize { NSSize(width: width, height: 30) }
     override var allowsVibrancy: Bool { true }
+
+    override func touchesBegan(with event: NSEvent) {
+        super.touchesBegan(with: event)
+        onTap?()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        super.mouseDown(with: event)
+        onTap?()
+    }
 
     override func draw(_ dirtyRect: NSRect) {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
