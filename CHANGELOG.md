@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.0] - 2026-08-30
 
 ### Fixed
 
@@ -46,6 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GlassDeck reaches the menu bar sooner. Building the SMC sensor catalogue costs
   about 50 ms and ran on the main thread before anything could be drawn; it now
   happens on the sampling actor, with the first sample paying for it.
+- **GlassDeckKit API**: `SystemMonitor.samplesProcesses` is now read-only. Views
+  register their interest with `beginSamplingProcesses()` and
+  `endSamplingProcesses()` instead, so that two open windows cannot switch the
+  scan off under one another. `MemoryUsage` gains `appMemory`, and
+  `ValueFormatter` gains `seconds(_:)`.
 
 ## [1.2.0] - 2026-08-30
 
@@ -107,7 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
-[Unreleased]: https://github.com/FraCata00/glassdeck/compare/v1.2.0...HEAD
+[1.3.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.3.0
 [1.2.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.2.0
 [1.1.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.1.0
 [1.0.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.0.0
