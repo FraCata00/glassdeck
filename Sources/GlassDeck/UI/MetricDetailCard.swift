@@ -9,6 +9,11 @@ struct MetricDetailCard: View {
     let history: [Double]
 
     var body: some View {
+        // Computed once: `details(for:)` builds and formats the whole array, and
+        // the row loop used to ask for it again for every item plus once more to
+        // find the last one.
+        let details = snapshot.details(for: kind)
+
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 Label(kind.title, systemImage: kind.symbolName)
@@ -25,7 +30,7 @@ struct MetricDetailCard: View {
                 .frame(height: 44)
 
             HStack(spacing: 14) {
-                ForEach(snapshot.details(for: kind)) { detail in
+                ForEach(details) { detail in
                     VStack(alignment: .leading, spacing: 1) {
                         Text(detail.value)
                             .font(.system(size: 12, weight: .medium))
@@ -34,7 +39,7 @@ struct MetricDetailCard: View {
                             .font(.system(size: 10))
                             .foregroundStyle(.secondary)
                     }
-                    if detail.id != snapshot.details(for: kind).last?.id { Spacer(minLength: 0) }
+                    if detail.id != details.last?.id { Spacer(minLength: 0) }
                 }
             }
         }
