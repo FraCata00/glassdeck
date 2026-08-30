@@ -151,7 +151,7 @@ Everything is read directly from public kernel interfaces — no shelling out to
 | Disk | `URLResourceValues` + `IOBlockStorageDriver` → `Statistics` |
 | Network | `getifaddrs` → `if_data` counters |
 | Fans | `AppleSMC` user client (`FNum`, `F<n>Ac/Mn/Mx`), read-only |
-| Temperature | `AppleSMC`, keys discovered at start-up and filtered to plausible readings |
+| Temperature | `AppleSMC`, keys discovered on the first sample and filtered to plausible readings |
 | Power | `AppleSMC` (`PSTR` and friends), with the adapter rating as full scale |
 | Battery | `IOPSCopyPowerSourcesInfo` |
 | Processes | `libproc` (`proc_listpids`, `proc_pidinfo`) |

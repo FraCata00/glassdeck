@@ -52,8 +52,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Temperature** and **power** metrics. Sensor keys differ per model, so the SMC
-  is enumerated once at start-up and only the keys returning plausible readings
-  are kept; power is scaled against the attached adapter's rating.
+  is enumerated once and only the keys returning plausible readings are kept;
+  power is scaled against the attached adapter's rating.
 - **Expandable Touch Bar panels**: tapping a panel — or the battery chip — opens
   that metric across the bar with the numbers behind its headline and its history.
 - **Italian localisation**, following the system language.
