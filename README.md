@@ -12,6 +12,8 @@
 [![Swift](https://img.shields.io/badge/Swift-6.1%2B-orange?logo=swift)](https://swift.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+**[fracata00.github.io/glassdeck](https://fracata00.github.io/glassdeck/)**
+
 </div>
 
 GlassDeck is a menu bar system monitor for macOS. It reads CPU, GPU, memory, disk,
@@ -202,6 +204,9 @@ nor a menu bar extra can be driven by scripted clicks:
 GLASSDECK_TOUCHBAR_MODE=fullscreen|expanded    # come up with the bar presented
 GLASSDECK_OPEN_DASHBOARD=1                     # come up with the dashboard open
 ```
+
+The product page lives in [`web/`](web/README.md) — Vue 3 and Vuetify, published
+to GitHub Pages on every push to `main` that touches it.
 
 ## Contributing
 

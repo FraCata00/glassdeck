@@ -16,3 +16,7 @@ xcuserdata/
 
 ## macOS
 .DS_Store
+
+## Web
+web/node_modules/
+web/dist/
