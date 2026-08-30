@@ -42,3 +42,14 @@
 "Left" = "Left";
 "Centre" = "Centre";
 "Right, beside the Control Strip" = "Right, beside the Control Strip";
+
+/* Touch Bar controls, read out by VoiceOver */
+"Back to the meters" = "Back to the meters";
+"Shrink GlassDeck" = "Shrink GlassDeck";
+"Hand the Touch Bar back until the Control Strip meter is tapped" = "Hand the Touch Bar back until the Control Strip meter is tapped";
+"Leave full width" = "Leave full width";
+"Use the full Touch Bar" = "Use the full Touch Bar";
+"Open the dashboard" = "Open the dashboard";
+
+/* Window titles */
+"GlassDeck Settings" = "GlassDeck Settings";

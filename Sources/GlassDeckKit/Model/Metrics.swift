@@ -119,7 +119,12 @@ public struct MetricsSnapshot: Sendable, Equatable {
                 )
             }
             let maximum = fans.fans.map(\.maximumRPM).max() ?? 0
-            return speeds + [MetricDetail(label: L.t("detail.max", "max"), value: "\(Int(maximum)) rpm")]
+            return speeds + [
+                MetricDetail(
+                    label: L.t("detail.max", "max"),
+                    value: L.t("value.rpm", "%lld rpm", Int(maximum))
+                ),
+            ]
 
         case .battery:
             guard battery.isAvailable else { return [MetricDetail(label: L.t("detail.battery", "battery"), value: L.t("value.none", "none"))] }
@@ -188,7 +193,7 @@ public struct MetricsSnapshot: Sendable, Equatable {
     public func headline(for kind: MetricKind) -> String {
         switch kind {
         case .cpu: ValueFormatter.percent(cpu.total)
-        case .gpu: gpu.isAvailable ? ValueFormatter.percent(gpu.utilisation) : "n/a"
+        case .gpu: gpu.isAvailable ? ValueFormatter.percent(gpu.utilisation) : L.t("value.na", "n/a")
         case .memory: ValueFormatter.bytes(memory.used)
         case .disk: ValueFormatter.bytes(disk.used)
         case .network: ValueFormatter.rate(network.downloadBytesPerSecond)
@@ -513,7 +518,7 @@ public struct BatteryUsage: Sendable, Equatable {
 
     public var percentage: Int { Int((fraction * 100).rounded()) }
 
-    public var headline: String { isAvailable ? "\(percentage)%" : "n/a" }
+    public var headline: String { isAvailable ? "\(percentage)%" : L.t("value.na", "n/a") }
 
     public var caption: String {
         guard isAvailable else { return L.t("battery.none", "no battery") }
@@ -583,7 +588,7 @@ public struct ThermalUsage: Sendable, Equatable {
     }
 
     public var headline: String {
-        guard let hottest else { return "n/a" }
+        guard let hottest else { return L.t("value.na", "n/a") }
         return "\(Int(hottest.rounded()))°C"
     }
 

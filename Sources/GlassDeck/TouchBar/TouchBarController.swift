@@ -486,7 +486,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
             return button(
                 identifier: identifier,
                 symbol: "chevron.backward",
-                accessibilityDescription: "Back to the meters",
+                accessibilityDescription: String(localized: "Back to the meters"),
                 action: #selector(dismissDetail)
             )
         case Self.detailItem:
@@ -515,8 +515,8 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
                 identifier: identifier,
                 symbol: mode == .mini ? "xmark" : "chevron.compact.down",
                 accessibilityDescription: mode == .mini
-                    ? "Hand the Touch Bar back until the Control Strip meter is tapped"
-                    : "Shrink GlassDeck",
+                    ? String(localized: "Hand the Touch Bar back until the Control Strip meter is tapped")
+                    : String(localized: "Shrink GlassDeck"),
                 action: #selector(shrink)
             )
         case Self.resizeItem:
@@ -525,7 +525,9 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
                 symbol: mode == .fullscreen
                     ? "arrow.down.right.and.arrow.up.left"
                     : "arrow.up.left.and.arrow.down.right",
-                accessibilityDescription: mode == .fullscreen ? "Leave full width" : "Use the full Touch Bar",
+                accessibilityDescription: mode == .fullscreen
+                    ? String(localized: "Leave full width")
+                    : String(localized: "Use the full Touch Bar"),
                 action: #selector(grow)
             )
         case Self.batteryItem:
@@ -537,7 +539,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
             let item = button(
                 identifier: identifier,
                 symbol: "rectangle.on.rectangle",
-                accessibilityDescription: "Open the dashboard",
+                accessibilityDescription: String(localized: "Open the dashboard"),
                 action: #selector(openDashboard)
             )
             if let control = item.view as? NSButton {
