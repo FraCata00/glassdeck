@@ -17,6 +17,25 @@ struct GlassPanelView: View {
     private static let gaugeSpacing: CGFloat = 10
     /// Breathing room drawn around each ring, inside its own glass surface.
     private static let gaugePadding: CGFloat = 6
+    /// Below this a ring's value stops being readable at a glance.
+    private static let minimumGaugeSize: CGFloat = 56
+    /// Above this a lone gauge is just a large circle in a 396 pt panel.
+    private static let maximumGaugeSize: CGFloat = 110
+
+    private static var usableWidth: CGFloat { Theme.panelWidth - panelPadding * 2 }
+
+    /// The gauge size that makes a row of `count` fill the panel exactly.
+    private static func fillingSize(forRowOf count: Int) -> CGFloat {
+        let count = CGFloat(max(count, 1))
+        return (usableWidth - gaugeSpacing * (count - 1)) / count - gaugePadding * 2
+    }
+
+    /// The most gauges that fit on one row while each stays legible.
+    private static let maximumPerRow: Int = {
+        var count = 1
+        while fillingSize(forRowOf: count + 1) >= minimumGaugeSize { count += 1 }
+        return count
+    }()
 
     var body: some View {
         VStack(spacing: 14) {
@@ -72,6 +91,9 @@ struct GlassPanelView: View {
                 HStack(spacing: Self.gaugeSpacing) {
                     ForEach(row) { gauge(for: $0) }
                 }
+                // A last row with fewer gauges sits centred rather than adrift
+                // against the left edge.
+                .frame(maxWidth: .infinity)
             }
         }
     }
@@ -106,30 +128,24 @@ struct GlassPanelView: View {
         preferences.dashboardMetrics.filter { monitor.snapshot.supports($0) }
     }
 
-    /// Gauges shrink as more metrics are enabled, down to the smallest size that
-    /// still reads at a glance. Below that they wrap onto another row instead:
-    /// `GaugeRing` has a fixed frame, so a row that does not fit does not
-    /// compress — it simply draws past the edge of the panel.
+    /// Gauges are sized to fill the row they sit on rather than picked from a
+    /// ladder of fixed sizes, so enabling or disabling a metric resizes the rest
+    /// instead of leaving a wider or narrower gap beside them.
+    ///
+    /// `GaugeRing` has a fixed frame and does not compress, so a row that does
+    /// not fit draws past the edge of the panel: the count per row is capped at
+    /// what still leaves each ring legible, and the rest wrap.
     private var gaugeSize: CGFloat {
-        switch availableMetrics.count {
-        case ...3: 92
-        case 4: 70
-        default: 66
-        }
+        let perRow = min(max(availableMetrics.count, 1), Self.maximumPerRow)
+        return min(Self.fillingSize(forRowOf: perRow), Self.maximumGaugeSize)
     }
 
-    /// The gauges split into rows that fit the panel's width, spread evenly so
-    /// that nine metrics read as 3 · 3 · 3 rather than 4 · 4 · 1.
+    /// The gauges split into full rows, with whatever is left over on the last.
     private var gaugeRows: [[MetricKind]] {
         let metrics = availableMetrics
         guard !metrics.isEmpty else { return [] }
 
-        let itemWidth = gaugeSize + Self.gaugePadding * 2
-        let usable = Theme.panelWidth - Self.panelPadding * 2
-        let fitting = max(1, Int((usable + Self.gaugeSpacing) / (itemWidth + Self.gaugeSpacing)))
-        let rows = max(1, Int((Double(metrics.count) / Double(fitting)).rounded(.up)))
-        let perRow = max(1, Int((Double(metrics.count) / Double(rows)).rounded(.up)))
-
+        let perRow = min(metrics.count, Self.maximumPerRow)
         return stride(from: 0, to: metrics.count, by: perRow).map {
             Array(metrics[$0..<min($0 + perRow, metrics.count)])
         }
