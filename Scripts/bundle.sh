@@ -52,9 +52,15 @@ cp Resources/GlassDeck.icns "$APP/Contents/Resources/GlassDeck.icns"
 # carries the SwiftPM resource bundle holding the words the samplers produce.
 cp -R Resources/Localizations/*.lproj "$APP/Contents/Resources/"
 BIN_DIR="$(dirname "$BINARY")"
-if [[ -d "$BIN_DIR/GlassDeck_GlassDeckKit.bundle" ]]; then
-    cp -R "$BIN_DIR/GlassDeck_GlassDeckKit.bundle" "$APP/Contents/Resources/"
+KIT_BUNDLE="$BIN_DIR/GlassDeck_GlassDeckKit.bundle"
+# Loudly, not silently: skipping this used to ship a release whose samplers
+# spoke English no matter the system language, with nothing to notice it by.
+if [[ ! -d "$KIT_BUNDLE" ]]; then
+    echo "error: GlassDeckKit resource bundle missing at $KIT_BUNDLE" >&2
+    echo "       the app would ship without its localisations" >&2
+    exit 1
 fi
+cp -R "$KIT_BUNDLE" "$APP/Contents/Resources/"
 sed -e "s/__VERSION__/$VERSION/" -e "s/__BUILD__/$BUILD_NUMBER/" \
     Resources/Info.plist > "$APP/Contents/Info.plist"
 

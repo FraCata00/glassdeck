@@ -40,9 +40,17 @@ jobs:
         run: Scripts/bundle.sh --version 0.0.0-ci
       - name: Check the bundle
         run: |
-          test -x .build/bundle/GlassDeck.app/Contents/MacOS/GlassDeck
-          plutil -lint .build/bundle/GlassDeck.app/Contents/Info.plist
-          codesign --verify --verbose .build/bundle/GlassDeck.app
+          APP=.build/bundle/GlassDeck.app
+          test -x "$APP/Contents/MacOS/GlassDeck"
+          plutil -lint "$APP/Contents/Info.plist"
+          # The localisations are copied in by the bundle script rather than by
+          # SwiftPM, so assert they reached the app instead of hearing about it
+          # from someone running an Italian Mac.
+          KIT="$APP/Contents/Resources/GlassDeck_GlassDeckKit.bundle/Contents/Resources"
+          for table in "$APP/Contents/Resources"/{en,it}.lproj "$KIT"/{en,it}.lproj; do
+            plutil -lint "$table/Localizable.strings"
+          done
+          codesign --verify --verbose "$APP"
 
   commits:
     name: Conventional commits
