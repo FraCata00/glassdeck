@@ -23,6 +23,15 @@ final class TouchBarStripView: NSView {
 
     override var allowsVibrancy: Bool { true }
 
+    // One element for the whole meter: the chips are far too small to be
+    // separate targets, so it reads out as a single running summary.
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
+    override func accessibilityLabel() -> String? { "GlassDeck" }
+    override func accessibilityValue() -> Any? {
+        metrics.map { "\($0.title) \(snapshot.headline(for: $0))" }.joined(separator: ", ")
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         context.clear(dirtyRect)

@@ -72,9 +72,9 @@ struct GlassPanelView: View {
                 VStack(spacing: 14) {
                     gauges
                     MetricDetailCard(
-                        kind: selection,
+                        kind: selectedMetric,
                         snapshot: monitor.snapshot,
-                        history: monitor.history(for: selection)
+                        history: monitor.history(for: selectedMetric)
                     )
                     .glassMorph(id: "detail", in: glassNamespace)
                 }
@@ -135,7 +135,7 @@ struct GlassPanelView: View {
                 headline: monitor.snapshot.headline(for: kind),
                 size: gaugeSize,
                 lineWidth: 8,
-                isSelected: selection == kind
+                isSelected: selectedMetric == kind
             )
             .padding(Self.gaugePadding)
         }
@@ -143,7 +143,7 @@ struct GlassPanelView: View {
         .glassSurface(cornerRadius: gaugeSize, interactive: true)
         .glassMorph(id: kind, in: glassNamespace)
         .overlay {
-            if selection == kind {
+            if selectedMetric == kind {
                 Circle().strokeBorder(Theme.accent(kind).opacity(0.55), lineWidth: 1.2)
             }
         }
@@ -153,6 +153,15 @@ struct GlassPanelView: View {
     /// Metrics this Mac cannot actually report are hidden rather than shown as "n/a".
     private var availableMetrics: [MetricKind] {
         preferences.dashboardMetrics.filter { monitor.snapshot.supports($0) }
+    }
+
+    /// The metric the detail card shows.
+    ///
+    /// Resolved rather than stored: turning off whichever metric was selected
+    /// used to leave the card describing a gauge that is no longer on screen,
+    /// and a first run with CPU disabled opened on CPU regardless.
+    private var selectedMetric: MetricKind {
+        availableMetrics.contains(selection) ? selection : (availableMetrics.first ?? .cpu)
     }
 
     /// Gauges are sized to fill the row they sit on rather than picked from a

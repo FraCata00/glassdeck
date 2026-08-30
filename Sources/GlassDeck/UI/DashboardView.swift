@@ -28,7 +28,7 @@ struct DashboardView: View {
                                     kind: kind,
                                     snapshot: monitor.snapshot,
                                     history: monitor.history(for: kind),
-                                    isFocused: focus == kind
+                                    isFocused: focusedMetric == kind
                                 )
                                 .glassMorph(id: kind, in: glass)
                                 .onTapGesture {
@@ -54,6 +54,13 @@ struct DashboardView: View {
 
     private var metrics: [MetricKind] {
         preferences.dashboardMetrics.filter { monitor.snapshot.supports($0) }
+    }
+
+    /// The metric the hero gauge shows. Resolved rather than stored, so turning
+    /// off the focused metric moves the focus instead of leaving the hero
+    /// describing a card that is no longer in the grid.
+    private var focusedMetric: MetricKind {
+        metrics.contains(focus) ? focus : (metrics.first ?? .cpu)
     }
 
     private var header: some View {
@@ -93,14 +100,14 @@ struct DashboardView: View {
         HStack(spacing: 14) {
             VStack(spacing: 10) {
                 GaugeRing(
-                    kind: focus,
-                    fraction: monitor.snapshot.fraction(for: focus),
-                    headline: monitor.snapshot.headline(for: focus),
+                    kind: focusedMetric,
+                    fraction: monitor.snapshot.fraction(for: focusedMetric),
+                    headline: monitor.snapshot.headline(for: focusedMetric),
                     size: 124,
                     lineWidth: 12,
                     isSelected: true
                 )
-                Text(monitor.snapshot.caption(for: focus))
+                Text(monitor.snapshot.caption(for: focusedMetric))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -125,7 +132,7 @@ struct DashboardView: View {
 
                 CoreGridView(cpu: monitor.snapshot.cpu)
 
-                Sparkline(values: monitor.history(for: focus), gradient: Theme.gradient(focus))
+                Sparkline(values: monitor.history(for: focusedMetric), gradient: Theme.gradient(focusedMetric))
                     .frame(height: 46)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

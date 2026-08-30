@@ -22,6 +22,15 @@ final class TouchBarDetailView: NSView {
     override var intrinsicContentSize: NSSize { NSSize(width: width, height: 30) }
     override var allowsVibrancy: Bool { true }
 
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .button }
+    override func accessibilityLabel() -> String? { kind.title }
+    override func accessibilityValue() -> Any? {
+        // The headline plus the numbers behind it, which is what the bar shows.
+        ([snapshot.headline(for: kind)] + snapshot.details(for: kind).map { "\($0.label) \($0.value)" })
+            .joined(separator: ", ")
+    }
+
     override func touchesBegan(with event: NSEvent) {
         super.touchesBegan(with: event)
         onTap?()

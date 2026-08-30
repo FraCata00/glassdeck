@@ -24,6 +24,15 @@ final class TouchBarMetricView: NSView {
     override var intrinsicContentSize: NSSize { NSSize(width: width, height: 30) }
     override var allowsVibrancy: Bool { true }
 
+    // The panel is drawn, not composed of controls, so VoiceOver sees nothing
+    // unless it is told. Read live rather than set once: the value changes on
+    // every sample.
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .button }
+    override func accessibilityLabel() -> String? { kind.title }
+    override func accessibilityValue() -> Any? { snapshot.headline(for: kind) }
+    override func accessibilityHelp() -> String? { snapshot.caption(for: kind) }
+
     override func touchesBegan(with event: NSEvent) {
         super.touchesBegan(with: event)
         onTap?()

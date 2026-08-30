@@ -124,7 +124,7 @@ final class AppModel {
         let window = makeGlassWindow(
             title: String(localized: "GlassDeck Settings"),
             size: NSSize(width: 460, height: 330),
-            content: SettingsView().environment(preferences).environment(touchBar),
+            content: SettingsView().environment(preferences).environment(touchBar).environment(monitor),
             isResizable: false,
             isTransparent: false
         )

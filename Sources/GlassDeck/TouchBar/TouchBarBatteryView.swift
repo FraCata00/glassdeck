@@ -29,6 +29,12 @@ final class TouchBarBatteryView: NSView {
     }
     override var allowsVibrancy: Bool { true }
 
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .button }
+    override func accessibilityLabel() -> String? { MetricKind.battery.title }
+    override func accessibilityValue() -> Any? { battery.headline }
+    override func accessibilityHelp() -> String? { battery.caption }
+
     override func draw(_ dirtyRect: NSRect) {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         context.clear(dirtyRect)

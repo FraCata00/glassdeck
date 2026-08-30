@@ -35,9 +35,13 @@ private struct MenuBarLabel: View {
         case .graph:
             Image(nsImage: MenuBarGlyph.bars(for: monitor.coarseSnapshot, metrics: preferences.dashboardMetrics))
         case .percentage:
+            // A metric stored before the hardware was known — fans on a fanless
+            // Mac — would otherwise sit in the menu bar reading n/a for good.
+            let metric = monitor.coarseSnapshot.supports(preferences.menuBarMetric)
+                ? preferences.menuBarMetric : .cpu
             HStack(spacing: 3) {
-                Image(systemName: preferences.menuBarMetric.symbolName)
-                Text(monitor.coarseSnapshot.headline(for: preferences.menuBarMetric))
+                Image(systemName: metric.symbolName)
+                Text(monitor.coarseSnapshot.headline(for: metric))
                     .monospacedDigit()
             }
         case .icon:

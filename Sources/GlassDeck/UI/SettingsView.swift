@@ -8,6 +8,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(Preferences.self) private var preferences
     @Environment(TouchBarController.self) private var touchBar
+    @Environment(SystemMonitor.self) private var monitor
 
     @State private var launchesAtLogin = LoginItem.isEnabled
 
@@ -46,8 +47,10 @@ struct SettingsView: View {
                         Text(style.title).tag(style)
                     }
                 }
+                // Only what this Mac can actually report: offering "Fans" on a
+                // fanless Mac just pins the status item to n/a.
                 Picker("Menu bar metric", selection: preferences.menuBarMetric) {
-                    ForEach(MetricKind.allCases) { kind in
+                    ForEach(reportableMetrics) { kind in
                         Text(kind.title).tag(kind)
                     }
                 }
@@ -129,6 +132,13 @@ struct SettingsView: View {
 
         }
         .formStyle(.grouped)
+    }
+
+    /// Metrics this machine reports. Before the first sample nothing
+    /// hardware-dependent is known yet, so the full list stands in.
+    private var reportableMetrics: [MetricKind] {
+        guard monitor.snapshot != .empty else { return MetricKind.allCases }
+        return MetricKind.allCases.filter { monitor.snapshot.supports($0) }
     }
 
     private func binding(
