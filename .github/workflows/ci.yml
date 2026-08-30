@@ -45,11 +45,21 @@ jobs:
           plutil -lint "$APP/Contents/Info.plist"
           # The localisations are copied in by the bundle script rather than by
           # SwiftPM, so assert they reached the app instead of hearing about it
-          # from someone running an Italian Mac.
-          KIT="$APP/Contents/Resources/GlassDeck_GlassDeckKit.bundle/Contents/Resources"
-          for table in "$APP/Contents/Resources"/{en,it}.lproj "$KIT"/{en,it}.lproj; do
-            plutil -lint "$table/Localizable.strings"
-          done
+          # from someone running an Italian Mac. The kit's resource bundle is
+          # laid out by SwiftPM and that layout has moved between toolchains, so
+          # the tables are searched for rather than addressed by a fixed path.
+          echo "String tables in the app:"
+          find "$APP" -name Localizable.strings
+          FOUND=0
+          while IFS= read -r table; do
+            plutil -lint "$table"
+            FOUND=$((FOUND + 1))
+          done < <(find "$APP" -name Localizable.strings)
+          # Two for the app, two for the kit: en and it apiece.
+          if [ "$FOUND" -ne 4 ]; then
+            echo "error: expected 4 string tables in the app, found $FOUND" >&2
+            exit 1
+          fi
           codesign --verify --verbose "$APP"
 
   commits:
