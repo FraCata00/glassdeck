@@ -428,11 +428,16 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
             return bar
         }
 
+        // The grow button is only drawn where there is something larger to grow
+        // into. In full width it used to sit there showing a shrink glyph and
+        // calling `grow()`, which returns full width again: a dead control,
+        // beside the chevron that does the shrinking for real.
+        let canGrow = mode.larger != mode
         let content: [NSTouchBarItem.Identifier] = mode == .mini
             ? [Self.miniMeterItem, Self.resizeItem, Self.collapseItem]
             : metrics(for: mode).map { NSTouchBarItem.Identifier(Self.metricItemPrefix + $0.rawValue) }
                 + (monitor.snapshot.battery.isAvailable ? [Self.batteryItem] : [])
-                + [Self.resizeItem]
+                + (canGrow ? [Self.resizeItem] : [])
                 + (mode == .fullscreen ? [Self.dashboardItem] : [])
                 + [Self.collapseItem]
 
@@ -488,14 +493,18 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         return max(Self.minimumPanelWidth, (free / CGFloat(count)).rounded(.down))
     }
 
-    /// The battery chip and the three buttons that ride along in full width.
+    /// The battery chip and the two buttons that ride along in full width: the
+    /// dashboard and the chevron. The grow button is not among them — there is
+    /// nothing larger than full width — so its width goes to the panels.
+    private static let fullscreenControlCount = 2
+
     private var fullscreenFixedItems: Int {
-        (monitor.snapshot.battery.isAvailable ? 1 : 0) + 3
+        (monitor.snapshot.battery.isAvailable ? 1 : 0) + Self.fullscreenControlCount
     }
 
     private var fullscreenFixedWidth: CGFloat {
         (monitor.snapshot.battery.isAvailable ? batteryView.intrinsicContentSize.width : 0)
-            + 3 * Self.controlWidth
+            + CGFloat(Self.fullscreenControlCount) * Self.controlWidth
     }
 
     /// The most panels full width can hold before they stop being legible.
@@ -557,14 +566,11 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
                 action: #selector(shrink)
             )
         case Self.resizeItem:
+            // Only ever means "grow": the bar drops this item in full width.
             return button(
                 identifier: identifier,
-                symbol: mode == .fullscreen
-                    ? "arrow.down.right.and.arrow.up.left"
-                    : "arrow.up.left.and.arrow.down.right",
-                accessibilityDescription: mode == .fullscreen
-                    ? String(localized: "Leave full width")
-                    : String(localized: "Use the full Touch Bar"),
+                symbol: "arrow.up.left.and.arrow.down.right",
+                accessibilityDescription: String(localized: "Use the full Touch Bar"),
                 action: #selector(grow)
             )
         case Self.batteryItem:
