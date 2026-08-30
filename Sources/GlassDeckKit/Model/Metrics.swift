@@ -57,6 +57,118 @@ public struct MetricsSnapshot: Sendable, Equatable {
         }
     }
 
+    /// The numbers behind a metric's headline, shown when a card or a Touch Bar
+    /// panel is expanded.
+    public func details(for kind: MetricKind) -> [MetricDetail] {
+        switch kind {
+        case .cpu:
+            var items = [
+                MetricDetail(label: "user", value: ValueFormatter.percent(cpu.user)),
+                MetricDetail(label: "system", value: ValueFormatter.percent(cpu.system)),
+            ]
+            if let performance = cpu.performanceClusterLoad {
+                items.append(MetricDetail(label: "P-cores", value: ValueFormatter.percent(performance)))
+            }
+            if let efficiency = cpu.efficiencyClusterLoad {
+                items.append(MetricDetail(label: "E-cores", value: ValueFormatter.percent(efficiency)))
+            }
+            if let load = cpu.loadAverage.first {
+                items.append(MetricDetail(label: "load 1m", value: ValueFormatter.decimal(load)))
+            }
+            return items
+
+        case .gpu:
+            guard gpu.isAvailable else { return [MetricDetail(label: "gpu", value: "n/a")] }
+            return [
+                MetricDetail(label: "device", value: ValueFormatter.percent(gpu.utilisation)),
+                MetricDetail(label: "renderer", value: ValueFormatter.percent(gpu.rendererUtilisation)),
+                MetricDetail(label: "tiler", value: ValueFormatter.percent(gpu.tilerUtilisation)),
+                MetricDetail(label: "vram", value: ValueFormatter.bytes(gpu.allocatedMemory)),
+            ]
+
+        case .memory:
+            return [
+                MetricDetail(label: "used", value: ValueFormatter.bytes(memory.used)),
+                MetricDetail(label: "wired", value: ValueFormatter.bytes(memory.wired)),
+                MetricDetail(label: "compressed", value: ValueFormatter.bytes(memory.compressed)),
+                MetricDetail(label: "swap", value: ValueFormatter.bytes(memory.swapUsed)),
+            ]
+
+        case .disk:
+            return [
+                MetricDetail(label: "used", value: ValueFormatter.bytes(disk.used)),
+                MetricDetail(label: "free", value: ValueFormatter.bytes(disk.free)),
+                MetricDetail(label: "read", value: ValueFormatter.rate(disk.readBytesPerSecond)),
+                MetricDetail(label: "write", value: ValueFormatter.rate(disk.writeBytesPerSecond)),
+            ]
+
+        case .network:
+            return [
+                MetricDetail(label: "down", value: ValueFormatter.rate(network.downloadBytesPerSecond)),
+                MetricDetail(label: "up", value: ValueFormatter.rate(network.uploadBytesPerSecond)),
+            ]
+
+        case .fans:
+            guard fans.isAvailable else { return [MetricDetail(label: "fans", value: "none")] }
+            let speeds = fans.fans.map { fan in
+                MetricDetail(
+                    label: fans.fans.count > 1 ? "fan \(fan.index + 1)" : "speed",
+                    value: fan.rpm > 0 ? "\(Int(fan.rpm.rounded())) rpm" : "idle"
+                )
+            }
+            let maximum = fans.fans.map(\.maximumRPM).max() ?? 0
+            return speeds + [MetricDetail(label: "max", value: "\(Int(maximum)) rpm")]
+
+        case .battery:
+            guard battery.isAvailable else { return [MetricDetail(label: "battery", value: "none")] }
+            var items = [
+                MetricDetail(label: "charge", value: battery.headline),
+                MetricDetail(
+                    label: "state",
+                    value: battery.isCharging ? "charging" : (battery.isPluggedIn ? "on power" : "on battery")
+                ),
+            ]
+            if let minutes = battery.minutesRemaining {
+                items.append(
+                    MetricDetail(
+                        label: battery.isCharging ? "to full" : "remaining",
+                        value: minutes >= 60 ? "\(minutes / 60)h \(minutes % 60)m" : "\(minutes)m"
+                    )
+                )
+            }
+            // Draw belongs here rather than in the battery chip: it is the number
+            // you want once you are already asking about power.
+            if power.isAvailable {
+                items.append(MetricDetail(label: "draw", value: power.headline))
+            }
+            return items
+
+        case .temperature:
+            guard thermal.isAvailable else { return [MetricDetail(label: "sensors", value: "none")] }
+            var items: [MetricDetail] = []
+            if let cpu = thermal.cpu { items.append(MetricDetail(label: "cpu", value: "\(Int(cpu.rounded()))°C")) }
+            if let gpu = thermal.gpu { items.append(MetricDetail(label: "gpu", value: "\(Int(gpu.rounded()))°C")) }
+            if let battery = thermal.battery {
+                items.append(MetricDetail(label: "battery", value: "\(Int(battery.rounded()))°C"))
+            }
+            if let enclosure = thermal.enclosure {
+                items.append(MetricDetail(label: "case", value: "\(Int(enclosure.rounded()))°C"))
+            }
+            return items
+
+        case .power:
+            guard power.isAvailable else { return [MetricDetail(label: "power", value: "n/a")] }
+            var items = [MetricDetail(label: "now", value: power.headline)]
+            if let adapter = power.adapterWatts, adapter > 5 {
+                items.append(MetricDetail(label: "adapter", value: "\(Int(adapter.rounded())) W"))
+            }
+            if battery.isAvailable {
+                items.append(MetricDetail(label: "source", value: battery.isPluggedIn ? "wall" : "battery"))
+            }
+            return items
+        }
+    }
+
     /// Whether this machine can report the metric at all: fanless Macs have no
     /// fan reading, desktops have no battery.
     public func supports(_ kind: MetricKind) -> Bool {
@@ -299,6 +411,19 @@ public struct ProcessSample: Sendable, Equatable, Identifiable {
     }
 }
 
+
+/// One labelled number in a metric's detail view.
+public struct MetricDetail: Sendable, Equatable, Identifiable {
+    public let label: String
+    public let value: String
+
+    public init(label: String, value: String) {
+        self.label = label
+        self.value = value
+    }
+
+    public var id: String { label }
+}
 
 /// A single fan as reported by the SMC.
 public struct Fan: Sendable, Equatable, Identifiable {
