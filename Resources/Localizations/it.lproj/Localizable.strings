@@ -53,3 +53,6 @@
 
 /* Window titles */
 "GlassDeck Settings" = "Impostazioni GlassDeck";
+
+/* Metrics tab */
+"Drag to reorder. The order is shared by the panel, the Touch Bar and the menu bar." = "Trascina per riordinare. L'ordine vale per il pannello, la Touch Bar e la barra dei menu.";

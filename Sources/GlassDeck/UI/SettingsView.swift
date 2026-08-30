@@ -78,17 +78,25 @@ struct SettingsView: View {
         .formStyle(.grouped)
     }
 
+    /// A `List` rather than a `Form`, because rows have to be draggable and only
+    /// a list carries `onMove` on macOS.
     private func metrics(preferences: Bindable<Preferences>) -> some View {
-        Form {
-            Section("Shown in the panel and dashboard") {
-                ForEach(MetricKind.allCases) { kind in
+        List {
+            Section {
+                ForEach(preferences.wrappedValue.metricOrder) { kind in
                     Toggle(isOn: binding(for: kind, keyPath: \.dashboardMetrics)) {
                         Label(kind.title, systemImage: kind.symbolName)
                     }
                 }
+                .onMove { self.preferences.moveMetrics(fromOffsets: $0, toOffset: $1) }
+            } header: {
+                Text("Shown in the panel and dashboard")
+            } footer: {
+                Text("Drag to reorder. The order is shared by the panel, the Touch Bar and the menu bar.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
-        .formStyle(.grouped)
     }
 
     private func touchBarSettings(preferences: Bindable<Preferences>) -> some View {
@@ -123,7 +131,7 @@ struct SettingsView: View {
                 }
             }
             Section("Metrics in the Touch Bar strip") {
-                ForEach(MetricKind.allCases) { kind in
+                ForEach(preferences.wrappedValue.metricOrder) { kind in
                     Toggle(isOn: binding(for: kind, keyPath: \.touchBarMetrics)) {
                         Label(kind.title, systemImage: kind.symbolName)
                     }

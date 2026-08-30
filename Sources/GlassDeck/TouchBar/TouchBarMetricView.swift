@@ -52,8 +52,8 @@ final class TouchBarMetricView: NSView {
         NSColor.white.withAlphaComponent(0.08).setFill()
         background.fill()
 
-        // Narrow panels give the label less room, so they fall back to the short
-        // title ("RAM" instead of "MEMORY") and hand the saved width to the graph.
+        // Narrow panels hand more width to the graph; what the text says is then
+        // decided by measuring it, not by the same threshold.
         let isCompact = width < 120
         let labelWidth = isCompact ? bounds.width * 0.40 : bounds.width * 0.42
         let sparklineRect = NSRect(
@@ -64,17 +64,20 @@ final class TouchBarMetricView: NSView {
         )
         drawSparkline(in: sparklineRect, color: color)
 
+        let titleFont = NSFont.systemFont(ofSize: 8, weight: .semibold)
+        let valueFont = NSFont.monospacedDigitSystemFont(ofSize: isCompact ? 11 : 12, weight: .semibold)
+
         draw(
-            text: isCompact ? kind.shortTitle : kind.title.uppercased(),
+            text: Self.fitting([kind.title.uppercased(), kind.shortTitle], font: titleFont, within: labelWidth),
             in: NSRect(x: 8, y: bounds.height - 14, width: labelWidth, height: 11),
-            font: .systemFont(ofSize: 8, weight: .semibold),
+            font: titleFont,
             color: color.withAlphaComponent(0.9),
             alignment: .left
         )
         draw(
-            text: compactHeadline(isCompact: isCompact),
+            text: Self.fitting(headlineCandidates, font: valueFont, within: labelWidth),
             in: NSRect(x: 8, y: 3, width: labelWidth, height: 14),
-            font: .monospacedDigitSystemFont(ofSize: isCompact ? 11 : 12, weight: .semibold),
+            font: valueFont,
             color: .white,
             alignment: .left
         )
@@ -110,13 +113,27 @@ final class TouchBarMetricView: NSView {
         path.stroke()
     }
 
-    /// Byte-valued metrics are shown as a percentage on the narrow panels, where
-    /// "5.5 GB" would not fit beside the graph.
-    private func compactHeadline(isCompact: Bool) -> String {
-        guard isCompact, kind == .memory || kind == .disk else {
-            return snapshot.headline(for: kind)
+    /// What the value could say, best first. Byte- and rate-valued metrics fall
+    /// back to a percentage, which always fits.
+    private var headlineCandidates: [String] {
+        let headline = snapshot.headline(for: kind)
+        switch kind {
+        case .memory, .disk, .network:
+            return [headline, ValueFormatter.percent(snapshot.fraction(for: kind))]
+        default:
+            return [headline]
         }
-        return ValueFormatter.percent(snapshot.fraction(for: kind))
+    }
+
+    /// The first candidate that fits the space, or the last as a fallback.
+    ///
+    /// Measured rather than guessed from the panel width: widening the panels
+    /// to fill the bar also let them show full titles, and "TEMPERATURE" was
+    /// then quietly clipped to "TEMPERATU" at widths where "TMP" would have
+    /// been fine.
+    private static func fitting(_ candidates: [String], font: NSFont, within width: CGFloat) -> String {
+        candidates.first { ($0 as NSString).size(withAttributes: [.font: font]).width <= width }
+            ?? candidates.last ?? ""
     }
 
     /// Vertical range the curve is drawn in.

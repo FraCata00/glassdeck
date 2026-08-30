@@ -63,7 +63,8 @@ final class AppModel {
     /// clicks, so two environment variables let a build come up in a given state
     /// for screenshots and manual testing:
     /// `GLASSDECK_TOUCHBAR_MODE=fullscreen|expanded|mini|detail:<metric>`,
-    /// `GLASSDECK_OPEN_DASHBOARD=1` and `GLASSDECK_OPEN_PANEL=1`, which puts the
+    /// `GLASSDECK_OPEN_DASHBOARD=1`, `GLASSDECK_OPEN_SETTINGS=1` and
+    /// `GLASSDECK_OPEN_PANEL=1`, which puts the
     /// menu bar panel in an ordinary window: a `MenuBarExtra` cannot be opened
     /// any other way, so without it the panel is the one surface that cannot be
     /// looked at except by hand.
@@ -90,6 +91,10 @@ final class AppModel {
 
         if environment["GLASSDECK_OPEN_PANEL"] == "1" {
             showPanel()
+        }
+
+        if environment["GLASSDECK_OPEN_SETTINGS"] == "1" {
+            showSettings()
         }
 
     }

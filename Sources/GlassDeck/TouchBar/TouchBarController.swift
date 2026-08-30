@@ -389,7 +389,8 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         for extra in [MetricKind.fans, .temperature] where !metrics.contains(extra) {
             if monitor.snapshot.supports(extra) { metrics.append(extra) }
         }
-        metrics = metrics.filter { monitor.snapshot.supports($0) }
+        // Back into the user's order: the extras are appended, not ranked.
+        metrics = preferences.metricOrder.filter { metrics.contains($0) && monitor.snapshot.supports($0) }
 
         return Array(metrics.prefix(maximumFullscreenPanels))
     }

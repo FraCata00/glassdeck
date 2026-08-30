@@ -16,6 +16,7 @@ final class Preferences {
         static let touchBarPresentation = "touchBarPresentation"
         static let touchBarAlignment = "touchBarAlignment"
         static let showsProcesses = "showsProcesses"
+        static let metricOrder = "metricOrder"
     }
 
     /// How the status item renders in the menu bar.
@@ -91,6 +92,11 @@ final class Preferences {
     }
     var showsProcesses: Bool { didSet { defaults.set(showsProcesses, forKey: Key.showsProcesses) } }
 
+    /// The order every surface lists metrics in — the panel's gauges, the Touch
+    /// Bar's panels and the status item's bars. Holds all of them, selected or
+    /// not, so turning one off and on again does not lose its place.
+    var metricOrder: [MetricKind] { didSet { store(metricOrder, forKey: Key.metricOrder) } }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         let storedInterval = defaults.double(forKey: Key.interval)
@@ -105,10 +111,37 @@ final class Preferences {
         touchBarAlignment = defaults.string(forKey: Key.touchBarAlignment)
             .flatMap(TouchBarAlignment.init(rawValue:)) ?? .trailing
         showsProcesses = defaults.object(forKey: Key.showsProcesses) as? Bool ?? true
+        metricOrder = Self.repairedOrder(Self.read(Key.metricOrder, from: defaults))
+
+        // Selections stored before the order was changed — or before this
+        // version — are brought into line. Assigned here rather than through the
+        // setters, so a launch that changes nothing writes nothing.
+        dashboardMetrics = metricOrder.filter(dashboardMetrics.contains)
+        touchBarMetrics = metricOrder.filter(touchBarMetrics.contains)
     }
 
-    /// Toggles a metric in a selection while keeping the canonical metric order
-    /// and refusing to empty the list — an empty Touch Bar strip would look broken.
+    /// Moves metrics in the shared order and brings the selections along, so all
+    /// three surfaces keep agreeing about what comes first.
+    func moveMetrics(fromOffsets source: IndexSet, toOffset destination: Int) {
+        var order = metricOrder
+        order.move(fromOffsets: source, toOffset: destination)
+        metricOrder = order
+        dashboardMetrics = order.filter(dashboardMetrics.contains)
+        touchBarMetrics = order.filter(touchBarMetrics.contains)
+    }
+
+    /// Keeps whatever order was stored, drops anything that is no longer a
+    /// metric, and appends any kind added since — so a new metric shows up at
+    /// the end instead of the list silently resetting.
+    private static func repairedOrder(_ stored: [MetricKind]?) -> [MetricKind] {
+        var order: [MetricKind] = []
+        for kind in stored ?? [] where !order.contains(kind) { order.append(kind) }
+        for kind in MetricKind.allCases where !order.contains(kind) { order.append(kind) }
+        return order
+    }
+
+    /// Toggles a metric in a selection while keeping the user's metric order and
+    /// refusing to empty the list — an empty Touch Bar strip would look broken.
     func toggle(_ kind: MetricKind, in keyPath: ReferenceWritableKeyPath<Preferences, [MetricKind]>) {
         var selection = self[keyPath: keyPath]
         if let index = selection.firstIndex(of: kind) {
@@ -116,7 +149,7 @@ final class Preferences {
             selection.remove(at: index)
         } else {
             selection.append(kind)
-            selection = MetricKind.allCases.filter(selection.contains)
+            selection = metricOrder.filter(selection.contains)
         }
         self[keyPath: keyPath] = selection
     }
