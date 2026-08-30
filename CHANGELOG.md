@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-30
+
+### Added
+
+- A **mini** Touch Bar size showing just the meters, so shrinking never makes
+  GlassDeck disappear: the ⌄ button now steps down through full width, compact
+  and mini, and only a tap on the mini bar hands the Touch Bar back.
+- **Position** setting for the compact and mini bars: left, centre, or beside the
+  system Control Strip (the new default).
+
+### Fixed
+
+- Quitting GlassDeck no longer writes `Touch Bar disabled` into the settings,
+  which used to leave the integration switched off for every later launch.
+- Collapsing from the Touch Bar no longer rewrites the placement preference; a
+  tap is a session action, not a settings change.
+- GlassDeck now releases the Touch Bar when it is sent `SIGINT`, `SIGTERM` or
+  `SIGHUP`. Being killed while a bar was presented used to leave the system Touch
+  Bar stuck on a dead bar until its server was restarted.
+- Compact-bar items are sized to the space the system actually grants beside the
+  Control Strip, so the trailing button is no longer clipped.
+
 ## [1.0.0] - 2026-08-30
 
 ### Added
@@ -23,4 +45,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[1.1.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.1.0
 [1.0.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.0.0

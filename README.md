@@ -30,19 +30,30 @@ dashboard or collapse back:
 
 <img src="docs/images/touchbar-full-width.png" alt="GlassDeck across the full Touch Bar">
 
-**Sharing the bar** — a compact set that leaves the system Control Strip alone:
+**Compact** — four live graphs and the battery, with the system Control Strip
+untouched:
 
 <img src="docs/images/touchbar-compact.png" alt="GlassDeck beside the Control Strip">
 
-Three states, one tap apart:
+**Mini** — just the meters, parked next to the Control Strip:
 
-| State | What you get | How to get there |
+<img src="docs/images/touchbar-mini.png" alt="GlassDeck as a small meter beside the Control Strip">
+
+The ⌄ button steps *down* one size at a time and stops at the mini meter, so a
+single tap can never make GlassDeck vanish:
+
+| Size | What you get | How to get there |
 | --- | --- | --- |
-| **Control Strip** | A compact meter chip inside the Control Strip | Default; tap the chip to expand |
-| **Expanded** | Four live graphs, battery, controls — Control Strip stays visible | Tap the chip, or set *Take over the whole Touch Bar* |
-| **Full width** | Everything, plus **fan RPM**, across the entire bar | Tap ⤢ on the expanded bar |
+| **Full width** | Every metric plus **fan RPM**, across the whole bar | ⤢ from compact |
+| **Compact** | Four live graphs, battery, controls; Control Strip stays visible | ⌄ from full width, or ⤢ from mini |
+| **Mini** | The four meters and two buttons | ⌄ from compact |
+| **Released** | The Touch Bar goes back to the system and the frontmost app | ✕ on the mini bar |
 
-Collapsing hands the Touch Bar straight back to the system and the frontmost app.
+Once released, tapping the meter in the Control Strip brings GlassDeck straight
+back. Nothing a tap does is written to your settings.
+
+*Settings → Touch Bar → Position* puts the compact and mini bars on the left, in
+the centre, or beside the Control Strip (the default).
 
 ## Features
 
