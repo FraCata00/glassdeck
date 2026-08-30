@@ -30,12 +30,39 @@ struct GlassPanelView: View {
         return (usableWidth - gaugeSpacing * (count - 1)) / count - gaugePadding * 2
     }
 
-    /// The most gauges that fit on one row while each stays legible.
-    private static let maximumPerRow: Int = {
-        var count = 1
-        while fillingSize(forRowOf: count + 1) >= minimumGaugeSize { count += 1 }
-        return count
-    }()
+    private static func rowWidth(of count: Int, size: CGFloat) -> CGFloat {
+        CGFloat(count) * (size + gaugePadding * 2) + CGFloat(count - 1) * gaugeSpacing
+    }
+
+    /// The split that leaves the least of the panel's width unused.
+    ///
+    /// The gauges are circles of a single size, so for some counts no split
+    /// fills every row: five come out as 3 · 2. Rather than guess a rule, every
+    /// split that keeps the rings legible is measured and the fullest wins, with
+    /// fewer rows breaking a tie. Deriving the size from the row count is the
+    /// whole point — sizing for the widest row a split allows is what left nine
+    /// metrics as 4 · 4 · 1 with three quarters of the last row empty.
+    private static func layout(for count: Int) -> (perRow: Int, size: CGFloat) {
+        guard count > 0 else { return (1, maximumGaugeSize) }
+
+        var best: (perRow: Int, size: CGFloat, fill: CGFloat, rows: Int)?
+        for rows in 1...count {
+            let perRow = Int((Double(count) / Double(rows)).rounded(.up))
+            let exact = fillingSize(forRowOf: perRow)
+            guard exact >= minimumGaugeSize else { continue }
+            let size = min(exact, maximumGaugeSize)
+
+            let counts = stride(from: 0, to: count, by: perRow).map { min(perRow, count - $0) }
+            let used = counts.reduce(CGFloat(0)) { $0 + rowWidth(of: $1, size: size) }
+            let fill = used / (CGFloat(counts.count) * usableWidth)
+
+            let isBetter = best.map { fill > $0.fill || (fill == $0.fill && counts.count < $0.rows) } ?? true
+            if isBetter { best = (perRow, size, fill, counts.count) }
+        }
+
+        // A row of one is always legible, so there is always a winner.
+        return best.map { ($0.perRow, $0.size) } ?? (1, maximumGaugeSize)
+    }
 
     var body: some View {
         VStack(spacing: 14) {
@@ -131,21 +158,15 @@ struct GlassPanelView: View {
     /// Gauges are sized to fill the row they sit on rather than picked from a
     /// ladder of fixed sizes, so enabling or disabling a metric resizes the rest
     /// instead of leaving a wider or narrower gap beside them.
-    ///
-    /// `GaugeRing` has a fixed frame and does not compress, so a row that does
-    /// not fit draws past the edge of the panel: the count per row is capped at
-    /// what still leaves each ring legible, and the rest wrap.
     private var gaugeSize: CGFloat {
-        let perRow = min(max(availableMetrics.count, 1), Self.maximumPerRow)
-        return min(Self.fillingSize(forRowOf: perRow), Self.maximumGaugeSize)
+        Self.layout(for: availableMetrics.count).size
     }
 
-    /// The gauges split into full rows, with whatever is left over on the last.
     private var gaugeRows: [[MetricKind]] {
         let metrics = availableMetrics
         guard !metrics.isEmpty else { return [] }
 
-        let perRow = min(metrics.count, Self.maximumPerRow)
+        let perRow = Self.layout(for: metrics.count).perRow
         return stride(from: 0, to: metrics.count, by: perRow).map {
             Array(metrics[$0..<min($0 + perRow, metrics.count)])
         }
