@@ -230,3 +230,73 @@ struct SMCCadenceTests {
         #expect(sampler.sample(at: start.addingTimeInterval(10)).isAvailable == false)
     }
 }
+
+/// Sampling into a dark screen costs a wake-up per tick and shows nobody
+/// anything, and Low Power Mode is the user asking for exactly this restraint.
+@Suite("Power-aware sampling")
+struct PowerAwarenessTests {
+    @Test("Parking keeps the intent to be running, so a wake resumes rather than restarts")
+    @MainActor
+    func suspendKeepsRunningIntent() {
+        let monitor = SystemMonitor(interval: 1)
+        monitor.start()
+        #expect(monitor.isRunning)
+        #expect(monitor.isSuspended == false)
+
+        monitor.suspend()
+        #expect(monitor.isSuspended)
+        #expect(monitor.isRunning)  // still wanted, just not sampling
+
+        monitor.resume()
+        #expect(monitor.isSuspended == false)
+        #expect(monitor.isRunning)
+        monitor.stop()
+    }
+
+    @Test("Overlapping sleep and wake events are idempotent")
+    @MainActor
+    func repeatedEventsAreHarmless() {
+        let monitor = SystemMonitor(interval: 1)
+        monitor.start()
+
+        // Sleeping the machine sends the screens to sleep too: both arrive.
+        monitor.suspend()
+        monitor.suspend()
+        #expect(monitor.isSuspended)
+
+        monitor.resume()
+        monitor.resume()
+        #expect(monitor.isSuspended == false)
+        monitor.stop()
+    }
+
+    @Test("A full stop clears the parked state")
+    @MainActor
+    func stopClearsSuspension() {
+        let monitor = SystemMonitor(interval: 1)
+        monitor.start()
+        monitor.suspend()
+        monitor.stop()
+
+        #expect(monitor.isRunning == false)
+        #expect(monitor.isSuspended == false)
+
+        // And a later start samples again instead of coming up parked.
+        monitor.start()
+        #expect(monitor.isRunning)
+        #expect(monitor.isSuspended == false)
+        monitor.stop()
+    }
+
+    @Test("Low Power Mode stretches the interval the loop sleeps for")
+    @MainActor
+    func lowPowerModeStretchesTheInterval() {
+        let monitor = SystemMonitor(interval: 1.5)
+        let expected = ProcessInfo.processInfo.isLowPowerModeEnabled
+            ? 1.5 * SystemMonitor.lowPowerMultiplier
+            : 1.5
+
+        #expect(monitor.effectiveInterval == expected)
+        #expect(monitor.effectiveInterval >= monitor.interval)
+    }
+}

@@ -35,6 +35,35 @@ public final class SystemMonitor {
         }
     }
 
+    /// What the interval is multiplied by while macOS is in Low Power Mode.
+    ///
+    /// Low Power Mode is the user saying the battery matters more than anything
+    /// on screen right now, and a system monitor is the last thing that should
+    /// argue. Doubling is enough to halve the sampling cost without the graphs
+    /// becoming a different shape.
+    public static let lowPowerMultiplier: TimeInterval = 2
+
+    /// True while macOS is in Low Power Mode.
+    ///
+    /// Read fresh rather than cached from a notification: the loop asks for it
+    /// once per tick anyway, which is far less often than the state can change.
+    public var isLowPowerModeEnabled: Bool {
+        ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
+
+    /// The gap the loop actually sleeps for.
+    public var effectiveInterval: TimeInterval {
+        isLowPowerModeEnabled ? interval * Self.lowPowerMultiplier : interval
+    }
+
+    /// True while sampling is parked because nobody can see the result — the
+    /// display is asleep, the machine is suspended, or another user is in front.
+    ///
+    /// Distinct from `isRunning`, which records whether the app wants to be
+    /// sampling at all: parking has to be undone by `resume()` without losing
+    /// that intent.
+    public private(set) var isSuspended = false
+
     /// True while at least one view showing the process list is on screen; keeps
     /// the process scan off the hot path otherwise.
     public private(set) var samplesProcesses = false
@@ -85,6 +114,27 @@ public final class SystemMonitor {
         task?.cancel()
         task = nil
         isRunning = false
+        isSuspended = false
+    }
+
+    /// Parks the loop without clearing the intent to be running.
+    ///
+    /// There is nothing to show while the display is asleep, so polling the SMC
+    /// into a dark screen buys nothing and costs a wake-up every tick.
+    public func suspend() {
+        guard !isSuspended else { return }
+        isSuspended = true
+        task?.cancel()
+        task = nil
+    }
+
+    /// Undoes `suspend()`. The loop takes a leading sample straight away, so the
+    /// first thing seen after a wake is a fresh reading rather than the one from
+    /// before the display went dark.
+    public func resume() {
+        guard isSuspended else { return }
+        isSuspended = false
+        restart()
     }
 
     /// Takes one sample immediately, outside the loop cadence.
@@ -94,15 +144,21 @@ public final class SystemMonitor {
 
     private func restart() {
         task?.cancel()
-        let interval = interval
+        task = nil
+        guard isRunning, !isSuspended else { return }
+
         task = Task { [weak self] in
             // A leading sample makes the window feel instant when it opens.
             // The loop owns no strong reference, so it retires on its own once
             // the monitor is deallocated.
             await self?.refreshNow()
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(interval))
-                guard !Task.isCancelled, let self else { return }
+                // Read once per iteration rather than captured up front, so Low
+                // Power Mode is picked up at the next tick without the loop
+                // having to be torn down and rebuilt to notice.
+                guard let self else { return }
+                try? await Task.sleep(for: .seconds(self.effectiveInterval))
+                guard !Task.isCancelled else { return }
                 await self.tick()
             }
         }

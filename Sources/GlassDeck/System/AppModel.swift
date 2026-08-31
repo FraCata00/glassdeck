@@ -22,6 +22,7 @@ final class AppModel {
     @ObservationIgnored private var dashboardWindow: NSWindow?
     @ObservationIgnored private var settingsWindow: NSWindow?
     @ObservationIgnored private var signalSources: [any DispatchSourceSignal] = []
+    @ObservationIgnored private var powerObservers: [any NSObjectProtocol] = []
 
     private init() {
         let preferences = Preferences()
@@ -38,6 +39,7 @@ final class AppModel {
         NSApp.touchBar = touchBar.makeApplicationTouchBar()
         touchBar.synchroniseWithPreferences()
         observePreferences()
+        observePowerEvents()
         alerts.start()
         installSignalHandlers()
 
@@ -49,6 +51,51 @@ final class AppModel {
     /// dead bar until the system's Touch Bar server is restarted. `applicationWillTerminate`
     /// does not run for a signal, so SIGINT and SIGTERM are handled explicitly and
     /// the bar is taken down before exiting.
+    /// Parks sampling whenever nothing can be seen: the display asleep, the
+    /// machine suspended, or another user switched in front.
+    ///
+    /// A menu bar that nobody is looking at is still a menu bar being redrawn,
+    /// and the SMC round trips behind it are the priciest part of a sample. The
+    /// monitor keeps its intent to be running throughout, so the wake path is a
+    /// `resume()` rather than a fresh `start()` — which also takes a leading
+    /// sample, so the first glance after a wake is not the reading from before
+    /// the screen went dark.
+    private func observePowerEvents() {
+        let center = NSWorkspace.shared.notificationCenter
+        let park = [
+            NSWorkspace.screensDidSleepNotification,
+            NSWorkspace.willSleepNotification,
+            NSWorkspace.sessionDidResignActiveNotification
+        ]
+        let wake = [
+            NSWorkspace.screensDidWakeNotification,
+            NSWorkspace.didWakeNotification,
+            NSWorkspace.sessionDidBecomeActiveNotification
+        ]
+
+        // Both halves are idempotent, which matters because the events overlap:
+        // putting the machine to sleep sends the screens to sleep as well.
+        for name in park {
+            powerObservers.append(observe(name, on: center) { $0.monitor.suspend() })
+        }
+        for name in wake {
+            powerObservers.append(observe(name, on: center) { $0.monitor.resume() })
+        }
+    }
+
+    private func observe(
+        _ name: NSNotification.Name,
+        on center: NotificationCenter,
+        perform action: @escaping @MainActor (AppModel) -> Void
+    ) -> any NSObjectProtocol {
+        center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                action(self)
+            }
+        }
+    }
+
     private func installSignalHandlers() {
         for signalNumber in [SIGINT, SIGTERM, SIGHUP] {
             signal(signalNumber, SIG_IGN)
@@ -108,6 +155,10 @@ final class AppModel {
     func stop() {
         monitor.stop()
         touchBar.shutDown()
+
+        let center = NSWorkspace.shared.notificationCenter
+        powerObservers.forEach(center.removeObserver)
+        powerObservers.removeAll()
     }
 
     // MARK: - Windows
