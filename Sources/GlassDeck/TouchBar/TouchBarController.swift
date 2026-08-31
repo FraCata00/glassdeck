@@ -53,6 +53,21 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
             if case let .detail(kind) = self { return kind }
             return nil
         }
+
+        /// Whether this bar is worth redrawing at the sampling cadence.
+        ///
+        /// The Control Strip meter and the mini bar are a few points tall and
+        /// carry no numbers: at the default cadence, redrawing them every 1.5 s
+        /// spends the DFR round trip on a change nobody can see. They follow the
+        /// coarse republication instead — the same one the menu bar glyph uses.
+        /// The larger bars carry sparklines and readouts, where the cadence is
+        /// the point, and keep it.
+        var wantsFineCadence: Bool {
+            switch self {
+            case .collapsed, .mini: false
+            case .expanded, .fullscreen, .detail: true
+            }
+        }
     }
 
     static let controlStripIdentifier = NSTouchBarItem.Identifier("dev.fracata00.glassdeck.controlstrip")
@@ -116,6 +131,11 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     /// Width of the spacer that shifts the bar towards the Control Strip.
     private var leadingSpacerWidth: CGFloat = 0
     private var isObserving = false
+    /// Identifies the live tracking closure. `withObservationTracking` cannot be
+    /// cancelled, so re-arming early — which a mode change does, to pick up the
+    /// new cadence — leaves the previous closure to fire once more; it compares
+    /// this and retires instead of starting a second loop.
+    private var observationGeneration = 0
 
     /// Called when the user asks for the full dashboard from the Touch Bar.
     var onOpenDashboard: (() -> Void)?
@@ -249,6 +269,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         mode = newMode
         SystemTouchBar.presentSystemModal(bar, identifier: Self.controlStripIdentifier, placement: newMode.placement)
         refresh()
+        reobserve()
     }
 
     /// Returns the Touch Bar to the system, leaving the Control Strip meter behind.
@@ -258,6 +279,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         self.presentedBar = nil
         presentedSignature = nil
         mode = .collapsed
+        reobserve()
     }
 
     /// Expands a single metric across the bar. Tapping a panel is how the extra
@@ -349,14 +371,30 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         observe()
     }
 
+    /// Re-arms the tracking closure against the cadence the current mode wants,
+    /// so a bar that has just grown does not spend its first seconds updating at
+    /// the coarse rate the mini bar left behind.
+    private func reobserve() {
+        guard isObserving else { return }
+        observe()
+    }
+
     private func observe() {
+        observationGeneration += 1
+        let generation = observationGeneration
+        let wantsFineCadence = mode.wantsFineCadence
+
         withObservationTracking {
-            _ = monitor.snapshot
+            // Only one of the two is read, and that is the whole point:
+            // `@Observable` tracks each property separately, so a bar that reads
+            // the coarse republication is not invalidated by the sample in
+            // between.
+            _ = wantsFineCadence ? monitor.snapshot : monitor.coarseSnapshot
             _ = preferences.touchBarMetrics
             _ = preferences.touchBarAlignment
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
-                guard let self else { return }
+                guard let self, generation == self.observationGeneration else { return }
                 self.stripView.metrics = self.preferences.touchBarMetrics
                 self.miniStripView.metrics = self.preferences.touchBarMetrics
                 self.applicationStripView.metrics = self.preferences.touchBarMetrics
