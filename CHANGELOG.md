@@ -5,6 +5,39 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-08-31
+
+### Changed
+
+- **GlassDeck stops sampling while nobody can see the result.** The loop ran at
+  full cadence with the display asleep, the machine suspended or another user
+  switched in front: waking every tick to read the SMC and redraw a status item
+  on a dark screen. It is now parked on those events and resumed on their
+  speculars, and resuming takes a reading straight away, so the first glance
+  after a wake is fresh rather than the one from before the screen went dark.
+- **Low Power Mode halves the sampling rate.** It is the user saying the battery
+  matters more than anything on screen, and a system monitor is the last thing
+  that should argue. The change takes effect at the next tick, and switching the
+  mode off restores the cadence just as quickly.
+- **The Control Strip meter and the mini Touch Bar redraw on the slower
+  cadence.** Both are a few points tall and carry no numbers, and both were
+  costing a Touch Bar round trip every 1.5 s to change something too small to
+  read. They now follow the same 2 s republication the menu bar glyph has used
+  since 1.4.0. The expanded, full-width and detail bars carry sparklines and
+  readouts, where the cadence is the point, and keep the fast one.
+- **The fans and the wattage are read every few seconds rather than every tick**,
+  through the cache the thermometers have had since 1.4.0 — three seconds for fan
+  speed, two for power, which is the spikiest of the three and the one a longer
+  hold would turn into a staircase. Worth being plain about the size: a fan read
+  costs 0.24 ms and a power read 0.47 ms against 19.8 ms for the thermometers, so
+  this is coherence between the SMC samplers rather than a battery win. The one
+  above it is where the hours are.
+- **GlassDeckKit API**: `SystemMonitor` gains `suspend()`, `resume()`,
+  `isSuspended`, `effectiveInterval`, `isLowPowerModeEnabled` and
+  `lowPowerMultiplier`. `FanSampler.sample()` and `PowerSampler.sample()` take
+  the same optional `at:` timestamp `ThermalSampler` already took, defaulted, so
+  existing calls are unchanged. Nothing was removed or renamed.
+
 ## [1.5.1] - 2026-08-31
 
 ### Fixed
@@ -217,6 +250,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[1.6.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.6.0
 [1.5.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.5.1
 [1.5.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.5.0
 [1.4.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.4.1
