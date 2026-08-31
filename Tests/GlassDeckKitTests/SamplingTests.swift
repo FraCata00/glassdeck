@@ -183,3 +183,50 @@ struct ThermalCadenceTests {
         #expect(sampler.sample(at: start.addingTimeInterval(2)) == first)
     }
 }
+
+/// The fans and the wattage go through the same SMC connection as the
+/// thermometers, and change no faster: both reuse a reading rather than paying
+/// for a round trip on every tick.
+@Suite("SMC sampling cadence")
+struct SMCCadenceTests {
+    @Test("Fan readings are reused inside the refresh interval")
+    func fanReadingsAreReused() {
+        let sampler = FanSampler(smc: SMCService(), refreshInterval: 3)
+        let start = Date()
+
+        let first = sampler.sample(at: start)
+        #expect(sampler.readCount == 1)
+
+        for offset in [1.5, 2.99] {
+            #expect(sampler.sample(at: start.addingTimeInterval(offset)) == first)
+        }
+        #expect(sampler.readCount == 1)
+
+        _ = sampler.sample(at: start.addingTimeInterval(3))
+        #expect(sampler.readCount == 2)
+    }
+
+    @Test("Power readings are reused inside the refresh interval")
+    func powerReadingsAreReused() {
+        let smc = SMCService()
+        let sampler = PowerSampler(smc: smc, catalogue: SensorCatalogue(smc: smc), refreshInterval: 2)
+        let start = Date()
+
+        let first = sampler.sample(at: start)
+        #expect(sampler.readCount == 1)
+        #expect(sampler.sample(at: start.addingTimeInterval(1.5)) == first)
+        #expect(sampler.readCount == 1)
+
+        _ = sampler.sample(at: start.addingTimeInterval(2))
+        #expect(sampler.readCount == 2)
+    }
+
+    @Test("A fanless Mac still reports unavailable rather than a stale reading")
+    func fanlessMacIsHonest() {
+        let sampler = FanSampler(smc: nil)
+        let start = Date()
+
+        #expect(sampler.sample(at: start).isAvailable == false)
+        #expect(sampler.sample(at: start.addingTimeInterval(10)).isAvailable == false)
+    }
+}
