@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.7.0] - 2026-09-01
 
 ### Added
 
@@ -314,7 +314,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
-[Unreleased]: https://github.com/FraCata00/glassdeck/compare/v1.6.1...HEAD
+[1.7.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.7.0
 [1.6.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.6.1
 [1.6.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.6.0
 [1.5.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.5.1
