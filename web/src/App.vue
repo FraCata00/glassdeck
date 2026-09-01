@@ -6,6 +6,7 @@ import MetricsSection from './components/MetricsSection.vue'
 import PrinciplesSection from './components/PrinciplesSection.vue'
 import HowSection from './components/HowSection.vue'
 import InstallSection from './components/InstallSection.vue'
+import SupportSection from './components/SupportSection.vue'
 import SiteFooter from './components/SiteFooter.vue'
 </script>
 
@@ -20,6 +21,7 @@ import SiteFooter from './components/SiteFooter.vue'
       <PrinciplesSection />
       <HowSection />
       <InstallSection />
+      <SupportSection />
       <SiteFooter />
     </v-main>
   </v-app>
