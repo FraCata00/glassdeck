@@ -5,8 +5,8 @@
       2,
       "always",
       ["cpu", "gpu", "memory", "disk", "network", "fans", "battery", "processes",
-       "touchbar", "menubar", "ui", "dashboard", "settings", "kit", "scripts",
-       "ci", "deps", "readme", "release", "web"]
+       "bluetooth", "clock", "touchbar", "menubar", "ui", "dashboard", "settings",
+       "kit", "scripts", "ci", "deps", "readme", "release", "web"]
     ],
     "subject-case": [2, "never", ["start-case", "pascal-case", "upper-case"]],
     "header-max-length": [2, "always", 100]
