@@ -15,8 +15,9 @@ struct GlassDeckApp: App {
                 .environment(model.monitor)
                 .environment(model.preferences)
                 .environment(model)
+                .environment(model.clock)
         } label: {
-            MenuBarLabel(monitor: model.monitor, preferences: model.preferences)
+            MenuBarLabel(monitor: model.monitor, preferences: model.preferences, clock: model.clock)
         }
         .menuBarExtraStyle(.window)
     }
@@ -26,8 +27,39 @@ struct GlassDeckApp: App {
 private struct MenuBarLabel: View {
     @Bindable var monitor: SystemMonitor
     @Bindable var preferences: Preferences
+    @Bindable var clock: ClockTicker
 
     var body: some View {
+        HStack(spacing: 6) {
+            if let clock = menuBarClock {
+                Text(clock)
+                    .monospacedDigit()
+            }
+            meter
+        }
+    }
+
+    /// The clock in the status item, or `nil` when nobody asked for one.
+    ///
+    /// Named rather than bare when it is somewhere else — a lone `21:32` beside
+    /// a Mac reading 14:32 is a puzzle — and bare when the zone is this one.
+    /// The guards run before `clock.now` is touched, so an install with no menu
+    /// bar clock never takes a dependency on the ticker and never redraws the
+    /// status item for it.
+    private var menuBarClock: String? {
+        guard let identifier = preferences.menuBarClockZone,
+              let timeZone = TimeZone(identifier: identifier)
+        else { return nil }
+
+        let time = WorldClock.time(in: timeZone, at: clock.now)
+        guard identifier != TimeZone.current.identifier else { return time }
+        let label = preferences.clockZones.first { $0.identifier == identifier }?.displayLabel
+            ?? ClockZone.cityName(for: identifier)
+        return "\(label) \(time)"
+    }
+
+    @ViewBuilder
+    private var meter: some View {
         // Reads `coarseSnapshot`, never `snapshot`: redrawing the status item is
         // the app's largest single cost, and this body re-runs — and the status
         // item redraws — on every property it touches that changes.

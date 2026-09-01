@@ -7,11 +7,13 @@ struct DashboardView: View {
     @Environment(SystemMonitor.self) private var monitor
     @Environment(Preferences.self) private var preferences
     @Environment(AppModel.self) private var model
+    @Environment(ClockTicker.self) private var clock
 
     @Namespace private var glass
     @State private var focus: MetricKind = .cpu
     @State private var isOnScreen = true
     @State private var lastSnapshot: MetricsSnapshot = .empty
+    @State private var lastTick: Date = .distantPast
 
     private let columns = [GridItem(.adaptive(minimum: 224), spacing: 14)]
 
@@ -41,7 +43,12 @@ struct DashboardView: View {
                         if !modules.isEmpty {
                             LazyVGrid(columns: columns, spacing: 14) {
                                 ForEach(modules) { module in
-                                    ModuleCardView(module: module, snapshot: snapshot)
+                                    ModuleCardView(
+                                        module: module,
+                                        snapshot: snapshot,
+                                        zones: preferences.clockZones,
+                                        now: tick
+                                    )
                                     .glassMorph(id: module, in: glass)
                                 }
                             }
@@ -62,7 +69,10 @@ struct DashboardView: View {
         .samplesProcesses(with: monitor, while: preferences.showsProcesses)
         // The window is kept rather than released when it closes, so the same
         // gate the panel needs applies here — over a drifting mesh gradient.
-        .tracksVisibility($isOnScreen) { lastSnapshot = monitor.snapshot }
+        .tracksVisibility($isOnScreen) {
+            lastSnapshot = monitor.snapshot
+            lastTick = clock.now
+        }
     }
 
     /// The reading the dashboard draws: the live one while it is on screen, the
@@ -85,6 +95,12 @@ struct DashboardView: View {
 
     private var modules: [ModuleKind] {
         preferences.panelModules.filter { $0.hasContent(in: snapshot, preferences: preferences) }
+    }
+
+    /// The clock, frozen while the window is not on screen — the same gate the
+    /// snapshot goes through, for the same reason.
+    private var tick: Date {
+        isOnScreen ? clock.now : lastTick
     }
 
     /// The metric the hero gauge shows. Resolved rather than stored, so turning

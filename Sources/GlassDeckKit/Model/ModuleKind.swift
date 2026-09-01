@@ -20,18 +20,20 @@ extension MetricKind: Accented {}
 /// fraction of a whole, and the whole pipeline is built on that: `fraction(for:)`,
 /// the rolling history behind every sparkline, the ring gauges, the bars in the
 /// status item, the Touch Bar strip, the temperature alert. A list of paired
-/// devices — each with its own charge, and sometimes three of them — has no such
-/// number. Inventing one would put a meaningless ring in the panel and a
-/// meaningless bar in the menu bar, so these render as cards of their own
-/// instead, and the two enums stay honest about what they are.
+/// devices — each with its own charge, and sometimes three of them — and a wall
+/// of clocks have no such number. Inventing one would put a meaningless ring in
+/// the panel and a meaningless bar in the menu bar, so these render as cards of
+/// their own instead, and the two enums stay honest about what they are.
 public enum ModuleKind: String, Sendable, CaseIterable, Codable, Identifiable, Accented {
     case bluetooth
+    case clock
 
     public var id: String { rawValue }
 
     public var title: String {
         switch self {
         case .bluetooth: "Bluetooth"
+        case .clock: L.t("module.clock", "Clock")
         }
     }
 
@@ -40,18 +42,23 @@ public enum ModuleKind: String, Sendable, CaseIterable, Codable, Identifiable, A
         // There is no Bluetooth glyph in SF Symbols, and the radio waves are
         // what the system itself uses for a wireless link.
         case .bluetooth: "antenna.radiowaves.left.and.right"
+        // Not "clock": that is the uptime label in the dashboard header, and
+        // this module is about where in the world it is, not what time it is here.
+        case .clock: "globe"
         }
     }
 
     public var hue: Double {
         switch self {
         case .bluetooth: 0.66 // blue, as the system paints Bluetooth itself
+        case .clock: 0.72     // indigo
         }
     }
 
     /// Modules enabled the first time the app runs.
     ///
-    /// All of them, because a module hides itself when it has nothing to say —
-    /// the Bluetooth card until a device with a battery is paired.
+    /// Both, because both hide themselves when they have nothing to say: the
+    /// Bluetooth card until a device with a battery is paired, the clock until a
+    /// time zone has been added.
     public static let defaultSelection: [ModuleKind] = allCases
 }

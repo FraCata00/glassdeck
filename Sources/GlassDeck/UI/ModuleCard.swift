@@ -86,9 +86,10 @@ extension ModuleKind {
     /// fan gauge, and a Mac with nothing paired is not shown an empty Bluetooth
     /// card.
     @MainActor
-    func hasContent(in snapshot: MetricsSnapshot, preferences _: Preferences) -> Bool {
+    func hasContent(in snapshot: MetricsSnapshot, preferences: Preferences) -> Bool {
         switch self {
         case .bluetooth: snapshot.bluetooth.isAvailable
+        case .clock: !preferences.clockZones.isEmpty
         }
     }
 }
@@ -97,10 +98,13 @@ extension ModuleKind {
 struct ModuleCardView: View {
     let module: ModuleKind
     let snapshot: MetricsSnapshot
+    let zones: [ClockZone]
+    let now: Date
 
     var body: some View {
         switch module {
         case .bluetooth: BluetoothCard(status: snapshot.bluetooth)
+        case .clock: ClockCard(zones: zones, now: now)
         }
     }
 }

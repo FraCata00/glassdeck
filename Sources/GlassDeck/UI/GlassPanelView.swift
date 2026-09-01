@@ -10,11 +10,13 @@ struct GlassPanelView: View {
     @Environment(SystemMonitor.self) private var monitor
     @Environment(Preferences.self) private var preferences
     @Environment(AppModel.self) private var model
+    @Environment(ClockTicker.self) private var clock
 
     @State private var selection: MetricKind = .cpu
     @State private var contentHeight: CGFloat = 0
     @State private var isOnScreen = true
     @State private var lastSnapshot: MetricsSnapshot = .empty
+    @State private var lastTick: Date = .distantPast
     @Namespace private var glassNamespace
 
     private static let panelPadding: CGFloat = 16
@@ -96,7 +98,12 @@ struct GlassPanelView: View {
                 }
 
                 ForEach(modules) { module in
-                    ModuleCardView(module: module, snapshot: snapshot)
+                    ModuleCardView(
+                        module: module,
+                        snapshot: snapshot,
+                        zones: preferences.clockZones,
+                        now: tick
+                    )
                 }
 
                 if preferences.showsProcesses {
@@ -120,13 +127,22 @@ struct GlassPanelView: View {
         .samplesProcesses(with: monitor, while: preferences.showsProcesses)
         // Closing the panel does not tear this tree down, so what it reads has
         // to be switched off by hand or it animates on into a hidden window.
-        .tracksVisibility($isOnScreen) { lastSnapshot = monitor.snapshot }
+        .tracksVisibility($isOnScreen) {
+            lastSnapshot = monitor.snapshot
+            lastTick = clock.now
+        }
     }
 
     /// The reading the panel draws: the live one while it is on screen, the last
     /// one it saw once it is not.
     private var snapshot: MetricsSnapshot {
         isOnScreen ? monitor.snapshot : lastSnapshot
+    }
+
+    /// The same trick for the clock: a closed panel that went on reading the
+    /// ticker would be rebuilt once a minute for nobody.
+    private var tick: Date {
+        isOnScreen ? clock.now : lastTick
     }
 
     /// The module cards, minus the ones with nothing to show.

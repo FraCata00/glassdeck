@@ -66,6 +66,11 @@
 "Modules" = "Moduli";
 "The charge of every paired device that reports one. A device that is not connected keeps publishing the level it was last seen at, so those rows are dimmed and marked rather than hidden." = "La carica di ogni dispositivo abbinato che la comunica. Un dispositivo non connesso continua a pubblicare l'ultimo livello visto, quindi quelle righe restano visibili ma in grigio e con l'indicazione.";
 "Nothing paired is reporting a battery level right now." = "Al momento nessun dispositivo abbinato comunica il livello di batteria.";
+"Add a time zone" = "Aggiungi un fuso orario";
+"Show in the menu bar" = "Mostra nella barra dei menu";
+"Off" = "Nessuno";
+"Remove this time zone" = "Rimuovi questo fuso orario";
+"Rename a row to whatever the clock is for — a city, an office, a colleague. Drag to reorder." = "Rinomina una riga con quello che rappresenta: una città, un ufficio, un collega. Trascina per riordinare.";
 
 /* Scheda Bluetooth */
 "not connected" = "non connesso";

@@ -9,6 +9,7 @@ struct SettingsView: View {
     @Environment(Preferences.self) private var preferences
     @Environment(TouchBarController.self) private var touchBar
     @Environment(SystemMonitor.self) private var monitor
+    @Environment(ClockTicker.self) private var clock
 
     @State private var launchesAtLogin = LoginItem.isEnabled
 
@@ -130,9 +131,11 @@ struct SettingsView: View {
         .toggleStyle(.switch)
     }
 
-    /// The cards that are not a gauge, and what goes on them.
+    /// The two cards that are not a gauge: the paired devices' batteries, and
+    /// the wall of clocks. A `List` for the same reason as the metrics tab —
+    /// the time zones are reorderable.
     private func modules(preferences: Bindable<Preferences>) -> some View {
-        Form {
+        List {
             Section {
                 Toggle(isOn: moduleBinding(.bluetooth)) {
                     Label(ModuleKind.bluetooth.title, systemImage: ModuleKind.bluetooth.symbolName)
@@ -146,8 +149,116 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Section {
+                Toggle(isOn: moduleBinding(.clock)) {
+                    Label(ModuleKind.clock.title, systemImage: ModuleKind.clock.symbolName)
+                }
+
+                ForEach(preferences.wrappedValue.clockZones) { zone in
+                    zoneRow(zone)
+                }
+                .onMove { self.preferences.moveClockZones(fromOffsets: $0, toOffset: $1) }
+
+                Menu {
+                    ForEach(Self.zoneRegions, id: \.name) { region in
+                        Menu(region.name) {
+                            ForEach(region.identifiers, id: \.self) { identifier in
+                                Button(ClockZone.cityName(for: identifier)) {
+                                    self.preferences.addClockZone(identifier)
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    Label("Add a time zone", systemImage: "plus")
+                }
+
+                Picker("Show in the menu bar", selection: menuBarZoneBinding) {
+                    Text("Off").tag(String?.none)
+                    ForEach(preferences.wrappedValue.clockZones) { zone in
+                        Text(zone.displayLabel).tag(String?.some(zone.identifier))
+                    }
+                }
+                .disabled(preferences.wrappedValue.clockZones.isEmpty)
+            } footer: {
+                Text("Rename a row to whatever the clock is for — a city, an office, a colleague. Drag to reorder.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    // A list row would rather truncate than grow: this is what
+                    // lets the sentence wrap to a second line instead.
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .formStyle(.grouped)
+        .toggleStyle(.switch)
+        // The rows preview a live time, and the ticker is otherwise asleep until
+        // the module is switched on.
+        .onAppear { clock.beginObserving() }
+        .onDisappear { clock.endObserving() }
+    }
+
+    private func zoneRow(_ zone: ClockZone) -> some View {
+        HStack(spacing: 8) {
+            TextField(
+                ClockZone.cityName(for: zone.identifier),
+                text: Binding(
+                    get: { zone.label },
+                    set: { preferences.renameClockZone(zone.identifier, to: $0) }
+                )
+            )
+            .textFieldStyle(.roundedBorder)
+            .frame(maxWidth: 150)
+
+            Text(zone.identifier)
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .lineLimit(1)
+                .truncationMode(.head)
+
+            Spacer(minLength: 4)
+
+            if let timeZone = zone.timeZone {
+                Text(WorldClock.time(in: timeZone, at: clock.now))
+                    .font(.system(size: 11, weight: .medium))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+
+            Button {
+                if let index = preferences.clockZones.firstIndex(of: zone) {
+                    preferences.removeClockZones(atOffsets: IndexSet(integer: index))
+                }
+            } label: {
+                Image(systemName: "minus.circle.fill")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.borderless)
+            .help("Remove this time zone")
+        }
+    }
+
+    /// Every zone macOS knows, grouped by region for the add menu.
+    ///
+    /// Built once: there are some six hundred identifiers, and this is read
+    /// every time the settings body runs.
+    private static let zoneRegions: [(name: String, identifiers: [String])] = {
+        Dictionary(grouping: TimeZone.knownTimeZoneIdentifiers, by: ClockZone.region(for:))
+            .map { region in
+                (
+                    name: region.key,
+                    identifiers: region.value.sorted {
+                        ClockZone.cityName(for: $0) < ClockZone.cityName(for: $1)
+                    }
+                )
+            }
+            .sorted { $0.name < $1.name }
+    }()
+
+    private var menuBarZoneBinding: Binding<String?> {
+        Binding(
+            get: { preferences.menuBarClockZone },
+            set: { preferences.menuBarClockZone = $0 }
+        )
     }
 
     private func moduleBinding(_ module: ModuleKind) -> Binding<Bool> {

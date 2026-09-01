@@ -11,6 +11,10 @@
 "bluetooth.left" = "left";
 "bluetooth.none" = "no devices";
 "bluetooth.right" = "right";
+"clock.otherRegion" = "Other";
+"clock.same" = "same time";
+"clock.tomorrow" = "tomorrow";
+"clock.yesterday" = "yesterday";
 "cpu.caption" = "%1$@ user · %2$@ sys";
 "detail.adapter" = "adapter";
 "detail.battery" = "battery";
@@ -58,6 +62,7 @@
 "metric.network" = "Network";
 "metric.power" = "Power";
 "metric.temperature" = "Temperature";
+"module.clock" = "Clock";
 "power.adapter" = "of a %lld W adapter";
 "power.none" = "not reported";
 "power.total" = "system total";

@@ -21,12 +21,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   asked every 5 s rather than on every tick: the query costs 0.2 ms for four
   devices, but it is a round trip to `bluetoothd` and a battery percentage moves
   in minutes.
-- It is a `ModuleKind` rather than a `MetricKind`, and draws as a card of its own
+- **Clock module.** Any number of time zones, each with its own label, showing
+  the local time there and how far that is from here — offsets measured at the
+  instant, so the three weeks when one hemisphere has changed to summer time and
+  the other has not are not an hour out. One zone can also sit in the menu bar,
+  named unless it is this one. It runs on its own once-a-minute ticker rather
+  than on the sampler: nothing here reads seconds, and hanging a clock off a
+  1.5 s loop would redraw the status item forty times for every minute it
+  changed. The ticker is not scheduled at all until a zone exists.
+- Both are `ModuleKind` rather than `MetricKind`, and draw as cards of their own
   under the gauges. A metric is one fraction of a whole — that is what makes it a
   ring, a bar in the status item, a sparkline and a row on the Touch Bar. A list
-  of devices with a charge each has no such number, and inventing one would have
-  put a meaningless ring in the panel.
-- A *Modules* tab in the settings, for the cards that are not gauges.
+  of devices with a charge each, and a wall of clocks, have no such number, and
+  giving them an invented one would have put a meaningless ring in the panel.
+- A *Modules* tab in the settings to switch the two on, add and rename and
+  reorder time zones, and pick the one for the menu bar.
 
 ## [1.6.1] - 2026-09-01
 

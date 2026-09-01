@@ -66,6 +66,11 @@
 "Modules" = "Modules";
 "The charge of every paired device that reports one. A device that is not connected keeps publishing the level it was last seen at, so those rows are dimmed and marked rather than hidden." = "The charge of every paired device that reports one. A device that is not connected keeps publishing the level it was last seen at, so those rows are dimmed and marked rather than hidden.";
 "Nothing paired is reporting a battery level right now." = "Nothing paired is reporting a battery level right now.";
+"Add a time zone" = "Add a time zone";
+"Show in the menu bar" = "Show in the menu bar";
+"Off" = "Off";
+"Remove this time zone" = "Remove this time zone";
+"Rename a row to whatever the clock is for — a city, an office, a colleague. Drag to reorder." = "Rename a row to whatever the clock is for — a city, an office, a colleague. Drag to reorder.";
 
 /* Bluetooth card */
 "not connected" = "not connected";

@@ -82,6 +82,8 @@ the centre, or beside the Control Strip (the default).
 - **Bluetooth** — the charge of every paired device that reports one, earbuds
   split into left, right and case. Disconnected devices keep the level they were
   last seen at, so those rows are dimmed and marked rather than passed off as live.
+- **Clock** — as many time zones as you like, each with its own label and the
+  offset from here, and one of them in the menu bar if you want it there.
 - **Top processes** — the busiest processes, sampled only while a window is open.
 - **English and Italian**, following the system language.
 - **Liquid Glass everywhere** — real `glassEffect` surfaces on macOS 26+, with a

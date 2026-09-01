@@ -17,6 +17,9 @@ final class AppModel {
     let preferences: Preferences
     let monitor: SystemMonitor
     let touchBar: TouchBarController
+    /// Drives the clock module and the menu bar clock, on its own once-a-minute
+    /// cadence rather than the sampler's.
+    let clock = ClockTicker()
 
     @ObservationIgnored private let alerts: ThresholdAlerts
     @ObservationIgnored private var dashboardWindow: NSWindow?
@@ -39,6 +42,7 @@ final class AppModel {
         NSApp.touchBar = touchBar.makeApplicationTouchBar()
         touchBar.synchroniseWithPreferences()
         observePreferences()
+        synchroniseClock()
         observePowerEvents()
         alerts.start()
         installSignalHandlers()
@@ -79,7 +83,12 @@ final class AppModel {
             powerObservers.append(observe(name, on: center) { $0.monitor.suspend() })
         }
         for name in wake {
-            powerObservers.append(observe(name, on: center) { $0.monitor.resume() })
+            powerObservers.append(observe(name, on: center) {
+                $0.monitor.resume()
+                // The minute the machine slept through has passed: the ticker's
+                // own sleep fires on its own, but not before the first glance.
+                $0.clock.refresh()
+            })
         }
     }
 
@@ -172,7 +181,11 @@ final class AppModel {
         let window = makeGlassWindow(
             title: "GlassDeck",
             size: NSSize(width: 720, height: 560),
-            content: DashboardView().environment(monitor).environment(preferences).environment(self)
+            content: DashboardView()
+                .environment(monitor)
+                .environment(preferences)
+                .environment(self)
+                .environment(clock)
         )
         window.isReleasedWhenClosed = false
         dashboardWindow = window
@@ -190,7 +203,11 @@ final class AppModel {
         let window = makeGlassWindow(
             title: String(localized: "GlassDeck Settings"),
             size: NSSize(width: 460, height: 330),
-            content: SettingsView().environment(preferences).environment(touchBar).environment(monitor),
+            content: SettingsView()
+                .environment(preferences)
+                .environment(touchBar)
+                .environment(monitor)
+                .environment(clock),
             isResizable: false,
             isTransparent: false
         )
@@ -210,7 +227,8 @@ final class AppModel {
             content: GlassPanelView()
                 .environment(monitor)
                 .environment(preferences)
-                .environment(self),
+                .environment(self)
+                .environment(clock),
             isResizable: false
         )
         window.isReleasedWhenClosed = false
@@ -256,13 +274,24 @@ final class AppModel {
             _ = preferences.refreshInterval
             _ = preferences.isTouchBarEnabled
             _ = preferences.touchBarMetrics
+            _ = preferences.panelModules
+            _ = preferences.clockZones
+            _ = preferences.menuBarClockZone
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.monitor.interval = self.preferences.refreshInterval
                 self.touchBar.synchroniseWithPreferences()
+                self.synchroniseClock()
                 self.observePreferences()
             }
         }
+    }
+
+    /// Runs the minute ticker only while a clock is actually on screen. Nobody
+    /// starts out with one, so the default install schedules nothing.
+    private func synchroniseClock() {
+        let onCard = preferences.panelModules.contains(.clock) && !preferences.clockZones.isEmpty
+        clock.setWanted(onCard || preferences.menuBarClockZone != nil)
     }
 }

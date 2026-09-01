@@ -20,6 +20,8 @@ final class Preferences {
         static let temperatureAlert = "temperatureAlert"
         static let temperatureThreshold = "temperatureThreshold"
         static let panelModules = "panelModules"
+        static let clockZones = "clockZones"
+        static let menuBarClockZone = "menuBarClockZone"
     }
 
     /// How the status item renders in the menu bar.
@@ -96,10 +98,21 @@ final class Preferences {
     var showsProcesses: Bool { didSet { defaults.set(showsProcesses, forKey: Key.showsProcesses) } }
 
     /// The non-scalar cards shown under the gauges, in the panel and the
-    /// dashboard. Unlike the metric selections this one may be empty: the
-    /// modules are extras, and a card with nothing in it is worse than no card.
+    /// dashboard. Unlike the metric selections this one may be empty: both
+    /// modules are extras, and neither has anything to say by default.
     var panelModules: [ModuleKind] {
         didSet { defaults.set(panelModules.map(\.rawValue), forKey: Key.panelModules) }
+    }
+
+    /// The time zones on the clock card, in the order they are shown.
+    var clockZones: [ClockZone] { didSet { storeClockZones() } }
+
+    /// The zone whose time sits in the menu bar, or `nil` for none.
+    ///
+    /// Off by default: macOS already has a clock up there, and a second one is
+    /// only worth its space to someone who asked for it.
+    var menuBarClockZone: String? {
+        didSet { defaults.set(menuBarClockZone, forKey: Key.menuBarClockZone) }
     }
 
     /// The order every surface lists metrics in — the panel's gauges, the Touch
@@ -134,6 +147,8 @@ final class Preferences {
         showsProcesses = defaults.object(forKey: Key.showsProcesses) as? Bool ?? true
         panelModules = (defaults.array(forKey: Key.panelModules) as? [String])
             .map { $0.compactMap(ModuleKind.init(rawValue:)) } ?? ModuleKind.defaultSelection
+        clockZones = Self.readClockZones(from: defaults)
+        menuBarClockZone = defaults.string(forKey: Key.menuBarClockZone)
         metricOrder = Self.repairedOrder(Self.read(Key.metricOrder, from: defaults))
         isTemperatureAlertEnabled = defaults.object(forKey: Key.temperatureAlert) as? Bool ?? false
         let storedThreshold = defaults.double(forKey: Key.temperatureThreshold)
@@ -174,6 +189,53 @@ final class Preferences {
         } else {
             panelModules = ModuleKind.allCases.filter { panelModules.contains($0) || $0 == module }
         }
+    }
+
+    /// Adds a zone to the clock card, ignoring one that is already there.
+    func addClockZone(_ identifier: String) {
+        guard TimeZone(identifier: identifier) != nil,
+              !clockZones.contains(where: { $0.identifier == identifier })
+        else { return }
+        clockZones.append(ClockZone(identifier: identifier))
+    }
+
+    func removeClockZones(atOffsets offsets: IndexSet) {
+        var zones = clockZones
+        zones.remove(atOffsets: offsets)
+        clockZones = zones
+        // A zone that is no longer on the card cannot go on being the one in the
+        // menu bar.
+        if let menuBarClockZone, !zones.contains(where: { $0.identifier == menuBarClockZone }) {
+            self.menuBarClockZone = nil
+        }
+    }
+
+    func moveClockZones(fromOffsets source: IndexSet, toOffset destination: Int) {
+        var zones = clockZones
+        zones.move(fromOffsets: source, toOffset: destination)
+        clockZones = zones
+    }
+
+    /// Renames one zone's row. An empty name is kept as such — `ClockZone`
+    /// falls back to the city when it draws, which is what lets the field be
+    /// cleared and retyped.
+    func renameClockZone(_ identifier: String, to label: String) {
+        guard let index = clockZones.firstIndex(where: { $0.identifier == identifier }) else { return }
+        clockZones[index].label = label.trimmingCharacters(in: .whitespaces)
+    }
+
+    private func storeClockZones() {
+        guard let data = try? JSONEncoder().encode(clockZones) else { return }
+        defaults.set(data, forKey: Key.clockZones)
+    }
+
+    private static func readClockZones(from defaults: UserDefaults) -> [ClockZone] {
+        guard let data = defaults.data(forKey: Key.clockZones),
+              let zones = try? JSONDecoder().decode([ClockZone].self, from: data)
+        else { return [] }
+        // A zone macOS has dropped between releases would otherwise be a row
+        // that can never show a time.
+        return zones.filter { TimeZone(identifier: $0.identifier) != nil }
     }
 
     /// Toggles a metric in a selection while keeping the user's metric order and
