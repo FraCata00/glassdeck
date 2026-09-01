@@ -20,6 +20,8 @@ struct SettingsView: View {
                 .tabItem { Label("General", systemImage: "slider.horizontal.3") }
             metrics(preferences: $preferences)
                 .tabItem { Label("Metrics", systemImage: "chart.bar") }
+            modules(preferences: $preferences)
+                .tabItem { Label("Modules", systemImage: "square.grid.2x2") }
             touchBarSettings(preferences: $preferences)
                 .tabItem { Label("Touch Bar", systemImage: "macbook.gen1") }
         }
@@ -126,6 +128,33 @@ struct SettingsView: View {
         // A list renders toggles as checkboxes by default, which would not match
         // the switches in the other two tabs.
         .toggleStyle(.switch)
+    }
+
+    /// The cards that are not a gauge, and what goes on them.
+    private func modules(preferences: Bindable<Preferences>) -> some View {
+        Form {
+            Section {
+                Toggle(isOn: moduleBinding(.bluetooth)) {
+                    Label(ModuleKind.bluetooth.title, systemImage: ModuleKind.bluetooth.symbolName)
+                }
+                Text("The charge of every paired device that reports one. A device that is not connected keeps publishing the level it was last seen at, so those rows are dimmed and marked rather than hidden.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if !monitor.snapshot.bluetooth.isAvailable {
+                    Label("Nothing paired is reporting a battery level right now.", systemImage: "info.circle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private func moduleBinding(_ module: ModuleKind) -> Binding<Bool> {
+        Binding(
+            get: { preferences.panelModules.contains(module) },
+            set: { _ in preferences.toggle(module) }
+        )
     }
 
     private func touchBarSettings(preferences: Bindable<Preferences>) -> some View {

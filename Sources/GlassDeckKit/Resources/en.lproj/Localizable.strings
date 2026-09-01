@@ -4,6 +4,13 @@
 "battery.onBattery" = "on battery";
 "battery.onPower" = "on power";
 "battery.toFull" = "%1$@ · %2$@ to full";
+"bluetooth.battery" = "battery";
+"bluetooth.case" = "case";
+"bluetooth.count" = "%lld devices";
+"bluetooth.disconnected" = "nothing connected";
+"bluetooth.left" = "left";
+"bluetooth.none" = "no devices";
+"bluetooth.right" = "right";
 "cpu.caption" = "%1$@ user · %2$@ sys";
 "detail.adapter" = "adapter";
 "detail.battery" = "battery";

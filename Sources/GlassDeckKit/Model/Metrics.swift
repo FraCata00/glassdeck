@@ -15,6 +15,9 @@ public struct MetricsSnapshot: Sendable, Equatable {
     public var battery: BatteryUsage
     public var thermal: ThermalUsage
     public var power: PowerUsage
+    /// Not a metric — a list of devices, each with its own charge — but sampled
+    /// on the same tick, so it rides in the same snapshot. See `ModuleKind`.
+    public var bluetooth: BluetoothStatus
 
     public init(
         timestamp: Date = Date(),
@@ -26,7 +29,8 @@ public struct MetricsSnapshot: Sendable, Equatable {
         fans: FanUsage = .unavailable,
         battery: BatteryUsage = .unavailable,
         thermal: ThermalUsage = .unavailable,
-        power: PowerUsage = .unavailable
+        power: PowerUsage = .unavailable,
+        bluetooth: BluetoothStatus = .unavailable
     ) {
         self.timestamp = timestamp
         self.cpu = cpu
@@ -38,6 +42,7 @@ public struct MetricsSnapshot: Sendable, Equatable {
         self.battery = battery
         self.thermal = thermal
         self.power = power
+        self.bluetooth = bluetooth
     }
 
     public static let empty = MetricsSnapshot()

@@ -11,6 +11,7 @@ public actor MetricsEngine {
     private let disk = DiskSampler()
     private let network = NetworkSampler()
     private let battery = BatterySampler()
+    private let bluetooth = BluetoothSampler()
 
     private let processes = ProcessSampler()
 
@@ -56,7 +57,8 @@ public actor MetricsEngine {
             fans: sensors.fans.sample(at: now),
             battery: battery.sample(),
             thermal: sensors.thermal.sample(at: now),
-            power: sensors.power.sample(at: now)
+            power: sensors.power.sample(at: now),
+            bluetooth: bluetooth.sample(at: now)
         )
     }
 

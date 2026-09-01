@@ -4,6 +4,13 @@
 "battery.onBattery" = "a batteria";
 "battery.onPower" = "alimentato";
 "battery.toFull" = "%1$@ · %2$@ alla carica completa";
+"bluetooth.battery" = "batteria";
+"bluetooth.case" = "custodia";
+"bluetooth.count" = "%lld dispositivi";
+"bluetooth.disconnected" = "nessuno connesso";
+"bluetooth.left" = "sinistro";
+"bluetooth.none" = "nessun dispositivo";
+"bluetooth.right" = "destro";
 "cpu.caption" = "%1$@ utente · %2$@ sistema";
 "detail.adapter" = "alimentatore";
 "detail.battery" = "batteria";

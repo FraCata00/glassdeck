@@ -54,6 +54,29 @@ struct SamplingTests {
         if battery.isCharging { #expect(battery.isPluggedIn) }
     }
 
+    @Test("Whatever this Mac has paired reports charges inside their own bounds")
+    func bluetoothIsConsistent() {
+        let status = BluetoothSampler().sample(at: Date())
+        guard status.isAvailable else { return }  // Nothing paired reports a battery.
+
+        for device in status.devices {
+            #expect(!device.address.isEmpty)
+            #expect(!device.name.isEmpty)
+            // A device is only listed at all because it reported something.
+            #expect(!device.battery.isEmpty)
+            for level in device.battery.levels {
+                #expect((0.0...1.0).contains(level.value))
+                #expect(level.value > 0)
+            }
+        }
+        // The headline can only come from a device that is on the air.
+        if let lowest = status.lowest {
+            #expect(status.connected.contains { $0.battery.lowest == lowest })
+        } else {
+            #expect(status.connected.isEmpty)
+        }
+    }
+
     @Test("Discovered sensors report plausible temperatures and power")
     func sensorsAreConsistent() {
         let smc = SMCService()

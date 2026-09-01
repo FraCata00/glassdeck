@@ -36,7 +36,7 @@ struct CoreGridView: View {
                         .frame(width: 7, height: 26)
                         .overlay(alignment: .bottom) {
                             Capsule()
-                                .fill(Theme.gradient(.cpu))
+                                .fill(Theme.gradient(MetricKind.cpu))
                                 .frame(width: 7, height: max(2, 26 * load.clamped01))
                                 .animation(.smooth(duration: 0.45), value: load)
                         }

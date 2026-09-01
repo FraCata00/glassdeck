@@ -95,6 +95,10 @@ struct GlassPanelView: View {
                     }
                 }
 
+                ForEach(modules) { module in
+                    ModuleCardView(module: module, snapshot: snapshot)
+                }
+
                 if preferences.showsProcesses {
                     ProcessListView(processes: processes)
                 }
@@ -125,6 +129,11 @@ struct GlassPanelView: View {
         isOnScreen ? monitor.snapshot : lastSnapshot
     }
 
+    /// The module cards, minus the ones with nothing to show.
+    private var modules: [ModuleKind] {
+        preferences.panelModules.filter { $0.hasContent(in: snapshot, preferences: preferences) }
+    }
+
     private func history(for kind: MetricKind) -> [Double] {
         isOnScreen ? monitor.history(for: kind) : []
     }
@@ -137,7 +146,7 @@ struct GlassPanelView: View {
         HStack(spacing: 8) {
             Image(systemName: "gauge.with.dots.needle.67percent")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Theme.gradient(.cpu))
+                .foregroundStyle(Theme.gradient(MetricKind.cpu))
             VStack(alignment: .leading, spacing: 0) {
                 Text("GlassDeck")
                     .font(.system(size: 13, weight: .semibold))

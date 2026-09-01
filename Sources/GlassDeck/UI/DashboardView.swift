@@ -38,6 +38,14 @@ struct DashboardView: View {
                                 }
                             }
                         }
+                        if !modules.isEmpty {
+                            LazyVGrid(columns: columns, spacing: 14) {
+                                ForEach(modules) { module in
+                                    ModuleCardView(module: module, snapshot: snapshot)
+                                    .glassMorph(id: module, in: glass)
+                                }
+                            }
+                        }
                         if preferences.showsProcesses {
                             ProcessListView(processes: processes)
                                 .glassMorph(id: "processes", in: glass)
@@ -73,6 +81,10 @@ struct DashboardView: View {
 
     private var metrics: [MetricKind] {
         preferences.dashboardMetrics.filter { snapshot.supports($0) }
+    }
+
+    private var modules: [ModuleKind] {
+        preferences.panelModules.filter { $0.hasContent(in: snapshot, preferences: preferences) }
     }
 
     /// The metric the hero gauge shows. Resolved rather than stored, so turning

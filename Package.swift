@@ -14,7 +14,10 @@ let package = Package(
             name: "GlassDeckKit",
             resources: [.process("Resources")],
             swiftSettings: [.swiftLanguageMode(.v6)],
-            linkerSettings: [.linkedFramework("IOKit")]
+            linkerSettings: [
+                .linkedFramework("IOKit"),
+                .linkedFramework("IOBluetooth"),
+            ]
         ),
         .executableTarget(
             name: "GlassDeck",

@@ -5,6 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Bluetooth module.** The charge of every paired device that reports one:
+  a mouse or a keyboard as a single level, earbuds as left, right and case.
+  Read through `IOBluetoothDevice`, which needs no permission — the Bluetooth
+  usage description governs CoreBluetooth, and asking what is already paired
+  prompts for nothing. A device that is not connected keeps publishing the level
+  it was last seen at, with nothing on it to say how old that is: measured here,
+  a pair of AirPods in their case went on reporting 94 / 90 / 72 indefinitely.
+  Those rows are kept, dimmed and marked rather than hidden or passed off as
+  live, and the card's headline counts only what is connected. The stack is
+  asked every 5 s rather than on every tick: the query costs 0.2 ms for four
+  devices, but it is a round trip to `bluetoothd` and a battery percentage moves
+  in minutes.
+- It is a `ModuleKind` rather than a `MetricKind`, and draws as a card of its own
+  under the gauges. A metric is one fraction of a whole — that is what makes it a
+  ring, a bar in the status item, a sparkline and a row on the Touch Bar. A list
+  of devices with a charge each has no such number, and inventing one would have
+  put a meaningless ring in the panel.
+- A *Modules* tab in the settings, for the cards that are not gauges.
+
 ## [1.6.1] - 2026-09-01
 
 ### Fixed
@@ -277,6 +300,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[Unreleased]: https://github.com/FraCata00/glassdeck/compare/v1.6.1...HEAD
 [1.6.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.6.1
 [1.6.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.6.0
 [1.5.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.5.1

@@ -61,3 +61,11 @@
 "Warn above" = "Warn above";
 "A notification once the hottest sensor passes %lld°C, and not again until it has cooled down." = "A notification once the hottest sensor passes %lld°C, and not again until it has cooled down.";
 "Running hot: %1$lld°C, above the %2$lld°C you asked about." = "Running hot: %1$lld°C, above the %2$lld°C you asked about.";
+
+/* Modules tab */
+"Modules" = "Modules";
+"The charge of every paired device that reports one. A device that is not connected keeps publishing the level it was last seen at, so those rows are dimmed and marked rather than hidden." = "The charge of every paired device that reports one. A device that is not connected keeps publishing the level it was last seen at, so those rows are dimmed and marked rather than hidden.";
+"Nothing paired is reporting a battery level right now." = "Nothing paired is reporting a battery level right now.";
+
+/* Bluetooth card */
+"not connected" = "not connected";

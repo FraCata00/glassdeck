@@ -54,9 +54,9 @@ struct AuroraBackdrop: View {
     }
 
     private var colors: [Color] {
-        let cpu = Theme.accent(.cpu)
-        let gpu = Theme.accent(.gpu)
-        let memory = Theme.accent(.memory)
+        let cpu = Theme.accent(MetricKind.cpu)
+        let gpu = Theme.accent(MetricKind.gpu)
+        let memory = Theme.accent(MetricKind.memory)
         let base = Color(hue: 0.66, saturation: 0.55, brightness: 0.35)
 
         // Corners stay dark so the glass tiles keep their contrast; the colour

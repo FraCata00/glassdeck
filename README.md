@@ -79,6 +79,9 @@ the centre, or beside the Control Strip (the default).
 - **Power** — what the machine is drawing right now, scaled against the rating of
   the adapter that is plugged in.
 - **Battery** — charge, charging state and time to full/empty.
+- **Bluetooth** — the charge of every paired device that reports one, earbuds
+  split into left, right and case. Disconnected devices keep the level they were
+  last seen at, so those rows are dimmed and marked rather than passed off as live.
 - **Top processes** — the busiest processes, sampled only while a window is open.
 - **English and Italian**, following the system language.
 - **Liquid Glass everywhere** — real `glassEffect` surfaces on macOS 26+, with a

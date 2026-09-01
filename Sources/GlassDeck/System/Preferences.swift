@@ -19,6 +19,7 @@ final class Preferences {
         static let metricOrder = "metricOrder"
         static let temperatureAlert = "temperatureAlert"
         static let temperatureThreshold = "temperatureThreshold"
+        static let panelModules = "panelModules"
     }
 
     /// How the status item renders in the menu bar.
@@ -94,6 +95,13 @@ final class Preferences {
     }
     var showsProcesses: Bool { didSet { defaults.set(showsProcesses, forKey: Key.showsProcesses) } }
 
+    /// The non-scalar cards shown under the gauges, in the panel and the
+    /// dashboard. Unlike the metric selections this one may be empty: the
+    /// modules are extras, and a card with nothing in it is worse than no card.
+    var panelModules: [ModuleKind] {
+        didSet { defaults.set(panelModules.map(\.rawValue), forKey: Key.panelModules) }
+    }
+
     /// The order every surface lists metrics in — the panel's gauges, the Touch
     /// Bar's panels and the status item's bars. Holds all of them, selected or
     /// not, so turning one off and on again does not lose its place.
@@ -124,6 +132,8 @@ final class Preferences {
         touchBarAlignment = defaults.string(forKey: Key.touchBarAlignment)
             .flatMap(TouchBarAlignment.init(rawValue:)) ?? .trailing
         showsProcesses = defaults.object(forKey: Key.showsProcesses) as? Bool ?? true
+        panelModules = (defaults.array(forKey: Key.panelModules) as? [String])
+            .map { $0.compactMap(ModuleKind.init(rawValue:)) } ?? ModuleKind.defaultSelection
         metricOrder = Self.repairedOrder(Self.read(Key.metricOrder, from: defaults))
         isTemperatureAlertEnabled = defaults.object(forKey: Key.temperatureAlert) as? Bool ?? false
         let storedThreshold = defaults.double(forKey: Key.temperatureThreshold)
@@ -154,6 +164,16 @@ final class Preferences {
         for kind in stored ?? [] where !order.contains(kind) { order.append(kind) }
         for kind in MetricKind.allCases where !order.contains(kind) { order.append(kind) }
         return order
+    }
+
+    /// Turns a module's card on or off. Unlike the metric selections this one is
+    /// allowed to empty: no modules simply means no extra cards.
+    func toggle(_ module: ModuleKind) {
+        if let index = panelModules.firstIndex(of: module) {
+            panelModules.remove(at: index)
+        } else {
+            panelModules = ModuleKind.allCases.filter { panelModules.contains($0) || $0 == module }
+        }
     }
 
     /// Toggles a metric in a selection while keeping the user's metric order and

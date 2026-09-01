@@ -61,3 +61,11 @@
 "Warn above" = "Avvisa sopra";
 "A notification once the hottest sensor passes %lld°C, and not again until it has cooled down." = "Una notifica quando il sensore più caldo supera %lld°C, e non di nuovo finché non si è raffreddato.";
 "Running hot: %1$lld°C, above the %2$lld°C you asked about." = "Sta scaldando: %1$lld°C, sopra i %2$lld°C che avevi impostato.";
+
+/* Moduli */
+"Modules" = "Moduli";
+"The charge of every paired device that reports one. A device that is not connected keeps publishing the level it was last seen at, so those rows are dimmed and marked rather than hidden." = "La carica di ogni dispositivo abbinato che la comunica. Un dispositivo non connesso continua a pubblicare l'ultimo livello visto, quindi quelle righe restano visibili ma in grigio e con l'indicazione.";
+"Nothing paired is reporting a battery level right now." = "Al momento nessun dispositivo abbinato comunica il livello di batteria.";
+
+/* Scheda Bluetooth */
+"not connected" = "non connesso";

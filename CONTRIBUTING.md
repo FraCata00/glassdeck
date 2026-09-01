@@ -39,7 +39,11 @@ Types in use: `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `build`, `ci`,
 - Anything that can be absent on some Macs (a fan, a battery, a discrete GPU)
   must report *unavailable* rather than zero, so the UI can hide it.
 - Private API use stays confined to `Sources/GlassDeck/TouchBar/DFRSupport.swift`
-  and must degrade to a no-op when a symbol cannot be resolved.
+  and to the battery keys in `Sources/GlassDeckKit/Samplers/BluetoothSampler.swift`
+  — there is no public API for a paired device's charge — and must degrade to a
+  no-op when a symbol cannot be resolved. The Bluetooth keys are read through
+  `responds(to:)` for that reason: `value(forKey:)` on a key that has gone away
+  raises an Objective-C exception, which Swift cannot catch.
 - Match the surrounding style: comments explain *why*, not *what*.
 
 ## Releasing
