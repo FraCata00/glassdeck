@@ -105,6 +105,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .toggleStyle(.glass)
     }
 
     /// A `List` rather than a `Form`, because rows have to be draggable and only
@@ -127,8 +128,8 @@ struct SettingsView: View {
             }
         }
         // A list renders toggles as checkboxes by default, which would not match
-        // the switches in the other two tabs.
-        .toggleStyle(.switch)
+        // the switches in the other tabs.
+        .toggleStyle(.glass)
     }
 
     /// The two cards that are not a gauge: the paired devices' batteries, and
@@ -190,7 +191,7 @@ struct SettingsView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .toggleStyle(.switch)
+        .toggleStyle(.glass)
         // The rows preview a live time, and the ticker is otherwise asleep until
         // the module is switched on.
         .onAppear { clock.beginObserving() }
@@ -309,6 +310,7 @@ struct SettingsView: View {
 
         }
         .formStyle(.grouped)
+        .toggleStyle(.glass)
     }
 
     /// Metrics this machine reports. Before the first sample nothing

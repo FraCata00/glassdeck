@@ -37,6 +37,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A *Modules* tab in the settings to switch the two on, add and rename and
   reorder time zones, and pick the one for the menu bar.
 
+### Changed
+
+- Switches in the settings window are drawn in Liquid Glass, like every other
+  surface in the app, instead of in the system's opaque control.
+
 ## [1.6.1] - 2026-09-01
 
 ### Fixed
