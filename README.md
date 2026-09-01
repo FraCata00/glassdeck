@@ -215,6 +215,11 @@ GLASSDECK_OPEN_DASHBOARD=1                     # come up with the dashboard open
 The product page lives in [`web/`](web/README.md) — Vue 3 and Vuetify, published
 to GitHub Pages on every push to `main` that touches it.
 
+## Sponsoring
+
+GlassDeck is free and MIT-licensed, and stays that way. If it has earned its
+place in your menu bar, you can [sponsor the work](https://github.com/sponsors/FraCata00).
+
 ## Contributing
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/) and
