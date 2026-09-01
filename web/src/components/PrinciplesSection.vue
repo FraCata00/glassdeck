@@ -14,7 +14,7 @@ import { principles } from '@/data/content'
     <div class="deck-measure">
       <v-row>
         <v-col v-for="(item, index) in principles" :key="item.title" cols="12" sm="6" md="3">
-          <div class="principle" v-reveal="index * 80">
+          <div class="principle" v-reveal>
             <h3 class="deck-body principle__name">{{ item.title }}</h3>
             <p class="deck-body deck-dim">{{ item.body }}</p>
           </div>
@@ -26,7 +26,7 @@ import { principles } from '@/data/content'
 
 <style scoped>
 .principles {
-  background: linear-gradient(180deg, #000 0%, #08080b 100%);
+  background: #000;
 }
 
 .principles__head {

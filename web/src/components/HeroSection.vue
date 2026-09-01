@@ -11,23 +11,21 @@ const hero = touchBarStates[0]
 
 <template>
   <section id="top" class="hero">
-    <div class="hero__glow" aria-hidden="true" />
-
     <div class="deck-measure hero__copy">
-      <v-img :src="icon" width="104" height="104" alt="" class="hero__icon" v-reveal />
+      <v-img :src="icon" width="76" height="76" alt="" class="hero__icon" v-reveal />
 
-      <h1 class="deck-display hero__title" v-reveal="60">
+      <h1 class="deck-display hero__title" v-reveal>
         Your Mac's vitals,<br />
         <span class="deck-gradient-text">in Liquid Glass.</span>
       </h1>
 
-      <p class="deck-lead deck-dim hero__lead" v-reveal="140">
+      <p class="deck-lead deck-dim hero__lead" v-reveal>
         A menu bar system monitor that reads your machine straight from the kernel — and,
         on a MacBook Pro that has one, puts it on the Touch Bar where you can actually
         glance at it.
       </p>
 
-      <div class="hero__actions" v-reveal="220">
+      <div class="hero__actions" v-reveal>
         <v-btn :href="latestRelease" target="_blank" rel="noopener" color="primary" size="large" variant="flat">
           Download for macOS
         </v-btn>
@@ -37,12 +35,12 @@ const hero = touchBarStates[0]
         </v-btn>
       </div>
 
-      <p class="deck-caption deck-dim hero__meta" v-reveal="260">
+      <p class="deck-caption deck-dim hero__meta" v-reveal>
         Version {{ version }} · macOS 15 or later · Apple silicon and Intel · Free and open source
       </p>
     </div>
 
-    <div class="deck-measure-wide hero__shot" v-reveal="120">
+    <div class="deck-measure-wide hero__shot" v-reveal>
       <TouchBarStrip :src="hero.image" :alt="hero.alt" glow />
     </div>
   </section>
@@ -57,22 +55,8 @@ const hero = touchBarStates[0]
   text-align: center;
 }
 
-/* A single soft light behind the headline, the way a dark Apple hero is lit. */
-.hero__glow {
-  position: absolute;
-  top: -22%;
-  left: 50%;
-  width: min(1100px, 130vw);
-  aspect-ratio: 1.6;
-  transform: translateX(-50%);
-  background: radial-gradient(
-    50% 50% at 50% 50%,
-    rgba(64, 122, 255, 0.2) 0%,
-    rgba(95, 216, 255, 0.1) 38%,
-    transparent 70%
-  );
-  pointer-events: none;
-}
+/* No glow behind the headline. The gradient in the wordmark is the one piece of
+   colour the page needs, and a second light source was competing with it. */
 
 .hero__copy {
   position: relative;
@@ -81,9 +65,8 @@ const hero = touchBarStates[0]
 
 .hero__icon {
   margin-inline: auto;
-  margin-bottom: 30px;
+  margin-bottom: 26px;
   border-radius: 23%;
-  filter: drop-shadow(0 16px 34px rgba(0, 0, 0, 0.55));
   flex: none;
 }
 

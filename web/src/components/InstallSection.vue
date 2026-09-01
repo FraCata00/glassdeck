@@ -17,7 +17,7 @@ const requirements = [
     <div class="deck-measure">
       <div class="install__head">
         <h2 class="deck-headline install__title" v-reveal>Get GlassDeck.</h2>
-        <p class="deck-lead deck-dim-dark install__lead" v-reveal="80">
+        <p class="deck-lead deck-dim-dark install__lead" v-reveal>
           Version {{ version }}. Free, MIT-licensed, and about five megabytes.
         </p>
       </div>
@@ -45,7 +45,7 @@ const requirements = [
         </v-col>
 
         <v-col cols="12" md="6">
-          <div class="install__direct" v-reveal="90">
+          <div class="install__direct" v-reveal>
             <p class="deck-title install__cardtitle install__cardtitle--dark">Direct download</p>
             <p class="deck-body deck-dim-dark install__cardlead">
               Move <span class="deck-mono">GlassDeck.app</span> to Applications, then right-click it

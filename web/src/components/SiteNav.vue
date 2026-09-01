@@ -35,19 +35,9 @@ const drawer = ref(false)
         </a>
       </nav>
 
+      <!-- One action, not three. GitHub is a link away in the hero, in the
+           section below and in the footer; repeating it up here was noise. -->
       <div class="nav__actions">
-        <v-btn
-          :href="repo"
-          target="_blank"
-          rel="noopener"
-          variant="text"
-          size="small"
-          class="nav__github"
-          :prepend-icon="mdiGithub"
-        >
-          GitHub
-        </v-btn>
-
         <v-btn
           href="#install"
           color="primary"
@@ -157,19 +147,10 @@ const drawer = ref(false)
   flex: none;
 }
 
-.nav__github {
-  color: var(--deck-ink);
-  opacity: 0.8;
-  font-size: 0.8125rem;
-}
-
-.nav__github:hover { opacity: 1; }
-
 .nav__burger { display: none; color: var(--deck-ink); }
 
 @media (max-width: 860px) {
-  .nav__links,
-  .nav__github { display: none; }
+  .nav__links { display: none; }
   .nav__burger { display: inline-flex; }
   .nav__inner { gap: 12px; }
   .nav__actions { margin-left: auto; }

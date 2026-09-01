@@ -1,5 +1,9 @@
 /// `v-reveal` — fades an element up as it scrolls into view.
 ///
+/// One movement, no stagger: elements that arrive together settle together.
+/// Cascading them a tenth of a second apart drew attention to the animation
+/// rather than to what was animating.
+///
 /// One observer for the whole page rather than one per element, and each
 /// element is unobserved once it has appeared: the animation plays on the way
 /// down and does not replay on the way back up, which is how Apple's pages
@@ -28,15 +32,12 @@ function watcher() {
 }
 
 export default {
-  mounted(el, binding) {
+  mounted(el) {
     if (reduced || typeof IntersectionObserver === 'undefined') {
       el.classList.add('deck-reveal', 'is-visible')
       return
     }
     el.classList.add('deck-reveal')
-    // `v-reveal="120"` staggers this element behind its neighbours.
-    const delay = Number(binding.value) || 0
-    if (delay) el.style.transitionDelay = `${delay}ms`
     watcher().observe(el)
   },
   unmounted(el) {

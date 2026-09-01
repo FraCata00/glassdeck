@@ -116,15 +116,16 @@ body {
 
 /*
  * Scroll reveal: content starts slightly low and transparent and settles as it
- * enters the viewport. Driven by the v-reveal directive, and switched off
- * entirely for anyone who asked the system for less motion.
+ * enters the viewport. Short and shallow on purpose — far enough to notice that
+ * the page is alive, not far enough to watch. Driven by the v-reveal directive,
+ * and switched off entirely for anyone who asked the system for less motion.
  */
 .deck-reveal {
   opacity: 0;
-  transform: translate3d(0, 26px, 0);
+  transform: translate3d(0, 12px, 0);
   transition:
-    opacity 0.85s cubic-bezier(0.28, 0.11, 0.32, 1),
-    transform 0.85s cubic-bezier(0.28, 0.11, 0.32, 1);
+    opacity 0.55s cubic-bezier(0.28, 0.11, 0.32, 1),
+    transform 0.55s cubic-bezier(0.28, 0.11, 0.32, 1);
   will-change: opacity, transform;
 }
 

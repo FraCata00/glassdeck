@@ -15,12 +15,12 @@ const current = ref(touchBarStates[0].id)
         The strip Apple gave up on,<br class="d-none d-sm-block" />
         finally worth looking at.
       </h2>
-      <p class="deck-lead deck-dim touchbar__lead" v-reveal="80">
+      <p class="deck-lead deck-dim touchbar__lead" v-reveal>
         Four sizes, and a rule: shrinking never makes GlassDeck disappear.
       </p>
     </div>
 
-    <div class="deck-measure-wide" v-reveal="60">
+    <div class="deck-measure-wide" v-reveal>
       <v-tabs
         v-model="current"
         color="accent"

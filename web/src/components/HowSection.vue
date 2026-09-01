@@ -22,7 +22,7 @@ const notes = [
     <div class="deck-measure">
       <div class="how__head">
         <h2 class="deck-headline how__title" v-reveal>Where the numbers come from.</h2>
-        <p class="deck-lead deck-dim how__lead" v-reveal="80">
+        <p class="deck-lead deck-dim how__lead" v-reveal>
           No shelling out, no polling another tool's output, no helper daemon, no root.
           Each metric is one call into an interface macOS already publishes.
         </p>
@@ -39,7 +39,7 @@ const notes = [
 
       <v-row class="how__notes">
         <v-col v-for="(note, index) in notes" :key="note.title" cols="12" md="6">
-          <div v-reveal="index * 90">
+          <div v-reveal>
             <h3 class="deck-body how__notetitle">{{ note.title }}</h3>
             <p class="deck-body deck-dim">{{ note.body }}</p>
           </div>
