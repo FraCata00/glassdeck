@@ -64,6 +64,14 @@ public final class SystemMonitor {
     /// that intent.
     public private(set) var isSuspended = false
 
+    /// Whether the paired Bluetooth devices are sampled at all.
+    ///
+    /// Off until the module is switched on: the first question asked of the
+    /// Bluetooth stack is what triggers the system's permission prompt, and
+    /// nobody should be asked for a permission by an app they have not asked
+    /// for the feature.
+    public var samplesBluetooth = false
+
     /// True while at least one view showing the process list is on screen; keeps
     /// the process scan off the hot path otherwise.
     public private(set) var samplesProcesses = false
@@ -139,7 +147,7 @@ public final class SystemMonitor {
 
     /// Takes one sample immediately, outside the loop cadence.
     public func refreshNow() async {
-        await ingest(await engine.sample())
+        await ingest(await engine.sample(bluetooth: samplesBluetooth))
     }
 
     private func restart() {
@@ -165,7 +173,7 @@ public final class SystemMonitor {
     }
 
     private func tick() async {
-        let snapshot = await engine.sample()
+        let snapshot = await engine.sample(bluetooth: samplesBluetooth)
         await ingest(snapshot)
 
         if samplesProcesses {

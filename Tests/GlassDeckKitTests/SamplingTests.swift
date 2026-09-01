@@ -54,6 +54,14 @@ struct SamplingTests {
         if battery.isCharging { #expect(battery.isPluggedIn) }
     }
 
+    @Test("The Bluetooth stack is not asked anything unless something is showing the answer")
+    func bluetoothIsOptIn() async {
+        // Asking is what raises the system's permission prompt, so a snapshot
+        // taken with the module off must not have gone near it.
+        let snapshot = await MetricsEngine().sample()
+        #expect(snapshot.bluetooth == .unavailable)
+    }
+
     @Test("Whatever this Mac has paired reports charges inside their own bounds")
     func bluetoothIsConsistent() {
         let status = BluetoothSampler().sample(at: Date())

@@ -33,6 +33,8 @@
     <string>15.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>GlassDeck reads the battery level of the devices already paired with this Mac. It never connects to them and never sends anything anywhere.</string>
     <key>NSHumanReadableCopyright</key>
     <string>Copyright © 2026 Francesco Cataldo. MIT licensed.</string>
     <key>NSPrincipalClass</key>

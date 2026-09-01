@@ -144,11 +144,17 @@ struct SettingsView: View {
                 Text("The charge of every paired device that reports one. A device that is not connected keeps publishing the level it was last seen at, so those rows are dimmed and marked rather than hidden.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                if !monitor.snapshot.bluetooth.isAvailable {
+                // Only once the module is on: with it off nothing is sampled,
+                // so "nothing is reporting" would be true of every Mac.
+                if preferences.wrappedValue.panelModules.contains(.bluetooth),
+                   !monitor.snapshot.bluetooth.isAvailable {
                     Label("Nothing paired is reporting a battery level right now.", systemImage: "info.circle")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                Text("macOS asks for permission the first time this is switched on.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section {
@@ -183,12 +189,9 @@ struct SettingsView: View {
                 }
                 .disabled(preferences.wrappedValue.clockZones.isEmpty)
             } footer: {
-                Text("Rename a row to whatever the clock is for — a city, an office, a colleague. Drag to reorder.")
+                Text("Rename a row to whatever the clock is for. Drag to reorder.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    // A list row would rather truncate than grow: this is what
-                    // lets the sentence wrap to a second line instead.
-                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .toggleStyle(.glass)

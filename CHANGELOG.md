@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **1.7.0 crashed on launch.** Reading a paired device's battery counts as
+  privacy-sensitive data, so macOS killed the app on sight —
+  `TCC_CRASHING_DUE_TO_PRIVACY_VIOLATION`, before anything was drawn — for want
+  of an `NSBluetoothAlwaysUsageDescription` in the Info.plist. It survived every
+  test beforehand because a binary run from a terminal answers to the terminal's
+  own privacy permissions, not to the bundle's, and the crash therefore appears
+  only when the app is launched the way a user launches it.
+
+### Changed
+
+- The Bluetooth module is off on a fresh install, and the Bluetooth stack is not
+  asked anything at all until it is switched on. The first question is what puts
+  the system's permission prompt on screen, and that belongs to the moment
+  someone asks for the feature — the same rule the temperature alert already
+  followed for notifications.
+- `MetricsEngine.sample(bluetooth:)` and `SystemMonitor.samplesBluetooth` carry
+  that switch, and are new public API on GlassDeckKit.
+
 ## [1.7.0] - 2026-09-01
 
 ### Added
@@ -314,6 +336,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[Unreleased]: https://github.com/FraCata00/glassdeck/compare/v1.7.0...HEAD
 [1.7.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.7.0
 [1.6.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.6.1
 [1.6.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.6.0

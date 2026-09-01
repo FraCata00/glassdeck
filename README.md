@@ -81,7 +81,9 @@ the centre, or beside the Control Strip (the default).
 - **Battery** — charge, charging state and time to full/empty.
 - **Bluetooth** — the charge of every paired device that reports one, earbuds
   split into left, right and case. Disconnected devices keep the level they were
-  last seen at, so those rows are dimmed and marked rather than passed off as live.
+  last seen at, so those rows are dimmed and marked rather than passed off as
+  live. Off until you switch it on, because that is when macOS asks for the
+  Bluetooth permission it needs.
 - **Clock** — as many time zones as you like, each with its own label and the
   offset from here, and one of them in the menu bar if you want it there.
 - **Top processes** — the busiest processes, sampled only while a window is open.

@@ -57,8 +57,10 @@ public enum ModuleKind: String, Sendable, CaseIterable, Codable, Identifiable, A
 
     /// Modules enabled the first time the app runs.
     ///
-    /// Both, because both hide themselves when they have nothing to say: the
-    /// Bluetooth card until a device with a battery is paired, the clock until a
-    /// time zone has been added.
-    public static let defaultSelection: [ModuleKind] = allCases
+    /// The clock, which hides itself until a time zone is added and needs no
+    /// permission, but not Bluetooth: reading a paired device's charge is
+    /// privacy-sensitive data as far as macOS is concerned, and it puts up a
+    /// prompt the moment the stack is asked. That prompt belongs to the moment
+    /// the module is switched on, not to the first launch after an update.
+    public static let defaultSelection: [ModuleKind] = [.clock]
 }

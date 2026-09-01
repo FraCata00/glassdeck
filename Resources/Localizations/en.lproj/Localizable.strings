@@ -70,7 +70,7 @@
 "Show in the menu bar" = "Show in the menu bar";
 "Off" = "Off";
 "Remove this time zone" = "Remove this time zone";
-"Rename a row to whatever the clock is for — a city, an office, a colleague. Drag to reorder." = "Rename a row to whatever the clock is for — a city, an office, a colleague. Drag to reorder.";
+"Rename a row to whatever the clock is for. Drag to reorder." = "Rename a row to whatever the clock is for. Drag to reorder.";
 
 /* Bluetooth card */
 "not connected" = "not connected";

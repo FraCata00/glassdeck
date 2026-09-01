@@ -42,7 +42,7 @@ final class AppModel {
         NSApp.touchBar = touchBar.makeApplicationTouchBar()
         touchBar.synchroniseWithPreferences()
         observePreferences()
-        synchroniseClock()
+        synchroniseModules()
         observePowerEvents()
         alerts.start()
         installSignalHandlers()
@@ -282,16 +282,21 @@ final class AppModel {
                 guard let self else { return }
                 self.monitor.interval = self.preferences.refreshInterval
                 self.touchBar.synchroniseWithPreferences()
-                self.synchroniseClock()
+                self.synchroniseModules()
                 self.observePreferences()
             }
         }
     }
 
-    /// Runs the minute ticker only while a clock is actually on screen. Nobody
-    /// starts out with one, so the default install schedules nothing.
-    private func synchroniseClock() {
+    /// Brings the two modules' costs in line with whether they are switched on.
+    ///
+    /// The ticker runs only while a clock is actually on screen — nobody starts
+    /// out with one, so a default install schedules nothing — and the Bluetooth
+    /// stack is not asked anything at all until the card exists, because the
+    /// asking is what raises the permission prompt.
+    private func synchroniseModules() {
         let onCard = preferences.panelModules.contains(.clock) && !preferences.clockZones.isEmpty
         clock.setWanted(onCard || preferences.menuBarClockZone != nil)
+        monitor.samplesBluetooth = preferences.panelModules.contains(.bluetooth)
     }
 }

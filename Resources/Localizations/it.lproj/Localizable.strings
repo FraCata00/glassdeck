@@ -70,7 +70,7 @@
 "Show in the menu bar" = "Mostra nella barra dei menu";
 "Off" = "Nessuno";
 "Remove this time zone" = "Rimuovi questo fuso orario";
-"Rename a row to whatever the clock is for — a city, an office, a colleague. Drag to reorder." = "Rinomina una riga con quello che rappresenta: una città, un ufficio, un collega. Trascina per riordinare.";
+"Rename a row to whatever the clock is for. Drag to reorder." = "Rinomina una riga con quello che rappresenta. Trascina per riordinare.";
 
 /* Scheda Bluetooth */
 "not connected" = "non connesso";

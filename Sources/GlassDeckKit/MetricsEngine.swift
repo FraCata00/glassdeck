@@ -45,7 +45,12 @@ public actor MetricsEngine {
 
     /// Reads every metric once. The first call primes the delta baselines and
     /// therefore reports zero for the rate-based metrics.
-    public func sample() -> MetricsSnapshot {
+    ///
+    /// `bluetooth` is off unless a surface is showing the paired devices. Asking
+    /// the Bluetooth stack anything is what makes macOS put up its permission
+    /// prompt, and an app that asks for a privacy permission before it has been
+    /// told to do anything with it is a bad guest.
+    public func sample(bluetooth samplesBluetooth: Bool = false) -> MetricsSnapshot {
         let now = Date()
         return MetricsSnapshot(
             timestamp: now,
@@ -58,7 +63,7 @@ public actor MetricsEngine {
             battery: battery.sample(),
             thermal: sensors.thermal.sample(at: now),
             power: sensors.power.sample(at: now),
-            bluetooth: bluetooth.sample(at: now)
+            bluetooth: samplesBluetooth ? bluetooth.sample(at: now) : .unavailable
         )
     }
 
