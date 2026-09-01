@@ -10,12 +10,14 @@ struct DashboardView: View {
 
     @Namespace private var glass
     @State private var focus: MetricKind = .cpu
+    @State private var isOnScreen = true
+    @State private var lastSnapshot: MetricsSnapshot = .empty
 
     private let columns = [GridItem(.adaptive(minimum: 224), spacing: 14)]
 
     var body: some View {
         ZStack {
-            AuroraBackdrop(snapshot: monitor.snapshot)
+            AuroraBackdrop(snapshot: snapshot)
 
             ScrollView {
                 GlassStack(spacing: 26) {
@@ -26,8 +28,8 @@ struct DashboardView: View {
                             ForEach(metrics) { kind in
                                 MetricCard(
                                     kind: kind,
-                                    snapshot: monitor.snapshot,
-                                    history: monitor.history(for: kind),
+                                    snapshot: snapshot,
+                                    history: history(for: kind),
                                     isFocused: focusedMetric == kind
                                 )
                                 .glassMorph(id: kind, in: glass)
@@ -37,7 +39,7 @@ struct DashboardView: View {
                             }
                         }
                         if preferences.showsProcesses {
-                            ProcessListView(processes: monitor.topProcesses)
+                            ProcessListView(processes: processes)
                                 .glassMorph(id: "processes", in: glass)
                         }
                     }
@@ -50,10 +52,27 @@ struct DashboardView: View {
         .frame(minWidth: 560, minHeight: 480)
         .task { await monitor.refreshNow() }
         .samplesProcesses(with: monitor, while: preferences.showsProcesses)
+        // The window is kept rather than released when it closes, so the same
+        // gate the panel needs applies here — over a drifting mesh gradient.
+        .tracksVisibility($isOnScreen) { lastSnapshot = monitor.snapshot }
+    }
+
+    /// The reading the dashboard draws: the live one while it is on screen, the
+    /// last one it saw once it is not.
+    private var snapshot: MetricsSnapshot {
+        isOnScreen ? monitor.snapshot : lastSnapshot
+    }
+
+    private func history(for kind: MetricKind) -> [Double] {
+        isOnScreen ? monitor.history(for: kind) : []
+    }
+
+    private var processes: [ProcessSample] {
+        isOnScreen ? monitor.topProcesses : []
     }
 
     private var metrics: [MetricKind] {
-        preferences.dashboardMetrics.filter { monitor.snapshot.supports($0) }
+        preferences.dashboardMetrics.filter { snapshot.supports($0) }
     }
 
     /// The metric the hero gauge shows. Resolved rather than stored, so turning
@@ -101,13 +120,13 @@ struct DashboardView: View {
             VStack(spacing: 10) {
                 GaugeRing(
                     kind: focusedMetric,
-                    fraction: monitor.snapshot.fraction(for: focusedMetric),
-                    headline: monitor.snapshot.headline(for: focusedMetric),
+                    fraction: snapshot.fraction(for: focusedMetric),
+                    headline: snapshot.headline(for: focusedMetric),
                     size: 124,
                     lineWidth: 12,
                     isSelected: true
                 )
-                Text(monitor.snapshot.caption(for: focusedMetric))
+                Text(snapshot.caption(for: focusedMetric))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -122,7 +141,7 @@ struct DashboardView: View {
                     Text(SystemIdentity.chipName)
                         .font(.system(size: 15, weight: .semibold))
                     Spacer()
-                    if let load = monitor.snapshot.cpu.loadAverage.first {
+                    if let load = snapshot.cpu.loadAverage.first {
                         Text("load \(ValueFormatter.decimal(load))")
                             .font(.system(size: 11, weight: .medium))
                             .monospacedDigit()
@@ -130,9 +149,9 @@ struct DashboardView: View {
                     }
                 }
 
-                CoreGridView(cpu: monitor.snapshot.cpu)
+                CoreGridView(cpu: snapshot.cpu)
 
-                Sparkline(values: monitor.history(for: focusedMetric), gradient: Theme.gradient(focusedMetric))
+                Sparkline(values: history(for: focusedMetric), gradient: Theme.gradient(focusedMetric))
                     .frame(height: 46)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

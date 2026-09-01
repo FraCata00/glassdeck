@@ -13,6 +13,8 @@ struct GlassPanelView: View {
 
     @State private var selection: MetricKind = .cpu
     @State private var contentHeight: CGFloat = 0
+    @State private var isOnScreen = true
+    @State private var lastSnapshot: MetricsSnapshot = .empty
     @Namespace private var glassNamespace
 
     private static let panelPadding: CGFloat = 16
@@ -86,15 +88,15 @@ struct GlassPanelView: View {
                         gauges
                         MetricDetailCard(
                             kind: selectedMetric,
-                            snapshot: monitor.snapshot,
-                            history: monitor.history(for: selectedMetric)
+                            snapshot: snapshot,
+                            history: history(for: selectedMetric)
                         )
                         .glassMorph(id: "detail", in: glassNamespace)
                     }
                 }
 
                 if preferences.showsProcesses {
-                    ProcessListView(processes: monitor.topProcesses)
+                    ProcessListView(processes: processes)
                 }
 
                 footer
@@ -112,6 +114,23 @@ struct GlassPanelView: View {
         .frame(height: min(max(contentHeight, 1), Self.maximumPanelHeight))
         .task { await monitor.refreshNow() }
         .samplesProcesses(with: monitor, while: preferences.showsProcesses)
+        // Closing the panel does not tear this tree down, so what it reads has
+        // to be switched off by hand or it animates on into a hidden window.
+        .tracksVisibility($isOnScreen) { lastSnapshot = monitor.snapshot }
+    }
+
+    /// The reading the panel draws: the live one while it is on screen, the last
+    /// one it saw once it is not.
+    private var snapshot: MetricsSnapshot {
+        isOnScreen ? monitor.snapshot : lastSnapshot
+    }
+
+    private func history(for kind: MetricKind) -> [Double] {
+        isOnScreen ? monitor.history(for: kind) : []
+    }
+
+    private var processes: [ProcessSample] {
+        isOnScreen ? monitor.topProcesses : []
     }
 
     private var header: some View {
@@ -153,8 +172,8 @@ struct GlassPanelView: View {
         } label: {
             GaugeRing(
                 kind: kind,
-                fraction: monitor.snapshot.fraction(for: kind),
-                headline: monitor.snapshot.headline(for: kind),
+                fraction: snapshot.fraction(for: kind),
+                headline: snapshot.headline(for: kind),
                 size: gaugeSize,
                 lineWidth: 8,
                 isSelected: selectedMetric == kind
@@ -169,12 +188,12 @@ struct GlassPanelView: View {
                 Circle().strokeBorder(Theme.accent(kind).opacity(0.55), lineWidth: 1.2)
             }
         }
-        .help("\(kind.title): \(monitor.snapshot.caption(for: kind))")
+        .help("\(kind.title): \(snapshot.caption(for: kind))")
     }
 
     /// Metrics this Mac cannot actually report are hidden rather than shown as "n/a".
     private var availableMetrics: [MetricKind] {
-        preferences.dashboardMetrics.filter { monitor.snapshot.supports($0) }
+        preferences.dashboardMetrics.filter { snapshot.supports($0) }
     }
 
     /// The metric the detail card shows.
