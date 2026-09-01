@@ -77,6 +77,43 @@ struct SamplingTests {
         }
     }
 
+    @Test("A sensor published on four channels is counted once")
+    func redundantChannelsCollapseToOne() {
+        let keys = ["Tp9a", "Tp9b", "Tp9x", "Tp9z", "Tp4b", "Tp4z", "TB0T", "Th1H"]
+        let kept = SensorCatalogue.oneChannelPerSensor(keys)
+
+        // One key per sensor, and the preferred channel is the one kept.
+        #expect(kept == ["TB0T", "Th1H", "Tp4b", "Tp9b"])
+    }
+
+    @Test("A sensor missing the preferred channel falls back in order")
+    func fallsBackToTheNextChannel() {
+        #expect(SensorCatalogue.oneChannelPerSensor(["Tp9z", "Tp9x", "Tp9a"]) == ["Tp9a"])
+        #expect(SensorCatalogue.oneChannelPerSensor(["Tp9z", "Tp9x"]) == ["Tp9x"])
+        #expect(SensorCatalogue.oneChannelPerSensor(["Tp9z"]) == ["Tp9z"])
+    }
+
+    @Test("Keys that carry no channel suffix are all kept")
+    func intelKeysAreLeftAlone() {
+        // An Intel Mac publishes TC0P, TC0D, TC0E and TC0F for one CPU: four
+        // keys on one sensor stem, none of them a channel of the same reading.
+        let intel = ["TC0P", "TC0D", "TC0E", "TC0F"]
+        #expect(SensorCatalogue.oneChannelPerSensor(intel) == intel.sorted())
+    }
+
+    @Test("This Mac reports each thermometer once, not four times")
+    func liveCatalogueHasNoRedundantChannels() {
+        let catalogue = SensorCatalogue(smc: SMCService())
+        let keys = catalogue.cpu + catalogue.gpu + catalogue.battery + catalogue.enclosure
+        guard !keys.isEmpty else { return }  // No SMC: nothing to assert.
+
+        // Keys with no channel suffix are a sensor of their own — an enclosure
+        // `Ts0P` sits beside `Ts0b` — so only the channelled ones must be unique.
+        let channelled = keys.filter { "abxz".contains($0.last ?? " ") }
+        let sensors = channelled.map { String($0.dropLast()) }
+        #expect(Set(sensors).count == sensors.count)
+    }
+
     @Test("Both open views have to close before the process scan stops")
     @MainActor
     func processObserversAreCounted() {
