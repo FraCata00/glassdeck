@@ -8,6 +8,7 @@ import mini from '#images/touchbar-mini.png'
 
 export const repo = 'https://github.com/FraCata00/glassdeck'
 export const latestRelease = `${repo}/releases/latest`
+export const sponsors = 'https://github.com/sponsors/FraCata00'
 
 /// The four Touch Bar states, in the order the ⌄ button steps through them.
 export const touchBarStates = [
@@ -89,6 +90,19 @@ export const metrics = [
   },
 ]
 
+/// The two cards that are not gauges. Kept apart from the metrics above
+/// because the app keeps them apart: neither is a single fraction of a whole.
+export const modules = [
+  {
+    name: 'Bluetooth',
+    body: 'The charge of every paired device that reports one — earbuds split into left, right and case. A device that is not connected keeps publishing the level it was last seen at, so those rows are dimmed and marked rather than passed off as live.',
+  },
+  {
+    name: 'Clock',
+    body: 'As many time zones as you like, each with its own label and the offset from here, and one of them in the menu bar. Offsets are read at the instant, so a summer-time mismatch is never an hour out.',
+  },
+]
+
 /// The four claims the app is really built on.
 export const principles = [
   {
@@ -122,4 +136,6 @@ export const sources = [
   ['Power', 'AppleSMC (PSTR and friends), adapter rating as full scale'],
   ['Battery', 'IOPSCopyPowerSourcesInfo'],
   ['Processes', 'libproc (proc_listpids, proc_pidinfo)'],
+  ['Bluetooth', 'IOBluetoothDevice.pairedDevices(), asked only once the module is on'],
+  ['Clock', 'Date and TimeZone — no interface at all'],
 ]
