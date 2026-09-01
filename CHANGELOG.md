@@ -5,6 +5,33 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-09-01
+
+### Fixed
+
+- **The temperature read up to 14 °C high, and on a busy Mac reached 108 °C.**
+  Apple silicon publishes every thermometer four times — `Tp9a`, `Tp9b`, `Tp9x`,
+  `Tp9z` — and those are not four places on the die: they track one signal,
+  offset from each other by as much as 17 °C. GlassDeck kept all four and showed
+  the hottest, so the headline was always the highest-offset channel. Measured on
+  an M1 at rest, `Tp9b` read 51.0 °C beside an enclosure at 39 °C where `Tp9z`
+  claimed 66.7 °C and put that same idle enclosure at 46 °C; under load `TCMz`
+  reached 100.8 °C against 87.2 °C. That was enough to fire the temperature alert
+  at its default 85 °C on a Mac that was not throttling. One channel per sensor
+  is kept now — on this Mac the catalogue goes from 83 keys to 27 sensors — and
+  keys that carry no channel suffix are untouched, so an Intel Mac still gets
+  every one of `TC0P`, `TC0D`, `TC0E` and `TC0F`.
+- **Opening the menu bar panel once cost 33% of a core for the rest of the
+  session.** `MenuBarExtra` does not tear its content down when the panel closes:
+  the window is ordered off screen and the view tree stays alive and observing,
+  so every sample went on invalidating it and the gauges' springs and the glass
+  effect went on animating into something nobody could see. A 5 s profile put 871
+  of 2041 main-thread samples in the SwiftUI renderer and 29 in the sampling —
+  0.6% — so none of this was the metrics. What the panel and the dashboard read
+  is now gated on their time on screen; with nothing left to change, the
+  animations settle and the redraws stop. On an M1: 0.2% for a launch that never
+  opens the panel, against 23-30% for a closed panel before this.
+
 ## [1.6.0] - 2026-08-31
 
 ### Changed
@@ -250,6 +277,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[1.6.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.6.1
 [1.6.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.6.0
 [1.5.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.5.1
 [1.5.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.5.0
