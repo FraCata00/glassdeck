@@ -12,6 +12,8 @@ struct SettingsView: View {
     @Environment(ClockTicker.self) private var clock
 
     @State private var launchesAtLogin = LoginItem.isEnabled
+    @State private var isOnScreen = true
+    @State private var lastSnapshot: MetricsSnapshot = .empty
 
     var body: some View {
         @Bindable var preferences = preferences
@@ -27,6 +29,9 @@ struct SettingsView: View {
                 .tabItem { Label("Touch Bar", systemImage: "macbook.gen1") }
         }
         .frame(width: 460, height: 330)
+        // The window outlives its closing — `isReleasedWhenClosed` is false — so
+        // the gate the panel and the dashboard need applies here too.
+        .tracksVisibility($isOnScreen) { lastSnapshot = monitor.snapshot }
     }
 
     private func general(preferences: Bindable<Preferences>) -> some View {
@@ -61,7 +66,7 @@ struct SettingsView: View {
 
                 Toggle("Show top processes", isOn: preferences.showsProcesses)
 
-                if monitor.snapshot.supports(.temperature) {
+                if snapshot.supports(.temperature) {
                     Toggle("Warn when the Mac runs hot", isOn: Binding(
                         get: { preferences.wrappedValue.isTemperatureAlertEnabled },
                         set: { enabled in
@@ -147,7 +152,7 @@ struct SettingsView: View {
                 // Only once the module is on: with it off nothing is sampled,
                 // so "nothing is reporting" would be true of every Mac.
                 if preferences.wrappedValue.panelModules.contains(.bluetooth),
-                   !monitor.snapshot.bluetooth.isAvailable {
+                   !snapshot.bluetooth.isAvailable {
                     Label("Nothing paired is reporting a battery level right now.", systemImage: "info.circle")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -316,11 +321,22 @@ struct SettingsView: View {
         .toggleStyle(.glass)
     }
 
+    /// The reading the settings draw from: the live one while the window is on
+    /// screen, the last one it saw once it is not.
+    ///
+    /// Only three rows depend on it — which metrics this Mac can report, the
+    /// temperature switch, the Bluetooth notice — but reading it at all is what
+    /// invalidates the body, and the body is a four-tab `Form` whose relayout
+    /// costs far more than the rows that asked for the value.
+    private var snapshot: MetricsSnapshot {
+        isOnScreen ? monitor.snapshot : lastSnapshot
+    }
+
     /// Metrics this machine reports. Before the first sample nothing
     /// hardware-dependent is known yet, so the full list stands in.
     private var reportableMetrics: [MetricKind] {
-        guard monitor.snapshot != .empty else { return MetricKind.allCases }
-        return MetricKind.allCases.filter { monitor.snapshot.supports($0) }
+        guard snapshot != .empty else { return MetricKind.allCases }
+        return MetricKind.allCases.filter { snapshot.supports($0) }
     }
 
     private func binding(
