@@ -5,6 +5,36 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2026-09-06
+
+### Fixed
+
+- **A window that had been closed went on being laid out.** Opening the
+  dashboard once left the app at about 26% of a core for the rest of the
+  session, with the window shut: measured here as 25.5% and 27.5% over two
+  runs, against 1.4-2.0% now. `VisibilityGate` was written for exactly this and
+  never fired, because it hung off `onDisappear` — and for a window the app
+  keeps a reference to, so that closing only orders it out, SwiftUI never sends
+  it. The body therefore went on reading `snapshot`, every sample invalidated
+  it, and invalidating it invalidated the hosting view's size constraints,
+  which relaid out the whole tree on every display cycle into a window nobody
+  could see. Profiling the running app put 57% of the main thread inside
+  `CA::Transaction::flush` under `NSHostingView.layout()`.
+
+  The panel was the one surface that looked well behaved, and only by accident:
+  nothing retains its window, so closing it deallocates the tree. That is what
+  kept the bug hidden.
+
+  The gate now takes its signal from AppKit instead, where it was available all
+  along: a probe view watches the window it is hosted in and reports
+  `isVisible` together with the occlusion state. That also covers the three
+  ways to be invisible with the window still ordered in — completely buried,
+  on another Space, or in a hidden app — none of which `onDisappear` would ever
+  have reported.
+
+- The settings window read the live snapshot through no gate at all, so it kept
+  the same relayout going, more cheaply, for as long as it had been opened once.
+
 ## [1.8.0] - 2026-09-01
 
 ### Fixed
@@ -336,6 +366,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[1.8.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.8.1
 [1.8.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.8.0
 [1.7.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.7.0
 [1.6.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.6.1
