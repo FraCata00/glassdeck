@@ -22,6 +22,20 @@ final class AppModel {
     let clock = ClockTicker()
 
     @ObservationIgnored private let alerts: ThresholdAlerts
+    /// Mirrors settings changes into the parts of the app that are not SwiftUI views.
+    @ObservationIgnored private lazy var preferenceChanges = ObservationLoop(self) { model in
+        let preferences = model.preferences
+        _ = preferences.refreshInterval
+        _ = preferences.isTouchBarEnabled
+        _ = preferences.touchBarMetrics
+        _ = preferences.panelModules
+        _ = preferences.clockZones
+        _ = preferences.menuBarClockZone
+    } onChange: { model in
+        model.monitor.interval = model.preferences.refreshInterval
+        model.touchBar.synchroniseWithPreferences()
+        model.synchroniseModules()
+    }
     @ObservationIgnored private var dashboardWindow: NSWindow?
     @ObservationIgnored private var settingsWindow: NSWindow?
     @ObservationIgnored private var signalSources: [any DispatchSourceSignal] = []
@@ -41,7 +55,7 @@ final class AppModel {
         monitor.start()
         NSApp.touchBar = touchBar.makeApplicationTouchBar()
         touchBar.synchroniseWithPreferences()
-        observePreferences()
+        preferenceChanges.start()
         synchroniseModules()
         observePowerEvents()
         alerts.start()
@@ -267,26 +281,6 @@ final class AppModel {
     }
 
     // MARK: - Settings plumbing
-
-    /// Mirrors settings changes into the parts of the app that are not SwiftUI views.
-    private func observePreferences() {
-        withObservationTracking {
-            _ = preferences.refreshInterval
-            _ = preferences.isTouchBarEnabled
-            _ = preferences.touchBarMetrics
-            _ = preferences.panelModules
-            _ = preferences.clockZones
-            _ = preferences.menuBarClockZone
-        } onChange: { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.monitor.interval = self.preferences.refreshInterval
-                self.touchBar.synchroniseWithPreferences()
-                self.synchroniseModules()
-                self.observePreferences()
-            }
-        }
-    }
 
     /// Brings the two modules' costs in line with whether they are switched on.
     ///

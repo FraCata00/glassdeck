@@ -59,12 +59,26 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     /// Set when the user releases the Touch Bar from the bar itself. It lasts for
     /// the session only — a tap is not a settings change, so nothing is persisted.
     private var isReleasedForSession = false
-    private var isObserving = false
-    /// Identifies the live tracking closure. `withObservationTracking` cannot be
-    /// cancelled, so re-arming early — which a mode change does, to pick up the
-    /// new cadence — leaves the previous closure to fire once more; it compares
-    /// this and retires instead of starting a second loop.
-    private var observationGeneration = 0
+    /// Bridges the Observation framework to AppKit: redraws the bar whenever a
+    /// reading or a Touch Bar setting it shows changes.
+    ///
+    /// Only one of the two snapshots is read, and that is the whole point:
+    /// `@Observable` tracks each property separately, so a bar that reads the
+    /// coarse republication is not invalidated by the sample in between. The
+    /// mode is read too, so a bar that has just grown is re-armed against the
+    /// fine cadence straight away rather than spending its first seconds at the
+    /// coarse rate the mini bar left behind.
+    @ObservationIgnored private lazy var changes = ObservationLoop(self) { controller in
+        _ = controller.mode.wantsFineCadence
+            ? controller.monitor.snapshot
+            : controller.monitor.coarseSnapshot
+        _ = controller.preferences.touchBarMetrics
+        _ = controller.preferences.touchBarAlignment
+    } onChange: { controller in
+        controller.applyMetricsToStrips()
+        controller.rebuildBarIfNeeded()
+        controller.refresh()
+    }
 
     /// Called when the user asks for the full dashboard from the Touch Bar.
     var onOpenDashboard: (() -> Void)?
@@ -132,7 +146,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
 
         SystemTouchBar.addSystemTrayItem(item)
         DFRSupport.setControlStripPresence(Self.controlStripIdentifier, visible: true)
-        startObserving()
+        changes.start()
     }
 
     /// Releases the Touch Bar and removes the tray item without changing
@@ -189,14 +203,12 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         presentedBar = bar
         SystemTouchBar.presentSystemModal(bar, identifier: Self.controlStripIdentifier, placement: newMode.placement)
         refresh()
-        reobserve()
     }
 
     /// Returns the Touch Bar to the system, leaving the Control Strip meter behind.
     func collapse() {
         guard presentedBar != nil, mode != .collapsed else { return }
         dismissPresentedBar()
-        reobserve()
     }
 
     /// Expands a single metric across the bar. Tapping a panel is how the extra
@@ -276,47 +288,6 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         for (kind, view) in metricViews {
             view.snapshot = snapshot
             view.history = monitor.history(for: kind)
-        }
-    }
-
-    /// Bridges the Observation framework to AppKit: every published snapshot
-    /// re-arms the tracking closure, which is how `@Observable` is watched
-    /// outside SwiftUI.
-    private func startObserving() {
-        guard !isObserving else { return }
-        isObserving = true
-        observe()
-    }
-
-    /// Re-arms the tracking closure against the cadence the current mode wants,
-    /// so a bar that has just grown does not spend its first seconds updating at
-    /// the coarse rate the mini bar left behind.
-    private func reobserve() {
-        guard isObserving else { return }
-        observe()
-    }
-
-    private func observe() {
-        observationGeneration += 1
-        let generation = observationGeneration
-        let wantsFineCadence = mode.wantsFineCadence
-
-        withObservationTracking {
-            // Only one of the two is read, and that is the whole point:
-            // `@Observable` tracks each property separately, so a bar that reads
-            // the coarse republication is not invalidated by the sample in
-            // between.
-            _ = wantsFineCadence ? monitor.snapshot : monitor.coarseSnapshot
-            _ = preferences.touchBarMetrics
-            _ = preferences.touchBarAlignment
-        } onChange: { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self, generation == self.observationGeneration else { return }
-                self.applyMetricsToStrips()
-                self.rebuildBarIfNeeded()
-                self.refresh()
-                self.observe()
-            }
         }
     }
 
