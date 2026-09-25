@@ -87,6 +87,7 @@ public final class SystemMonitor {
     private var history: [MetricKind: RingBuffer<Double>] = [:]
     private let engine = MetricsEngine()
     private var task: Task<Void, Never>?
+    private var powerSources: PowerSourceObserver?
 
     public init(interval: TimeInterval = 1.5) {
         self.interval = interval
@@ -115,10 +116,17 @@ public final class SystemMonitor {
     public func start() {
         guard !isRunning else { return }
         isRunning = true
+        let powerSources = PowerSourceObserver { [weak self] in
+            Task { await self?.refreshBattery() }
+        }
+        powerSources.start()
+        self.powerSources = powerSources
         restart()
     }
 
     public func stop() {
+        powerSources?.stop()
+        powerSources = nil
         task?.cancel()
         task = nil
         isRunning = false
@@ -148,6 +156,27 @@ public final class SystemMonitor {
     /// Takes one sample immediately, outside the loop cadence.
     public func refreshNow() async {
         await ingest(await engine.sample(bluetooth: samplesBluetooth))
+    }
+
+    /// Re-reads the battery alone, straight after macOS reports a power-source
+    /// change, instead of leaving it to the next tick.
+    public func refreshBattery() async {
+        guard isRunning, !isSuspended else { return }
+        applyBattery(await engine.sampleBattery())
+    }
+
+    /// Patches a fresh battery reading into both snapshots, bypassing the coarse
+    /// throttle: plugging the adapter in is the one change worth redrawing the
+    /// status item and the mini bar for at once. The history is left alone so
+    /// the sparklines keep their cadence.
+    func applyBattery(_ battery: BatteryUsage) {
+        // Nothing published yet: the leading sample is on its way and will
+        // carry the reading anyway.
+        guard snapshot != .empty else { return }
+        if snapshot.battery != battery { snapshot.battery = battery }
+        if coarseSnapshot != .empty, coarseSnapshot.battery != battery {
+            coarseSnapshot.battery = battery
+        }
     }
 
     private func restart() {

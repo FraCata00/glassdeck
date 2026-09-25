@@ -67,6 +67,12 @@ public actor MetricsEngine {
         )
     }
 
+    /// Just the battery, for when the power source changes between ticks. It
+    /// keeps no baseline, so reading it out of turn leaves the next tick intact.
+    public func sampleBattery() -> BatteryUsage {
+        battery.sample()
+    }
+
     /// Top CPU consumers. Sampled separately because it is only needed while the
     /// dashboard is on screen.
     public func topProcesses(limit: Int = 5) -> [ProcessSample] {

@@ -5,6 +5,9 @@ import GlassDeckKit
 ///
 /// It stays deliberately small — the point is to save room for the graphs — and
 /// turns green while charging, which is the one state worth spotting at a glance.
+/// Plugged in but not charging — the moment before the adapter has negotiated,
+/// or a charge held back by the system — shows a plug, so connecting the cable
+/// is acknowledged at once either way.
 final class TouchBarBatteryView: NSView {
     var battery: BatteryUsage = .unavailable {
         didSet {
@@ -91,8 +94,11 @@ final class TouchBarBatteryView: NSView {
         tint.setFill()
         NSBezierPath(roundedRect: level, xRadius: 1.3, yRadius: 1.3).fill()
 
-        guard battery.isCharging else { return }
-        drawBolt(in: rect)
+        if battery.isCharging {
+            drawBolt(in: rect)
+        } else if battery.isPluggedIn {
+            drawPlug(in: rect)
+        }
     }
 
     /// A small lightning bolt punched out of the level so it stays visible
@@ -108,11 +114,30 @@ final class TouchBarBatteryView: NSView {
         bolt.line(to: NSPoint(x: centre.x - 0.1, y: centre.y - 0.1))
         bolt.close()
 
+        punchOut(bolt)
+    }
+
+    /// A small mains plug, prongs to the right, punched out the same way as the bolt.
+    private func drawPlug(in rect: NSRect) {
+        let centre = NSPoint(x: rect.midX, y: rect.midY)
+        let plug = NSBezierPath(
+            roundedRect: NSRect(x: centre.x - 2.6, y: centre.y - 2.3, width: 3.4, height: 4.6),
+            xRadius: 1,
+            yRadius: 1
+        )
+        for offset: CGFloat in [1.1, -1.9] {
+            plug.append(NSBezierPath(rect: NSRect(x: centre.x + 0.8, y: centre.y + offset, width: 2.2, height: 0.8)))
+        }
+        plug.append(NSBezierPath(rect: NSRect(x: centre.x - 4.4, y: centre.y - 0.4, width: 1.8, height: 0.8)))
+        punchOut(plug)
+    }
+
+    private func punchOut(_ glyph: NSBezierPath) {
         NSColor.black.withAlphaComponent(0.85).setFill()
-        bolt.fill()
+        glyph.fill()
         NSColor.white.withAlphaComponent(0.9).setStroke()
-        bolt.lineWidth = 0.5
-        bolt.stroke()
+        glyph.lineWidth = 0.5
+        glyph.stroke()
     }
 
     private func drawPercentage(after x: CGFloat, tint: NSColor) {

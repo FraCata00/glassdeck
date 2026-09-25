@@ -195,6 +195,31 @@ struct SamplingTests {
         #expect(monitor.coarseSnapshot == first)
     }
 
+    @Test("A power-source change reaches both snapshots at once, without a history sample")
+    @MainActor
+    func batteryChangeBypassesCoarseThrottle() async {
+        let monitor = SystemMonitor(interval: 0.1)
+
+        // Before anything is published there is nothing to patch.
+        let pluggedIn = BatteryUsage(fraction: 0.4, isPluggedIn: true, isAvailable: true)
+        monitor.applyBattery(pluggedIn)
+        #expect(monitor.snapshot == .empty)
+
+        await monitor.refreshNow()
+        let historyBefore = monitor.history(for: .battery).count
+        let changed = BatteryUsage(
+            fraction: 0.4,
+            isCharging: !monitor.snapshot.battery.isCharging,
+            isPluggedIn: true,
+            isAvailable: true
+        )
+        monitor.applyBattery(changed)
+
+        #expect(monitor.snapshot.battery == changed)
+        #expect(monitor.coarseSnapshot.battery == changed)
+        #expect(monitor.history(for: .battery).count == historyBefore)
+    }
+
     @Test("The monitor keeps a bounded history per metric")
     @MainActor
     func monitorHistory() async {
