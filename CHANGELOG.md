@@ -5,6 +5,37 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-09-25
+
+### Changed
+
+- **The Touch Bar's layout rules are worked out in GlassDeckKit, and tested.**
+  Which panels a bar holds, how wide they are, which buttons ride along and how
+  far the alignment spacer shifts it used to be decided inside the AppKit
+  controller, against live views, with no tests — and it is the part of the
+  Touch Bar with the most history of breaking. `TouchBarLayout` now decides it
+  from plain values, and sixteen tests hold it to the width the system grants.
+  Every bar was captured on a 13-inch MacBook Pro before and after: they come
+  out identical. Two small differences, both deliberate: changing how many
+  metrics the mini bar shows now rebuilds it, since its meter's width depends
+  on it, and changing the alignment of a bar too full to move no longer
+  rebuilds it for nothing.
+- **Less of the app is written out more than once.** The panel, the dashboard
+  and the settings window share one visibility gate instead of three copies of
+  it; the Touch Bar, the settings plumbing and the temperature alert share one
+  observation loop; the three windows are built, and handed their environment,
+  in one place; and the settings are read and stored through one set of typed
+  helpers. None of this changes what is on screen: the closed dashboard still
+  settles at about 2% of a core, and existing settings load as they were.
+- **The wording of a reading is kept apart from the reading.** `Metrics.swift`
+  is now the snapshot, the usage types and their localised presentation, in
+  three files. Every headline, caption and detail was compared across 322
+  snapshots before and after, and none changed.
+- **GlassDeckKit API**: adds `TouchBarLayout`, `TouchBarMode` and
+  `TouchBarAlignment`, `SystemMonitor.defaultInterval`,
+  `ValueFormatter.duration(minutes:)` and `ValueFormatter.celsius(_:)`, and
+  `BatteryUsage.stateLabel`. Nothing was removed or renamed.
+
 ## [1.8.2] - 2026-09-25
 
 ### Fixed
@@ -383,6 +414,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[1.9.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.9.0
 [1.8.2]: https://github.com/FraCata00/glassdeck/releases/tag/v1.8.2
 [1.8.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.8.1
 [1.8.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.8.0
