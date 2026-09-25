@@ -187,70 +187,51 @@ final class AppModel {
     // MARK: - Windows
 
     func showDashboard() {
-        if let dashboardWindow {
-            dashboardWindow.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
+        show(\.dashboardWindow) {
+            makeGlassWindow(title: "GlassDeck", size: NSSize(width: 720, height: 560), content: DashboardView())
         }
-        let window = makeGlassWindow(
-            title: "GlassDeck",
-            size: NSSize(width: 720, height: 560),
-            content: DashboardView()
-                .environment(monitor)
-                .environment(preferences)
-                .environment(self)
-                .environment(clock)
-        )
-        window.isReleasedWhenClosed = false
-        dashboardWindow = window
-        window.center()
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     func showSettings() {
-        if let settingsWindow {
-            settingsWindow.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
+        show(\.settingsWindow) {
+            makeGlassWindow(
+                title: String(localized: "GlassDeck Settings"),
+                size: NSSize(width: 460, height: 330),
+                content: SettingsView(),
+                isResizable: false,
+                isTransparent: false
+            )
         }
-        let window = makeGlassWindow(
-            title: String(localized: "GlassDeck Settings"),
-            size: NSSize(width: 460, height: 330),
-            content: SettingsView()
-                .environment(preferences)
-                .environment(touchBar)
-                .environment(monitor)
-                .environment(clock),
-            isResizable: false,
-            isTransparent: false
-        )
-        window.isReleasedWhenClosed = false
-        settingsWindow = window
-        window.center()
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     /// The menu bar panel in a window of its own. Only reachable through the
-    /// development override above.
+    /// development override above, and built afresh each time rather than kept.
     func showPanel() {
-        let window = makeGlassWindow(
+        bringForward(makeGlassWindow(
             title: "GlassDeck",
             size: NSSize(width: Theme.panelWidth, height: 900),
-            content: GlassPanelView()
-                .environment(monitor)
-                .environment(preferences)
-                .environment(self)
-                .environment(clock),
+            content: GlassPanelView(),
             isResizable: false
-        )
-        window.isReleasedWhenClosed = false
-        window.center()
+        ))
+    }
+
+    /// Brings back the window kept in `slot`, building it the first time.
+    private func show(_ slot: ReferenceWritableKeyPath<AppModel, NSWindow?>, make: () -> NSWindow) {
+        if let window = self[keyPath: slot] { return bringForward(window) }
+        let window = make()
+        self[keyPath: slot] = window
+        bringForward(window)
+    }
+
+    private func bringForward(_ window: NSWindow) {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    /// A centred window hosting `content`, with the app's environment injected.
+    ///
+    /// Kept rather than released when it closes, so reopening it is a matter of
+    /// ordering it back in.
     private func makeGlassWindow(
         title: String,
         size: NSSize,
@@ -268,8 +249,9 @@ final class AppModel {
             defer: false
         )
         window.title = title
-        window.contentView = NSHostingView(rootView: content)
+        window.contentView = NSHostingView(rootView: content.appEnvironment(self))
         window.isMovableByWindowBackground = true
+        window.isReleasedWhenClosed = false
 
         if isTransparent {
             window.titlebarAppearsTransparent = true
@@ -277,6 +259,7 @@ final class AppModel {
             window.backgroundColor = .clear
             window.isOpaque = false
         }
+        window.center()
         return window
     }
 
@@ -292,5 +275,17 @@ final class AppModel {
         let onCard = preferences.panelModules.contains(.clock) && !preferences.clockZones.isEmpty
         clock.setWanted(onCard || preferences.menuBarClockZone != nil)
         monitor.samplesBluetooth = preferences.panelModules.contains(.bluetooth)
+    }
+}
+
+extension View {
+    /// Everything GlassDeck's views read from the environment. A view that has
+    /// no use for one of these takes no dependency on it.
+    func appEnvironment(_ model: AppModel) -> some View {
+        environment(model)
+            .environment(model.monitor)
+            .environment(model.preferences)
+            .environment(model.clock)
+            .environment(model.touchBar)
     }
 }

@@ -12,10 +12,7 @@ struct GlassDeckApp: App {
     var body: some Scene {
         MenuBarExtra {
             GlassPanelView()
-                .environment(model.monitor)
-                .environment(model.preferences)
-                .environment(model)
-                .environment(model.clock)
+                .appEnvironment(model)
         } label: {
             MenuBarLabel(monitor: model.monitor, preferences: model.preferences, clock: model.clock)
         }
