@@ -11,9 +11,7 @@ struct DashboardView: View {
 
     @Namespace private var glass
     @State private var focus: MetricKind = .cpu
-    @State private var isOnScreen = true
-    @State private var lastSnapshot: MetricsSnapshot = .empty
-    @State private var lastTick: Date = .distantPast
+    @State private var live = LiveReadings()
 
     private let columns = [GridItem(.adaptive(minimum: 224), spacing: 14)]
 
@@ -69,24 +67,15 @@ struct DashboardView: View {
         .samplesProcesses(with: monitor, while: preferences.showsProcesses)
         // The window is kept rather than released when it closes, so the same
         // gate the panel needs applies here — over a drifting mesh gradient.
-        .tracksVisibility($isOnScreen) {
-            lastSnapshot = monitor.snapshot
-            lastTick = clock.now
-        }
+        .tracksVisibility($live, monitor: monitor, clock: clock)
     }
 
-    /// The reading the dashboard draws: the live one while it is on screen, the
-    /// last one it saw once it is not.
-    private var snapshot: MetricsSnapshot {
-        isOnScreen ? monitor.snapshot : lastSnapshot
-    }
+    private var snapshot: MetricsSnapshot { live.snapshot(from: monitor) }
+    private var tick: Date { live.tick(from: clock) }
+    private var processes: [ProcessSample] { live.processes(from: monitor) }
 
     private func history(for kind: MetricKind) -> [Double] {
-        isOnScreen ? monitor.history(for: kind) : []
-    }
-
-    private var processes: [ProcessSample] {
-        isOnScreen ? monitor.topProcesses : []
+        live.history(for: kind, from: monitor)
     }
 
     private var metrics: [MetricKind] {
@@ -95,12 +84,6 @@ struct DashboardView: View {
 
     private var modules: [ModuleKind] {
         preferences.panelModules.filter { $0.hasContent(in: snapshot, preferences: preferences) }
-    }
-
-    /// The clock, frozen while the window is not on screen — the same gate the
-    /// snapshot goes through, for the same reason.
-    private var tick: Date {
-        isOnScreen ? clock.now : lastTick
     }
 
     /// The metric the hero gauge shows. Resolved rather than stored, so turning

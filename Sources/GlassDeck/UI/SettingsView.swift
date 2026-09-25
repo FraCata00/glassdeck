@@ -12,8 +12,7 @@ struct SettingsView: View {
     @Environment(ClockTicker.self) private var clock
 
     @State private var launchesAtLogin = LoginItem.isEnabled
-    @State private var isOnScreen = true
-    @State private var lastSnapshot: MetricsSnapshot = .empty
+    @State private var live = LiveReadings()
 
     var body: some View {
         @Bindable var preferences = preferences
@@ -31,7 +30,7 @@ struct SettingsView: View {
         .frame(width: 460, height: 330)
         // The window outlives its closing — `isReleasedWhenClosed` is false — so
         // the gate the panel and the dashboard need applies here too.
-        .tracksVisibility($isOnScreen) { lastSnapshot = monitor.snapshot }
+        .tracksVisibility($live, monitor: monitor, clock: clock)
     }
 
     private func general(preferences: Bindable<Preferences>) -> some View {
@@ -328,9 +327,7 @@ struct SettingsView: View {
     /// temperature switch, the Bluetooth notice — but reading it at all is what
     /// invalidates the body, and the body is a four-tab `Form` whose relayout
     /// costs far more than the rows that asked for the value.
-    private var snapshot: MetricsSnapshot {
-        isOnScreen ? monitor.snapshot : lastSnapshot
-    }
+    private var snapshot: MetricsSnapshot { live.snapshot(from: monitor) }
 
     /// Metrics this machine reports. Before the first sample nothing
     /// hardware-dependent is known yet, so the full list stands in.
