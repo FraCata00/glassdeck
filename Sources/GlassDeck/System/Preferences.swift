@@ -66,20 +66,8 @@ final class Preferences {
     }
 
     /// Where the meters sit on the bar when they are not using its full width.
-    enum TouchBarAlignment: String, CaseIterable, Identifiable {
-        case leading
-        case center
-        case trailing
-
-        var id: String { rawValue }
-        var title: String {
-            switch self {
-            case .leading: String(localized: "Left")
-            case .center: String(localized: "Centre")
-            case .trailing: String(localized: "Right, beside the Control Strip")
-            }
-        }
-    }
+    /// Defined in the kit, beside the layout that honours it.
+    typealias TouchBarAlignment = GlassDeckKit.TouchBarAlignment
 
     private let defaults: UserDefaults
 
@@ -260,5 +248,15 @@ final class Preferences {
         guard let raw = defaults.array(forKey: key) as? [String] else { return nil }
         let metrics = raw.compactMap(MetricKind.init(rawValue:))
         return metrics.isEmpty ? nil : metrics
+    }
+}
+
+extension TouchBarAlignment {
+    var title: String {
+        switch self {
+        case .leading: String(localized: "Left")
+        case .center: String(localized: "Centre")
+        case .trailing: String(localized: "Right, beside the Control Strip")
+        }
     }
 }
