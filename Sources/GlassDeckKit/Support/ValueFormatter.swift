@@ -38,6 +38,16 @@ public enum ValueFormatter {
         String(format: "%.2f", value.isFinite ? value : 0)
     }
 
+    /// Minutes as hours and minutes: `125` → `"2h 5m"`, `45` → `"45m"`.
+    public static func duration(minutes: Int) -> String {
+        minutes >= 60 ? "\(minutes / 60)h \(minutes % 60)m" : "\(minutes)m"
+    }
+
+    /// A temperature to the nearest degree: `54.4` → `"54°C"`.
+    public static func celsius(_ degrees: Double) -> String {
+        "\(Int(degrees.rounded()))°C"
+    }
+
     /// One decimal place, for a cadence the user picked on a slider: the
     /// half-second steps read as `1.5`, not as `1.50`.
     public static func seconds(_ value: Double) -> String {
