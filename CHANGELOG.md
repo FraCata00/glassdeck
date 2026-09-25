@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.1] - 2026-09-25
+
+### Fixed
+
+- **The Touch Bar's alignment setting was off by one gap.** The spacer that
+  shifts the shared bar right or to the centre was sized to all of the leftover
+  room, but the system puts its usual 8 pt gap after it as after any item. With
+  right alignment the bar ran 8 pt past the width it was sized for, and a centred
+  bar sat 8 pt nearer the Control Strip than the close box — measured on a
+  13-inch MacBook Pro as 55 pt of room on its left against 39 pt on its right.
+  Right alignment now ends exactly at that edge, on the expanded bar and the mini
+  bar alike, and a centred bar has 47 pt either side.
+
 ## [1.9.0] - 2026-09-25
 
 ### Changed
@@ -414,6 +427,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[1.9.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.9.1
 [1.9.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.9.0
 [1.8.2]: https://github.com/FraCata00/glassdeck/releases/tag/v1.8.2
 [1.8.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.8.1
