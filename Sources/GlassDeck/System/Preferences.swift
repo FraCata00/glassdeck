@@ -66,43 +66,27 @@ final class Preferences {
     }
 
     /// Where the meters sit on the bar when they are not using its full width.
-    enum TouchBarAlignment: String, CaseIterable, Identifiable {
-        case leading
-        case center
-        case trailing
-
-        var id: String { rawValue }
-        var title: String {
-            switch self {
-            case .leading: String(localized: "Left")
-            case .center: String(localized: "Centre")
-            case .trailing: String(localized: "Right, beside the Control Strip")
-            }
-        }
-    }
+    /// Defined in the kit, beside the layout that honours it.
+    typealias TouchBarAlignment = GlassDeckKit.TouchBarAlignment
 
     private let defaults: UserDefaults
 
     var refreshInterval: Double { didSet { defaults.set(refreshInterval, forKey: Key.interval) } }
-    var dashboardMetrics: [MetricKind] { didSet { store(dashboardMetrics, forKey: Key.dashboardMetrics) } }
-    var touchBarMetrics: [MetricKind] { didSet { store(touchBarMetrics, forKey: Key.touchBarMetrics) } }
-    var menuBarMetric: MetricKind { didSet { defaults.set(menuBarMetric.rawValue, forKey: Key.menuBarMetric) } }
-    var menuBarStyle: MenuBarStyle { didSet { defaults.set(menuBarStyle.rawValue, forKey: Key.menuBarStyle) } }
+    var dashboardMetrics: [MetricKind] { didSet { defaults.store(dashboardMetrics, forKey: Key.dashboardMetrics) } }
+    var touchBarMetrics: [MetricKind] { didSet { defaults.store(touchBarMetrics, forKey: Key.touchBarMetrics) } }
+    var menuBarMetric: MetricKind { didSet { defaults.store(menuBarMetric, forKey: Key.menuBarMetric) } }
+    var menuBarStyle: MenuBarStyle { didSet { defaults.store(menuBarStyle, forKey: Key.menuBarStyle) } }
     var isTouchBarEnabled: Bool { didSet { defaults.set(isTouchBarEnabled, forKey: Key.touchBarEnabled) } }
     var touchBarPresentation: TouchBarPresentation {
-        didSet { defaults.set(touchBarPresentation.rawValue, forKey: Key.touchBarPresentation) }
+        didSet { defaults.store(touchBarPresentation, forKey: Key.touchBarPresentation) }
     }
-    var touchBarAlignment: TouchBarAlignment {
-        didSet { defaults.set(touchBarAlignment.rawValue, forKey: Key.touchBarAlignment) }
-    }
+    var touchBarAlignment: TouchBarAlignment { didSet { defaults.store(touchBarAlignment, forKey: Key.touchBarAlignment) } }
     var showsProcesses: Bool { didSet { defaults.set(showsProcesses, forKey: Key.showsProcesses) } }
 
     /// The non-scalar cards shown under the gauges, in the panel and the
     /// dashboard. Unlike the metric selections this one may be empty: both
     /// modules are extras, and neither has anything to say by default.
-    var panelModules: [ModuleKind] {
-        didSet { defaults.set(panelModules.map(\.rawValue), forKey: Key.panelModules) }
-    }
+    var panelModules: [ModuleKind] { didSet { defaults.store(panelModules, forKey: Key.panelModules) } }
 
     /// The time zones on the clock card, in the order they are shown.
     var clockZones: [ClockZone] { didSet { storeClockZones() } }
@@ -118,7 +102,7 @@ final class Preferences {
     /// The order every surface lists metrics in — the panel's gauges, the Touch
     /// Bar's panels and the status item's bars. Holds all of them, selected or
     /// not, so turning one off and on again does not lose its place.
-    var metricOrder: [MetricKind] { didSet { store(metricOrder, forKey: Key.metricOrder) } }
+    var metricOrder: [MetricKind] { didSet { defaults.store(metricOrder, forKey: Key.metricOrder) } }
 
     /// Off by default: an app that asks to send notifications before it has been
     /// asked to do anything is a bad guest.
@@ -133,26 +117,23 @@ final class Preferences {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        let storedInterval = defaults.double(forKey: Key.interval)
-        refreshInterval = storedInterval > 0 ? storedInterval : 1.5
-        dashboardMetrics = Self.read(Key.dashboardMetrics, from: defaults) ?? MetricKind.allCases
-        touchBarMetrics = Self.read(Key.touchBarMetrics, from: defaults) ?? MetricKind.defaultSelection
-        menuBarMetric = defaults.string(forKey: Key.menuBarMetric).flatMap(MetricKind.init(rawValue:)) ?? .cpu
-        menuBarStyle = defaults.string(forKey: Key.menuBarStyle).flatMap(MenuBarStyle.init(rawValue:)) ?? .graph
+        refreshInterval = defaults.positive(Key.interval) ?? SystemMonitor.defaultInterval
+        // An empty metric list reads as none stored: an empty Touch Bar strip
+        // would look broken, and nothing can be turned off below one anyway.
+        dashboardMetrics = defaults.nonEmpty(Key.dashboardMetrics) ?? MetricKind.allCases
+        touchBarMetrics = defaults.nonEmpty(Key.touchBarMetrics) ?? MetricKind.defaultSelection
+        menuBarMetric = defaults.value(Key.menuBarMetric) ?? .cpu
+        menuBarStyle = defaults.value(Key.menuBarStyle) ?? .graph
         isTouchBarEnabled = defaults.object(forKey: Key.touchBarEnabled) as? Bool ?? true
-        touchBarPresentation = defaults.string(forKey: Key.touchBarPresentation)
-            .flatMap(TouchBarPresentation.init(rawValue:)) ?? .controlStrip
-        touchBarAlignment = defaults.string(forKey: Key.touchBarAlignment)
-            .flatMap(TouchBarAlignment.init(rawValue:)) ?? .trailing
+        touchBarPresentation = defaults.value(Key.touchBarPresentation) ?? .controlStrip
+        touchBarAlignment = defaults.value(Key.touchBarAlignment) ?? .trailing
         showsProcesses = defaults.object(forKey: Key.showsProcesses) as? Bool ?? true
-        panelModules = (defaults.array(forKey: Key.panelModules) as? [String])
-            .map { $0.compactMap(ModuleKind.init(rawValue:)) } ?? ModuleKind.defaultSelection
+        panelModules = defaults.values(Key.panelModules) ?? ModuleKind.defaultSelection
         clockZones = Self.readClockZones(from: defaults)
         menuBarClockZone = defaults.string(forKey: Key.menuBarClockZone)
-        metricOrder = Self.repairedOrder(Self.read(Key.metricOrder, from: defaults))
+        metricOrder = Self.repairedOrder(defaults.nonEmpty(Key.metricOrder))
         isTemperatureAlertEnabled = defaults.object(forKey: Key.temperatureAlert) as? Bool ?? false
-        let storedThreshold = defaults.double(forKey: Key.temperatureThreshold)
-        temperatureThreshold = storedThreshold > 0 ? storedThreshold : 85
+        temperatureThreshold = defaults.positive(Key.temperatureThreshold) ?? 85
 
         // Selections stored before the order was changed — or before this
         // version — are brought into line. Assigned here rather than through the
@@ -251,14 +232,50 @@ final class Preferences {
         }
         self[keyPath: keyPath] = selection
     }
+}
 
-    private func store(_ metrics: [MetricKind], forKey key: String) {
-        defaults.set(metrics.map(\.rawValue), forKey: key)
+/// Settings are stored by raw value. Named apart from `set(_:forKey:)` on
+/// purpose: that one takes `Any?`, and handed an enum it would store something
+/// that is not a property list and bring the app down.
+private extension UserDefaults {
+    func store<Value: RawRepresentable<String>>(_ value: Value, forKey key: String) {
+        set(value.rawValue, forKey: key)
     }
 
-    private static func read(_ key: String, from defaults: UserDefaults) -> [MetricKind]? {
-        guard let raw = defaults.array(forKey: key) as? [String] else { return nil }
-        let metrics = raw.compactMap(MetricKind.init(rawValue:))
-        return metrics.isEmpty ? nil : metrics
+    func store<Value: RawRepresentable<String>>(_ values: [Value], forKey key: String) {
+        set(values.map(\.rawValue), forKey: key)
+    }
+
+    /// The stored case, or `nil` when there is none or it is no longer a case.
+    func value<Value: RawRepresentable<String>>(_ key: String) -> Value? {
+        string(forKey: key).flatMap(Value.init(rawValue:))
+    }
+
+    /// The stored list, skipping anything that is no longer a case. `nil` only
+    /// when nothing is stored, so a list emptied on purpose stays empty.
+    func values<Value: RawRepresentable<String>>(_ key: String) -> [Value]? {
+        (array(forKey: key) as? [String]).map { $0.compactMap(Value.init(rawValue:)) }
+    }
+
+    /// As `values(_:)`, but a list with nothing left in it reads as none stored.
+    func nonEmpty<Value: RawRepresentable<String>>(_ key: String) -> [Value]? {
+        values(key).flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// A stored number, or `nil` for none — `double(forKey:)` reads a missing
+    /// key as `0`, which no setting that uses this can mean.
+    func positive(_ key: String) -> Double? {
+        let value = double(forKey: key)
+        return value > 0 ? value : nil
+    }
+}
+
+extension TouchBarAlignment {
+    var title: String {
+        switch self {
+        case .leading: String(localized: "Left")
+        case .center: String(localized: "Centre")
+        case .trailing: String(localized: "Right, beside the Control Strip")
+        }
     }
 }

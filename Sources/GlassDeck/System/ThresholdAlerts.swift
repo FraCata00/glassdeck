@@ -1,7 +1,6 @@
 import AppKit
 import Foundation
 import GlassDeckKit
-import Observation
 import UserNotifications
 
 /// Notifies when the machine runs hotter than the user asked to be told about.
@@ -21,7 +20,11 @@ final class ThresholdAlerts {
     private let monitor: SystemMonitor
 
     private var isAlerting = false
-    private var isObserving = false
+    private lazy var changes = ObservationLoop(self) { alerts in
+        _ = alerts.monitor.coarseSnapshot
+    } onChange: { alerts in
+        alerts.check(alerts.monitor.coarseSnapshot)
+    }
 
     init(preferences: Preferences, monitor: SystemMonitor) {
         self.preferences = preferences
@@ -29,9 +32,7 @@ final class ThresholdAlerts {
     }
 
     func start() {
-        guard !isObserving else { return }
-        isObserving = true
-        observe()
+        changes.start()
     }
 
     /// Asks for permission at the moment the user turns the alert on, rather
@@ -41,18 +42,6 @@ final class ThresholdAlerts {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, error in
             if let error {
                 NSLog("GlassDeck: notification permission denied – \(error.localizedDescription)")
-            }
-        }
-    }
-
-    private func observe() {
-        withObservationTracking {
-            _ = monitor.coarseSnapshot
-        } onChange: { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.check(self.monitor.coarseSnapshot)
-                self.observe()
             }
         }
     }

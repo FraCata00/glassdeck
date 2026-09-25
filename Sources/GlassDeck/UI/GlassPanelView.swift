@@ -14,9 +14,7 @@ struct GlassPanelView: View {
 
     @State private var selection: MetricKind = .cpu
     @State private var contentHeight: CGFloat = 0
-    @State private var isOnScreen = true
-    @State private var lastSnapshot: MetricsSnapshot = .empty
-    @State private var lastTick: Date = .distantPast
+    @State private var live = LiveReadings()
     @Namespace private var glassNamespace
 
     private static let panelPadding: CGFloat = 16
@@ -127,35 +125,20 @@ struct GlassPanelView: View {
         .samplesProcesses(with: monitor, while: preferences.showsProcesses)
         // Closing the panel does not tear this tree down, so what it reads has
         // to be switched off by hand or it animates on into a hidden window.
-        .tracksVisibility($isOnScreen) {
-            lastSnapshot = monitor.snapshot
-            lastTick = clock.now
-        }
+        .tracksVisibility($live, monitor: monitor, clock: clock)
     }
 
-    /// The reading the panel draws: the live one while it is on screen, the last
-    /// one it saw once it is not.
-    private var snapshot: MetricsSnapshot {
-        isOnScreen ? monitor.snapshot : lastSnapshot
-    }
+    private var snapshot: MetricsSnapshot { live.snapshot(from: monitor) }
+    private var tick: Date { live.tick(from: clock) }
+    private var processes: [ProcessSample] { live.processes(from: monitor) }
 
-    /// The same trick for the clock: a closed panel that went on reading the
-    /// ticker would be rebuilt once a minute for nobody.
-    private var tick: Date {
-        isOnScreen ? clock.now : lastTick
+    private func history(for kind: MetricKind) -> [Double] {
+        live.history(for: kind, from: monitor)
     }
 
     /// The module cards, minus the ones with nothing to show.
     private var modules: [ModuleKind] {
         preferences.panelModules.filter { $0.hasContent(in: snapshot, preferences: preferences) }
-    }
-
-    private func history(for kind: MetricKind) -> [Double] {
-        isOnScreen ? monitor.history(for: kind) : []
-    }
-
-    private var processes: [ProcessSample] {
-        isOnScreen ? monitor.topProcesses : []
     }
 
     private var header: some View {

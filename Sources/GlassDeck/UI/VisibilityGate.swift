@@ -1,4 +1,5 @@
 import AppKit
+import GlassDeckKit
 import SwiftUI
 
 /// Ties a flag to a view's time on screen, so a body can stop reading live
@@ -22,10 +23,9 @@ import SwiftUI
 /// its window: closing it deallocates the tree, which is why the bug hid there.
 /// The window itself does know, so ask it.
 struct VisibilityGate: ViewModifier {
-    @Binding var isOnScreen: Bool
-    /// Runs while the live values can still be read, so the view can hold on to
-    /// its last reading and have something to draw the moment it comes back.
-    let beforeHiding: () -> Void
+    @Binding var readings: LiveReadings
+    let monitor: SystemMonitor
+    let clock: ClockTicker
 
     func body(content: Content) -> some View {
         content
@@ -36,18 +36,61 @@ struct VisibilityGate: ViewModifier {
     }
 
     private func update(_ visible: Bool) {
-        guard visible != isOnScreen else { return }
-        if !visible { beforeHiding() }
-        isOnScreen = visible
+        guard visible != readings.isOnScreen else { return }
+        if visible {
+            readings.isOnScreen = true
+        } else {
+            readings.freeze(monitor: monitor, clock: clock)
+        }
+    }
+}
+
+/// What a gated view draws from the monitor and the clock: the live values
+/// while its window is on screen, the last ones it saw once it is not.
+///
+/// Every accessor goes through the gate, so a view that reads its values from
+/// here cannot be left with one of them still live — the history and the
+/// process list come back empty rather than frozen, since nothing is drawing
+/// them. Both the snapshot and the clock are frozen together, while they can
+/// still be read, so the view has something to draw the moment it comes back.
+@MainActor
+struct LiveReadings {
+    fileprivate(set) var isOnScreen = true
+    private var lastSnapshot: MetricsSnapshot = .empty
+    private var lastTick: Date = .distantPast
+
+    func snapshot(from monitor: SystemMonitor) -> MetricsSnapshot {
+        isOnScreen ? monitor.snapshot : lastSnapshot
+    }
+
+    /// A closed window that went on reading the ticker would be rebuilt once a
+    /// minute for nobody.
+    func tick(from clock: ClockTicker) -> Date {
+        isOnScreen ? clock.now : lastTick
+    }
+
+    func history(for kind: MetricKind, from monitor: SystemMonitor) -> [Double] {
+        isOnScreen ? monitor.history(for: kind) : []
+    }
+
+    func processes(from monitor: SystemMonitor) -> [ProcessSample] {
+        isOnScreen ? monitor.topProcesses : []
+    }
+
+    fileprivate mutating func freeze(monitor: SystemMonitor, clock: ClockTicker) {
+        lastSnapshot = monitor.snapshot
+        lastTick = clock.now
+        isOnScreen = false
     }
 }
 
 extension View {
     func tracksVisibility(
-        _ isOnScreen: Binding<Bool>,
-        beforeHiding: @escaping () -> Void = {}
+        _ readings: Binding<LiveReadings>,
+        monitor: SystemMonitor,
+        clock: ClockTicker
     ) -> some View {
-        modifier(VisibilityGate(isOnScreen: isOnScreen, beforeHiding: beforeHiding))
+        modifier(VisibilityGate(readings: readings, monitor: monitor, clock: clock))
     }
 }
 

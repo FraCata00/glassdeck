@@ -51,3 +51,28 @@ struct MathTests {
         #expect([1.0, 2.0, 3.0].mean == 2)
     }
 }
+
+@Suite("Durations and temperatures")
+struct DurationAndTemperatureTests {
+    @Test("Durations drop the hours below one")
+    func durations() {
+        #expect(ValueFormatter.duration(minutes: 0) == "0m")
+        #expect(ValueFormatter.duration(minutes: 45) == "45m")
+        #expect(ValueFormatter.duration(minutes: 60) == "1h 0m")
+        #expect(ValueFormatter.duration(minutes: 125) == "2h 5m")
+    }
+
+    @Test("Temperatures round to the nearest degree")
+    func temperatures() {
+        #expect(ValueFormatter.celsius(54.4) == "54°C")
+        #expect(ValueFormatter.celsius(54.5) == "55°C")
+        #expect(ValueFormatter.celsius(-3.6) == "-4°C")
+    }
+
+    @Test("Battery state reads charging before plugged in")
+    func batteryState() {
+        #expect(BatteryUsage(isCharging: true, isPluggedIn: true, isAvailable: true).stateLabel == "charging")
+        #expect(BatteryUsage(isCharging: false, isPluggedIn: true, isAvailable: true).stateLabel == "on power")
+        #expect(BatteryUsage(isCharging: false, isPluggedIn: false, isAvailable: true).stateLabel == "on battery")
+    }
+}

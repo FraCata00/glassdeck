@@ -27,6 +27,9 @@ public final class SystemMonitor {
     public private(set) var topProcesses: [ProcessSample] = []
     public private(set) var isRunning = false
 
+    /// The cadence a fresh install samples at.
+    public static let defaultInterval: TimeInterval = 1.5
+
     /// Seconds between samples. Changing it restarts the loop.
     public var interval: TimeInterval {
         didSet {
@@ -89,7 +92,7 @@ public final class SystemMonitor {
     private var task: Task<Void, Never>?
     private var powerSources: PowerSourceObserver?
 
-    public init(interval: TimeInterval = 1.5) {
+    public init(interval: TimeInterval = SystemMonitor.defaultInterval) {
         self.interval = interval
         for kind in MetricKind.allCases {
             history[kind] = RingBuffer<Double>(capacity: Self.historyLength)
