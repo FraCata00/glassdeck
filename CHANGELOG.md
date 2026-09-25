@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.2] - 2026-09-25
+
+### Fixed
+
+- **The Touch Bar battery chip lagged behind the charging cable.** It turned
+  green only once macOS reported the battery as charging, which happens a few
+  seconds after the adapter goes in, once it has negotiated — and never at all
+  while a charge is held back by optimised charging, a charge limit or a full
+  battery. The state was also read only on the next tick, and the mini bar and
+  Control Strip follow the slower coarse snapshot, so the chip could stay white
+  for several seconds after plugging in.
+
+  The chip now shows a plug as soon as the Mac is on AC power, and the green
+  bolt once charging starts. GlassDeck also listens for the system's
+  power-source notifications, re-reading the battery the moment it changes and
+  publishing it past the coarse throttle, so every surface catches up at once.
+
 ## [1.8.1] - 2026-09-06
 
 ### Fixed
@@ -366,6 +383,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[1.8.2]: https://github.com/FraCata00/glassdeck/releases/tag/v1.8.2
 [1.8.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.8.1
 [1.8.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.8.0
 [1.7.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.7.0
