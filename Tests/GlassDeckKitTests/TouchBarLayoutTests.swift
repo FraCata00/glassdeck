@@ -5,6 +5,7 @@ import Testing
 @Suite("Touch Bar layout")
 struct TouchBarLayoutTests {
     private static let batteryWidth: CGFloat = 62
+    private static let miniMeterWidth: CGFloat = 120
 
     private func layout(
         _ mode: TouchBarMode,
@@ -13,7 +14,7 @@ struct TouchBarLayoutTests {
         supported: Set<MetricKind> = Set(MetricKind.allCases),
         hasBattery: Bool = true,
         alignment: TouchBarAlignment = .trailing,
-        miniMeterWidth: CGFloat = 120
+        miniMeterWidth: CGFloat = Self.miniMeterWidth
     ) -> TouchBarLayout {
         TouchBarLayout(
             mode: mode,
@@ -35,6 +36,7 @@ struct TouchBarLayoutTests {
             case .leadingSpacer: total + layout.leadingSpacerWidth
             case .metric: total + layout.panelWidth
             case .battery: total + Self.batteryWidth
+            case .miniMeter: total + Self.miniMeterWidth
             case .grow, .collapse, .dashboard: total + TouchBarLayout.controlWidth
             default: total
             }
@@ -141,18 +143,26 @@ struct TouchBarLayoutTests {
     func trailingAlignment() {
         let bar = layout(.expanded, selection: [.cpu], alignment: .trailing)
         #expect(bar.items.first == .leadingSpacer)
-        // The spacer takes all the slack but not the gap the system puts after
-        // it, so the bar comes out one item spacing past the measured region.
-        // Pinned as it stands: the region was measured on hardware with this in
-        // place, and changing it wants a Touch Bar to check against.
-        #expect(width(of: bar) == TouchBarLayout.sharedRegionWidth + TouchBarLayout.itemSpacing)
+        // The spacer is an item like any other, so the system puts a gap after
+        // it too: the bar ends at the region's edge only once that is counted.
+        #expect(width(of: bar) == TouchBarLayout.sharedRegionWidth)
     }
 
-    @Test("Centring splits the leftover space")
-    func centreAlignment() {
-        let trailing = layout(.expanded, selection: [.cpu], alignment: .trailing)
-        let centred = layout(.expanded, selection: [.cpu], alignment: .center)
-        #expect(centred.leadingSpacerWidth == trailing.leadingSpacerWidth / 2)
+    @Test("Centring leaves the same room on either side", arguments: [[MetricKind.cpu], [.cpu, .gpu, .memory]])
+    func centreAlignment(selection: [MetricKind]) {
+        let centred = layout(.expanded, selection: selection, alignment: .center)
+        let unshifted = layout(.expanded, selection: selection, alignment: .leading)
+        let before = centred.leadingSpacerWidth + TouchBarLayout.itemSpacing
+        let after = TouchBarLayout.sharedRegionWidth - width(of: centred)
+        #expect(before == after)
+        #expect(width(of: centred) - before == width(of: unshifted))
+    }
+
+    @Test("Right alignment ends at the region's edge for the mini bar too")
+    func trailingMini() {
+        let bar = layout(.mini, alignment: .trailing)
+        #expect(bar.items.first == .leadingSpacer)
+        #expect(width(of: bar) == TouchBarLayout.sharedRegionWidth)
     }
 
     @Test("Left alignment uses no spacer")

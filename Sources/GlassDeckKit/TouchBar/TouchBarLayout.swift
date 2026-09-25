@@ -195,7 +195,11 @@ public struct TouchBarLayout: Equatable, Sendable {
 
             if slack > 24, alignment != .leading {
                 items = [.leadingSpacer] + content
-                leadingSpacerWidth = alignment == .center ? slack / 2 : slack
+                // The spacer is an item too, so the system puts a gap after it:
+                // left out, it pushed the bar 8 pt past the region and left a
+                // centred bar 8 pt nearer the Control Strip than the close box.
+                let shift = alignment == .center ? slack / 2 : slack
+                leadingSpacerWidth = shift - Self.itemSpacing
             } else {
                 // A full bar cannot be moved; forcing it would push items under
                 // the Control Strip, where the system clips them.
