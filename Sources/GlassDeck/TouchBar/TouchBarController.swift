@@ -19,6 +19,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     static let controlStripIdentifier = NSTouchBarItem.Identifier("dev.fracata00.glassdeck.controlstrip")
     private static let barIdentifier = NSTouchBar.CustomizationIdentifier("dev.fracata00.glassdeck.bar")
     private static let collapseItem = NSTouchBarItem.Identifier("dev.fracata00.glassdeck.collapse")
+    private static let yieldItem = NSTouchBarItem.Identifier("dev.fracata00.glassdeck.yield")
     private static let resizeItem = NSTouchBarItem.Identifier("dev.fracata00.glassdeck.resize")
     private static let dashboardItem = NSTouchBarItem.Identifier("dev.fracata00.glassdeck.dashboard")
     private static let batteryItem = NSTouchBarItem.Identifier("dev.fracata00.glassdeck.battery")
@@ -59,6 +60,14 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     /// Set when the user releases the Touch Bar from the bar itself. It lasts for
     /// the session only — a tap is not a settings change, so nothing is persisted.
     private var isReleasedForSession = false
+    /// The app the Touch Bar was handed to with the keyboard shortcut. GlassDeck
+    /// stays out of its way until another app comes forward.
+    private var yieldedApplication: pid_t?
+    /// The size to come back at once the yielded app is left.
+    private var modeBeforeYield: Mode = .expanded
+    /// The shortcut set in settings: hands the Touch Bar to the frontmost app,
+    /// or takes it back.
+    @ObservationIgnored private lazy var yieldHotKey = GlobalHotKey { [weak self] in self?.toggleYield() }
     /// Bridges the Observation framework to AppKit: redraws the bar whenever a
     /// reading or a Touch Bar setting it shows changes.
     ///
@@ -115,6 +124,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         }
 
         install()
+        yieldHotKey.shortcut = preferences.yieldShortcut
         applyMetricsToStrips()
         rebuildBarIfNeeded()
 
@@ -123,7 +133,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
             if mode != .collapsed { collapse() }
             stopReasserting()
         case .alwaysOn:
-            if mode == .collapsed, !isReleasedForSession { present(.expanded) }
+            if mode == .collapsed, !isReleasedForSession, yieldedApplication == nil { present(.expanded) }
             startReasserting()
         }
     }
@@ -156,6 +166,8 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         stopReasserting()
         dismissPresentedBar()
         guard let stripItem else { return }
+        yieldHotKey.shortcut = nil
+        yieldedApplication = nil
         DFRSupport.setControlStripPresence(Self.controlStripIdentifier, visible: false)
         SystemTouchBar.removeSystemTrayItem(stripItem)
         self.stripItem = nil
@@ -238,6 +250,30 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         }
     }
 
+    /// The keyboard shortcut and the hand-over button. Apps that put their own
+    /// controls on the Touch Bar
+    /// — editors, players — are hidden behind GlassDeck while it owns the bar, and
+    /// there is no API to ask another app whether it has a bar of its own, so
+    /// handing it over is left to the user: until another app comes forward, or
+    /// until the shortcut is pressed again.
+    @objc private func toggleYield() {
+        if mode == .collapsed {
+            yieldedApplication = nil
+            isReleasedForSession = false
+            present(modeBeforeYield)
+        } else {
+            modeBeforeYield = mode
+            yieldedApplication = NSWorkspace.shared.frontmostApplication?.processIdentifier
+            collapse()
+        }
+    }
+
+    /// Sets the hand-over shortcut aside while a new one is being recorded.
+    func suspendShortcut(_ suspended: Bool) {
+        guard stripItem != nil else { return }
+        yieldHotKey.shortcut = suspended ? nil : preferences.yieldShortcut
+    }
+
     @objc private func grow() {
         present(mode.larger)
     }
@@ -254,14 +290,24 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
             forName: NSWorkspace.didActivateApplicationNotification,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
+        ) { [weak self] notification in
+            let activated = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?
+                .processIdentifier
             Task { @MainActor [weak self] in
                 guard let self,
                       self.preferences.isTouchBarEnabled,
                       self.preferences.touchBarPresentation == .alwaysOn,
                       !self.isReleasedForSession
                 else { return }
-                self.reassert()
+                if let yielded = self.yieldedApplication {
+                    // Still the app the bar was handed to — a Space switch, or the
+                    // same app activated again — so it keeps the bar.
+                    guard activated != yielded else { return }
+                    self.yieldedApplication = nil
+                    self.present(self.modeBeforeYield)
+                } else {
+                    self.reassert()
+                }
             }
         }
     }
@@ -354,6 +400,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         case .battery: Self.batteryItem
         case .grow: Self.resizeItem
         case .dashboard: Self.dashboardItem
+        case .yield: Self.yieldItem
         case .collapse: Self.collapseItem
         case .miniMeter: Self.miniMeterItem
         case .back: Self.backItem
@@ -406,6 +453,13 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
                     ? String(localized: "Hand the Touch Bar back until the Control Strip meter is tapped")
                     : String(localized: "Shrink GlassDeck"),
                 action: #selector(shrink)
+            )
+        case Self.yieldItem:
+            return button(
+                identifier: identifier,
+                symbol: "rectangle.portrait.and.arrow.right",
+                accessibilityDescription: String(localized: "Hand the Touch Bar to this app until you switch to another one"),
+                action: #selector(toggleYield)
             )
         case Self.resizeItem:
             // Only ever means "grow": the bar drops this item in full width.

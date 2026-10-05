@@ -22,6 +22,7 @@ final class Preferences {
         static let panelModules = "panelModules"
         static let clockZones = "clockZones"
         static let menuBarClockZone = "menuBarClockZone"
+        static let yieldShortcut = "yieldShortcut"
     }
 
     /// How the status item renders in the menu bar.
@@ -60,7 +61,7 @@ final class Preferences {
             case .controlStrip:
                 String(localized: "A compact meter sits in the expanded Control Strip. Tap it for the full-width graphs.")
             case .alwaysOn:
-                String(localized: "GlassDeck occupies the entire Touch Bar. Other apps' bars still take priority while they are frontmost.")
+                String(localized: "GlassDeck occupies the entire Touch Bar, in every app. The hand-over shortcut, or the button in full width, gives it to the app in front until you switch to another one; the shortcut again takes it back.")
             }
         }
     }
@@ -82,6 +83,10 @@ final class Preferences {
     }
     var touchBarAlignment: TouchBarAlignment { didSet { defaults.store(touchBarAlignment, forKey: Key.touchBarAlignment) } }
     var showsProcesses: Bool { didSet { defaults.set(showsProcesses, forKey: Key.showsProcesses) } }
+
+    /// The shortcut that hands the Touch Bar to the frontmost app, or `nil` when
+    /// the user has turned it off.
+    var yieldShortcut: KeyShortcut? { didSet { storeYieldShortcut() } }
 
     /// The non-scalar cards shown under the gauges, in the panel and the
     /// dashboard. Unlike the metric selections this one may be empty: both
@@ -131,6 +136,7 @@ final class Preferences {
         panelModules = defaults.values(Key.panelModules) ?? ModuleKind.defaultSelection
         clockZones = Self.readClockZones(from: defaults)
         menuBarClockZone = defaults.string(forKey: Key.menuBarClockZone)
+        yieldShortcut = Self.readYieldShortcut(from: defaults)
         metricOrder = Self.repairedOrder(defaults.nonEmpty(Key.metricOrder))
         isTemperatureAlertEnabled = defaults.object(forKey: Key.temperatureAlert) as? Bool ?? false
         temperatureThreshold = defaults.positive(Key.temperatureThreshold) ?? 85
@@ -203,6 +209,18 @@ final class Preferences {
     func renameClockZone(_ identifier: String, to label: String) {
         guard let index = clockZones.firstIndex(where: { $0.identifier == identifier }) else { return }
         clockZones[index].label = label.trimmingCharacters(in: .whitespaces)
+    }
+
+    /// Stored as JSON including when it is `nil`, so a shortcut turned off is
+    /// told apart from one never set, which gets the default.
+    private func storeYieldShortcut() {
+        guard let data = try? JSONEncoder().encode(yieldShortcut) else { return }
+        defaults.set(data, forKey: Key.yieldShortcut)
+    }
+
+    private static func readYieldShortcut(from defaults: UserDefaults) -> KeyShortcut? {
+        guard let data = defaults.data(forKey: Key.yieldShortcut) else { return .defaultYield }
+        return (try? JSONDecoder().decode(KeyShortcut?.self, from: data)) ?? .defaultYield
     }
 
     private func storeClockZones() {

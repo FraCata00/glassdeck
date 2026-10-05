@@ -292,6 +292,10 @@ struct SettingsView: View {
                     }
                 }
                 .disabled(!preferences.wrappedValue.isTouchBarEnabled)
+                LabeledContent("Hand-over shortcut") {
+                    ShortcutRecorder(shortcut: preferences.yieldShortcut) { touchBar.suspendShortcut($0) }
+                }
+                .disabled(!preferences.wrappedValue.isTouchBarEnabled)
                 Text(preferences.wrappedValue.touchBarPresentation.explanation)
                     .font(.caption)
                     .foregroundStyle(.secondary)
