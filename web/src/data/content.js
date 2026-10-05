@@ -19,7 +19,7 @@ export const touchBarStates = [
     image: fullWidth,
     alt: 'GlassDeck across the full width of the Touch Bar, showing every metric',
     title: 'Every metric, edge to edge.',
-    body: 'CPU, GPU, memory, disk, network, temperature, power, fan RPM and battery, each in its own panel. The panels are sized from the room the bar actually has, so turning a metric off widens the ones that remain instead of leaving a gap.',
+    body: 'CPU, GPU, memory, disk, network, temperature, power, fan RPM and battery, each in its own panel. The panels are sized from the room the bar actually has, so turning a metric off widens the ones that remain instead of leaving a gap. When an app needs its own controls, ⌃⌥⌘T or the hand-over button gives it the bar until you switch away.',
   },
   {
     id: 'compact',
@@ -62,7 +62,7 @@ export const metrics = [
   },
   {
     name: 'Memory',
-    body: 'Used counted as app memory plus wired plus compressed — the same arithmetic Activity Monitor does — with swap alongside it.',
+    body: 'Used counted as app memory plus wired plus compressed — the same arithmetic Activity Monitor does — with swap alongside it. A Mac keeps its RAM full on purpose, so the warning comes from the kernel’s memory pressure instead, with an optional alert when it runs high.',
   },
   {
     name: 'Disk',
@@ -128,7 +128,7 @@ export const principles = [
 export const sources = [
   ['CPU', 'host_processor_info(PROCESSOR_CPU_LOAD_INFO), hw.perflevel*.logicalcpu, getloadavg'],
   ['GPU', 'IOAccelerator → PerformanceStatistics'],
-  ['Memory', 'host_statistics64(HOST_VM_INFO64), vm.swapusage'],
+  ['Memory', 'host_statistics64(HOST_VM_INFO64), vm.swapusage, kern.memorystatus_vm_pressure_level, kern.memorystatus_level'],
   ['Disk', 'URLResourceValues + IOBlockStorageDriver → Statistics'],
   ['Network', 'getifaddrs → if_data counters'],
   ['Fans', 'AppleSMC user client (FNum, F<n>Ac/Mn/Mx), read-only'],

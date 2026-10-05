@@ -5,7 +5,7 @@ import { repo } from '@/data/content'
 /// here, so cutting a release does not leave the site quietly a version behind.
 /// If the call fails — offline, rate-limited, blocked — the page keeps the
 /// fallback and simply says nothing about the version.
-const FALLBACK = '1.5.0'
+const FALLBACK = '1.10.0'
 
 export function useLatestRelease() {
   const version = ref(FALLBACK)
