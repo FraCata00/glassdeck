@@ -37,7 +37,7 @@ struct TouchBarLayoutTests {
             case .metric: total + layout.panelWidth
             case .battery: total + Self.batteryWidth
             case .miniMeter: total + Self.miniMeterWidth
-            case .grow, .collapse, .dashboard: total + TouchBarLayout.controlWidth
+            case .grow, .collapse, .dashboard, .yield: total + TouchBarLayout.controlWidth
             default: total
             }
         }
@@ -51,6 +51,7 @@ struct TouchBarLayoutTests {
         #expect(bar.panelWidth == TouchBarLayout.minimumPanelWidth)
         #expect(bar.items.suffix(4) == [.battery, .grow, .collapse, .flexibleSpace])
         #expect(!bar.items.contains(.dashboard))
+        #expect(!bar.items.contains(.yield))
     }
 
     @Test("The shared bar never runs under the Control Strip")
@@ -78,10 +79,10 @@ struct TouchBarLayoutTests {
         #expect(bar.metrics == [.cpu, .temperature])
     }
 
-    @Test("Full width has a dashboard button and no grow button")
+    @Test("Full width has hand-over and dashboard buttons and no grow button")
     func fullscreenControls() {
         let bar = layout(.fullscreen)
-        #expect(bar.items.suffix(3) == [.battery, .dashboard, .collapse])
+        #expect(bar.items.suffix(4) == [.battery, .yield, .dashboard, .collapse])
         #expect(!bar.items.contains(.grow))
         #expect(bar.leadingSpacerWidth == 0)
         #expect(!bar.items.contains(.flexibleSpace))

@@ -81,6 +81,19 @@ final class TouchBarMetricView: NSView {
             color: .white,
             alignment: .left
         )
+        drawPressureDot()
+    }
+
+    /// Memory's warning light. The value and the curve show how full RAM is,
+    /// which on a Mac is nearly always "very"; this shows when that has turned
+    /// into a shortage. Nothing is drawn at normal pressure.
+    private func drawPressureDot() {
+        guard kind == .memory, snapshot.memory.pressureLevel > .normal else { return }
+        let color: NSColor = snapshot.memory.pressureLevel == .critical ? .systemRed : .systemOrange
+        let diameter: CGFloat = 5
+        let dot = NSRect(x: bounds.maxX - diameter - 6, y: bounds.maxY - diameter - 5, width: diameter, height: diameter)
+        color.setFill()
+        NSBezierPath(ovalIn: dot).fill()
     }
 
     private func drawSparkline(in rect: NSRect, color: NSColor) {

@@ -83,6 +83,8 @@ public struct TouchBarLayout: Equatable, Sendable {
         case battery
         case grow
         case dashboard
+        /// Hands the Touch Bar to the frontmost app until another one comes forward.
+        case yield
         case collapse
         case miniMeter
         case back
@@ -106,10 +108,10 @@ public struct TouchBarLayout: Equatable, Sendable {
     /// Sharing the bar with the Control Strip leaves roughly 540 pt: four
     /// narrow panels plus the controls is the most that stays legible.
     public static let maximumSharedPanels = 4
-    /// The two buttons that ride along in full width: the dashboard and the
-    /// chevron. The grow button is not among them — there is nothing larger
-    /// than full width — so its width goes to the panels.
-    static let fullscreenControlCount = 2
+    /// The three buttons that ride along in full width: hand-over, the
+    /// dashboard and the chevron. The grow button is not among them — there is
+    /// nothing larger than full width — so its width goes to the panels.
+    static let fullscreenControlCount = 3
 
     public let mode: TouchBarMode
     public let items: [Item]
@@ -172,7 +174,9 @@ public struct TouchBarLayout: Equatable, Sendable {
             content = metrics.map(Item.metric)
                 + (hasBattery ? [.battery] : [])
                 + (mode.larger != mode ? [.grow] : [])
-                + (mode == .fullscreen ? [.dashboard] : [])
+                // Hand-over, like the dashboard, only fits in full width: the
+                // shared bar is already within a couple of points of its budget.
+                + (mode == .fullscreen ? [.yield, .dashboard] : [])
                 + [.collapse]
         }
 
@@ -187,7 +191,7 @@ public struct TouchBarLayout: Equatable, Sendable {
                 switch item {
                 case .miniMeter: total + miniMeterWidth
                 case .battery: total + batteryWidth
-                case .grow, .collapse, .dashboard: total + Self.controlWidth
+                case .grow, .collapse, .dashboard, .yield: total + Self.controlWidth
                 default: total + panelWidth
                 }
             } + CGFloat(content.count - 1) * Self.itemSpacing

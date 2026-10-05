@@ -62,6 +62,12 @@ public struct MetricsSnapshot: Sendable, Equatable {
         }
     }
 
+    /// How close a metric is to trouble, on the same scale as `fraction(for:)`.
+    /// The same as the fill for everything but memory; see `MemoryUsage.strain`.
+    public func strain(for kind: MetricKind) -> Double {
+        kind == .memory ? memory.strain : fraction(for: kind)
+    }
+
     /// Whether this machine can report the metric at all: fanless Macs have no
     /// fan reading, desktops have no battery.
     public func supports(_ kind: MetricKind) -> Bool {

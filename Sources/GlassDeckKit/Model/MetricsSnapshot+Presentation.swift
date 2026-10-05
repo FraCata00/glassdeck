@@ -36,10 +36,18 @@ extension MetricsSnapshot {
 
         case .memory:
             return [
+                MetricDetail(
+                    label: L.t("detail.pressure", "pressure"),
+                    value: "\(ValueFormatter.percent(memory.pressure)) \(memory.pressureLevel.title)"
+                ),
                 MetricDetail(label: L.t("detail.used", "used"), value: ValueFormatter.bytes(memory.used)),
-                MetricDetail(label: L.t("detail.wired", "wired"), value: ValueFormatter.bytes(memory.wired)),
                 MetricDetail(label: L.t("detail.compressed", "compressed"), value: ValueFormatter.bytes(memory.compressed)),
-                MetricDetail(label: L.t("detail.swap", "swap"), value: ValueFormatter.bytes(memory.swapUsed)),
+                MetricDetail(
+                    label: L.t("detail.swap", "swap"),
+                    value: memory.swapTotal > 0
+                        ? "\(ValueFormatter.bytes(memory.swapUsed)) / \(ValueFormatter.bytes(memory.swapTotal))"
+                        : ValueFormatter.bytes(memory.swapUsed)
+                ),
             ]
 
         case .disk:
@@ -147,7 +155,12 @@ extension MetricsSnapshot {
         case .gpu:
             gpu.isAvailable ? gpu.name : L.t("gpu.none", "no accelerator")
         case .memory:
-            L.t("memory.caption", "%1$@ total · %2$@ swap", ValueFormatter.bytes(memory.total), ValueFormatter.bytes(memory.swapUsed))
+            L.t(
+                "memory.caption.pressure",
+                "pressure %1$@ · %2$@ swap",
+                memory.pressureLevel.title,
+                ValueFormatter.bytes(memory.swapUsed)
+            )
         case .disk:
             L.t("disk.caption", "%1$@ free of %2$@", ValueFormatter.bytes(disk.free), ValueFormatter.bytes(disk.total))
         case .network:
@@ -160,6 +173,16 @@ extension MetricsSnapshot {
             thermal.caption
         case .power:
             power.caption
+        }
+    }
+}
+
+extension MemoryPressure {
+    public var title: String {
+        switch self {
+        case .normal: L.t("pressure.normal", "normal")
+        case .warning: L.t("pressure.warning", "high")
+        case .critical: L.t("pressure.critical", "critical")
         }
     }
 }

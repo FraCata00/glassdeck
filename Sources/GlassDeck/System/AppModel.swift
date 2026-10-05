@@ -31,6 +31,7 @@ final class AppModel {
         _ = preferences.panelModules
         _ = preferences.clockZones
         _ = preferences.menuBarClockZone
+        _ = preferences.yieldShortcut
     } onChange: { model in
         model.monitor.interval = model.preferences.refreshInterval
         model.touchBar.synchroniseWithPreferences()

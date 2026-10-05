@@ -36,7 +36,12 @@
 "Control Strip button" = "Pulsante nel Control Strip";
 "Take over the whole Touch Bar" = "Occupa tutta la Touch Bar";
 "A compact meter sits in the expanded Control Strip. Tap it for the full-width graphs." = "Un misuratore compatto resta nel Control Strip esteso. Toccalo per aprire i grafici a piena larghezza.";
-"GlassDeck occupies the entire Touch Bar. Other apps' bars still take priority while they are frontmost." = "GlassDeck occupa tutta la Touch Bar. Le barre delle altre app hanno comunque la precedenza mentre sono in primo piano.";
+"GlassDeck occupies the entire Touch Bar, in every app. The hand-over shortcut, or the button in full width, gives it to the app in front until you switch to another one; the shortcut again takes it back." = "GlassDeck occupa tutta la Touch Bar, in ogni app. La scorciatoia per cederla, o il pulsante a tutta larghezza, la lascia all'app in primo piano finché non passi a un'altra; la scorciatoia di nuovo la riprende.";
+"Hand the Touch Bar to this app until you switch to another one" = "Lascia la Touch Bar a questa app finché non passi a un'altra";
+"Type the shortcut…" = "Premi la scorciatoia…";
+"Turn the shortcut off" = "Disattiva la scorciatoia";
+"No shortcut" = "Nessuna";
+"Hand-over shortcut" = "Scorciatoia per cedere la Touch Bar";
 "The shrink button steps down through full width, the compact bar and a small meter; only a tap on the smallest one hands the Touch Bar back, and the Control Strip meter brings it straight back." = "Il pulsante di riduzione scala tra piena larghezza, barra compatta e misuratore ridotto: solo toccandolo sul più piccolo la Touch Bar torna al sistema, e il misuratore nel Control Strip la riporta subito indietro.";
 "No Touch Bar detected on this Mac. The setting is kept for when GlassDeck runs on one." = "Nessuna Touch Bar rilevata su questo Mac. L'impostazione resta salvata per quando GlassDeck girerà su un Mac che ce l'ha.";
 "Left" = "Sinistra";
@@ -61,6 +66,10 @@
 "Warn above" = "Avvisa sopra";
 "A notification once the hottest sensor passes %lld°C, and not again until it has cooled down." = "Una notifica quando il sensore più caldo supera %lld°C, e non di nuovo finché non si è raffreddato.";
 "Running hot: %1$lld°C, above the %2$lld°C you asked about." = "Sta scaldando: %1$lld°C, sopra i %2$lld°C che avevi impostato.";
+"Warn when memory runs short" = "Avvisami quando la memoria scarseggia";
+"A notification when macOS reports high memory pressure, and again if it turns critical. A full memory bar on its own is normal on a Mac." = "Una notifica quando macOS segnala una pressione della memoria alta, e di nuovo se diventa critica. Una barra della memoria piena, da sola, su un Mac è normale.";
+"Memory pressure is critical. Quit an app or close some tabs before the Mac slows to a crawl." = "La pressione della memoria è critica. Chiudi un'app o qualche scheda prima che il Mac rallenti del tutto.";
+"Memory pressure is high: the Mac is compressing memory and using swap (%@)." = "La pressione della memoria è alta: il Mac sta comprimendo la memoria e usando lo swap (%@).";
 
 /* Moduli */
 "Modules" = "Moduli";

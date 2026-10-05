@@ -91,6 +91,19 @@ struct SettingsView: View {
                     }
                 }
 
+                Toggle("Warn when memory runs short", isOn: Binding(
+                    get: { preferences.wrappedValue.isMemoryPressureAlertEnabled },
+                    set: { enabled in
+                        preferences.wrappedValue.isMemoryPressureAlertEnabled = enabled
+                        if enabled { ThresholdAlerts.requestAuthorization() }
+                    }
+                ))
+                if preferences.wrappedValue.isMemoryPressureAlertEnabled {
+                    Text("A notification when macOS reports high memory pressure, and again if it turns critical. A full memory bar on its own is normal on a Mac.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 // Written through a binding rather than `onChange` so that only
                 // the user's own taps register the login item: refreshing the
                 // toggle from the system below must not write back.
@@ -290,6 +303,10 @@ struct SettingsView: View {
                     ForEach(Preferences.TouchBarAlignment.allCases) { alignment in
                         Text(alignment.title).tag(alignment)
                     }
+                }
+                .disabled(!preferences.wrappedValue.isTouchBarEnabled)
+                LabeledContent("Hand-over shortcut") {
+                    ShortcutRecorder(shortcut: preferences.yieldShortcut) { touchBar.suspendShortcut($0) }
                 }
                 .disabled(!preferences.wrappedValue.isTouchBarEnabled)
                 Text(preferences.wrappedValue.touchBarPresentation.explanation)

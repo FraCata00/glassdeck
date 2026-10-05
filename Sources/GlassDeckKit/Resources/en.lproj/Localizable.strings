@@ -33,6 +33,7 @@
 "detail.max" = "max";
 "detail.now" = "now";
 "detail.power" = "power";
+"detail.pressure" = "pressure";
 "detail.read" = "read";
 "detail.remaining" = "remaining";
 "detail.renderer" = "renderer";
@@ -54,7 +55,7 @@
 "fans.none" = "fanless Mac";
 "fans.range" = "range %1$lld–%2$lld rpm";
 "gpu.none" = "no accelerator";
-"memory.caption" = "%1$@ total · %2$@ swap";
+"memory.caption.pressure" = "pressure %1$@ · %2$@ swap";
 "metric.battery" = "Battery";
 "metric.disk" = "Disk";
 "metric.fans" = "Fans";
@@ -66,6 +67,9 @@
 "power.adapter" = "of a %lld W adapter";
 "power.none" = "not reported";
 "power.total" = "system total";
+"pressure.critical" = "critical";
+"pressure.normal" = "normal";
+"pressure.warning" = "high";
 "thermal.battery" = "battery %lld°";
 "thermal.case" = "case %lld°";
 "thermal.none" = "no sensors";

@@ -32,7 +32,9 @@ public final class MemorySampler {
             inactive: UInt64(stats.inactive_count) * pageSize,
             free: UInt64(stats.free_count) * pageSize,
             swapUsed: swap.used,
-            swapTotal: swap.total
+            swapTotal: swap.total,
+            availableFraction: Self.integer("kern.memorystatus_level").map { (Double($0) / 100).clamped01 },
+            pressureLevel: MemoryPressure(kernelLevel: Self.integer("kern.memorystatus_vm_pressure_level") ?? 1)
         )
     }
 
@@ -45,6 +47,12 @@ public final class MemorySampler {
             }
         }
         return result == KERN_SUCCESS ? stats : nil
+    }
+
+    private static func integer(_ name: String) -> Int32? {
+        var value: Int32 = 0
+        var size = MemoryLayout<Int32>.size
+        return sysctlbyname(name, &value, &size, nil, 0) == 0 ? value : nil
     }
 
     private static func swapUsage() -> (used: UInt64, total: UInt64) {
