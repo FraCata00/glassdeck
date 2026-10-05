@@ -5,6 +5,47 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-10-05
+
+### Added
+
+- **The Touch Bar can be handed to the app in front.** While GlassDeck owns the
+  whole bar it covers the controls of apps that put their own there, and macOS
+  offers no way to ask another app whether it has any. A system-wide shortcut,
+  ⌃⌥⌘T unless changed, now collapses GlassDeck into its Control Strip meter until
+  another app comes forward, and brings it back at the size it had when pressed
+  again. It needs no Accessibility permission. It is recorded, or turned off, in
+  the Touch Bar settings, and one with no ⌘, ⌥ or ⌃ is refused, since it would
+  take a key away from typing everywhere. A button does the same in full width;
+  the shared bar has no room for one.
+- **Memory pressure.** A Mac keeps its RAM full on purpose, so how full it is
+  says little about whether memory is short. The kernel's pressure level says
+  that, and it is now read alongside the rest of the memory figures. The memory
+  caption shows the pressure and swap, and the details lead with the pressure
+  and give swap against its size. The Touch Bar panel and the panel's memory
+  gauge show an orange or red dot while pressure is high or critical, and
+  nothing otherwise.
+- **An optional alert when memory runs short**, off by default like the
+  temperature one. It fires when pressure turns high and again if it turns
+  critical, and not again until it has been back to normal.
+
+### Changed
+
+- **The dashboard's status dot for memory follows the pressure**, not the fill:
+  it used to turn orange and red on a full but healthy RAM.
+- **GlassDeckKit API**: adds `KeyShortcut`, `MemoryPressure`,
+  `MetricsSnapshot.strain(for:)`, and `availableFraction`, `pressureLevel`,
+  `swapFraction` and `strain` on `MemoryUsage`, whose `pressure` now comes from
+  the kernel where it reports one. `TouchBarLayout.Item` gains `.yield`.
+  Nothing was removed or renamed.
+
+### Fixed
+
+- **The Touch Bar reloaded on every app or Space switch** in take-over mode.
+  Putting the bar back up after another app had been activated took it down,
+  built a new one and presented that, although nothing on it had changed. The
+  bar already built is now presented again as it is.
+
 ## [1.9.1] - 2026-09-25
 
 ### Fixed
@@ -427,6 +468,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[1.10.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.10.0
 [1.9.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.9.1
 [1.9.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.9.0
 [1.8.2]: https://github.com/FraCata00/glassdeck/releases/tag/v1.8.2
