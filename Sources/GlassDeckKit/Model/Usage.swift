@@ -78,6 +78,26 @@ public struct GPUUsage: Sendable, Equatable {
 }
 
 /// Physical memory breakdown, mirroring the categories Activity Monitor reports.
+/// How short of memory the kernel considers the machine — the colour of
+/// Activity Monitor's memory pressure graph.
+public enum MemoryPressure: Int, Sendable, Comparable, CaseIterable {
+    case normal
+    case warning
+    case critical
+
+    /// From `kern.memorystatus_vm_pressure_level`, which reports 1, 2 and 4.
+    /// Anything else reads as normal: an unknown value is no reason to alarm.
+    public init(kernelLevel: Int32) {
+        switch kernelLevel {
+        case 2: self = .warning
+        case 4: self = .critical
+        default: self = .normal
+        }
+    }
+
+    public static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
+}
+
 public struct MemoryUsage: Sendable, Equatable {
     public var total: UInt64
     /// Anonymous pages an app has actually asked for, net of what it has marked
@@ -90,6 +110,11 @@ public struct MemoryUsage: Sendable, Equatable {
     public var free: UInt64
     public var swapUsed: UInt64
     public var swapTotal: UInt64
+    /// The share of memory the kernel counts as available, from
+    /// `kern.memorystatus_level` — the "free percentage" `memory_pressure`
+    /// prints. `nil` when the kernel does not say.
+    public var availableFraction: Double?
+    public var pressureLevel: MemoryPressure
 
     public init(
         total: UInt64 = 0,
@@ -100,7 +125,9 @@ public struct MemoryUsage: Sendable, Equatable {
         inactive: UInt64 = 0,
         free: UInt64 = 0,
         swapUsed: UInt64 = 0,
-        swapTotal: UInt64 = 0
+        swapTotal: UInt64 = 0,
+        availableFraction: Double? = nil,
+        pressureLevel: MemoryPressure = .normal
     ) {
         self.total = total
         self.appMemory = appMemory
@@ -111,6 +138,8 @@ public struct MemoryUsage: Sendable, Equatable {
         self.free = free
         self.swapUsed = swapUsed
         self.swapTotal = swapTotal
+        self.availableFraction = availableFraction
+        self.pressureLevel = pressureLevel
     }
 
     public static let zero = MemoryUsage()
@@ -128,9 +157,30 @@ public struct MemoryUsage: Sendable, Equatable {
         total == 0 ? 0 : (Double(used) / Double(total)).clamped01
     }
 
-    /// A coarse stand-in for the memory pressure graph: wired + compressed against total.
+    /// How much of the memory is spoken for, as the kernel sees it. Where the
+    /// kernel does not say, wired + compressed against total stands in.
     public var pressure: Double {
-        total == 0 ? 0 : (Double(wired &+ compressed) / Double(total)).clamped01
+        if let availableFraction { return (1 - availableFraction).clamped01 }
+        return total == 0 ? 0 : (Double(wired &+ compressed) / Double(total)).clamped01
+    }
+
+    public var swapFraction: Double {
+        swapTotal == 0 ? 0 : (Double(swapUsed) / Double(swapTotal)).clamped01
+    }
+
+    /// How close memory is to trouble, on the scale the status tints use
+    /// (green below 0.7, orange below 0.88, red above).
+    ///
+    /// Not `usedFraction`: macOS keeps RAM full on purpose, so a nearly full
+    /// bar is the normal state of a healthy Mac. The kernel's pressure level
+    /// is what says memory is actually short, and it sets the band; the
+    /// pressure figure only places the reading inside the green one.
+    public var strain: Double {
+        switch pressureLevel {
+        case .normal: min(pressure, 0.69)
+        case .warning: 0.8
+        case .critical: 1
+        }
     }
 }
 

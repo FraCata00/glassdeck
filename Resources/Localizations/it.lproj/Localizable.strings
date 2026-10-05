@@ -66,6 +66,10 @@
 "Warn above" = "Avvisa sopra";
 "A notification once the hottest sensor passes %lld°C, and not again until it has cooled down." = "Una notifica quando il sensore più caldo supera %lld°C, e non di nuovo finché non si è raffreddato.";
 "Running hot: %1$lld°C, above the %2$lld°C you asked about." = "Sta scaldando: %1$lld°C, sopra i %2$lld°C che avevi impostato.";
+"Warn when memory runs short" = "Avvisami quando la memoria scarseggia";
+"A notification when macOS reports high memory pressure, and again if it turns critical. A full memory bar on its own is normal on a Mac." = "Una notifica quando macOS segnala una pressione della memoria alta, e di nuovo se diventa critica. Una barra della memoria piena, da sola, su un Mac è normale.";
+"Memory pressure is critical. Quit an app or close some tabs before the Mac slows to a crawl." = "La pressione della memoria è critica. Chiudi un'app o qualche scheda prima che il Mac rallenti del tutto.";
+"Memory pressure is high: the Mac is compressing memory and using swap (%@)." = "La pressione della memoria è alta: il Mac sta comprimendo la memoria e usando lo swap (%@).";
 
 /* Moduli */
 "Modules" = "Moduli";

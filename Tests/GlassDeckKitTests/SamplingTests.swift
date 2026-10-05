@@ -22,6 +22,9 @@ struct SamplingTests {
         #expect(snapshot.memory.total == ProcessInfo.processInfo.physicalMemory)
         #expect(snapshot.memory.used > 0)
         #expect(snapshot.memory.used < snapshot.memory.total)
+        // Read from the kernel, the same figure `memory_pressure` prints.
+        let available = try #require(snapshot.memory.availableFraction)
+        #expect(available > 0 && available <= 1)
 
         #expect(snapshot.disk.total > 0)
         #expect(snapshot.disk.free <= snapshot.disk.total)

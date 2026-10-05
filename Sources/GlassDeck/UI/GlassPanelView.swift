@@ -196,6 +196,16 @@ struct GlassPanelView: View {
                 Circle().strokeBorder(Theme.accent(kind).opacity(0.55), lineWidth: 1.2)
             }
         }
+        .overlay(alignment: .topTrailing) {
+            // Memory's warning light: the ring shows how full RAM is, which on
+            // a Mac is nearly always "very"; this shows when that is a shortage.
+            if kind == .memory, snapshot.memory.pressureLevel > .normal {
+                Circle()
+                    .fill(Theme.statusTint(snapshot.strain(for: .memory)))
+                    .frame(width: 7, height: 7)
+                    .padding(Self.gaugePadding + 2)
+            }
+        }
         .help("\(kind.title): \(snapshot.caption(for: kind))")
     }
 

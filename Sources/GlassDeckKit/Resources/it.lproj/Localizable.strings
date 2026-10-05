@@ -33,6 +33,7 @@
 "detail.max" = "max";
 "detail.now" = "adesso";
 "detail.power" = "consumo";
+"detail.pressure" = "pressione";
 "detail.read" = "lettura";
 "detail.remaining" = "rimanente";
 "detail.renderer" = "renderer";
@@ -54,7 +55,7 @@
 "fans.none" = "Mac senza ventole";
 "fans.range" = "intervallo %1$lld–%2$lld rpm";
 "gpu.none" = "nessun acceleratore";
-"memory.caption" = "%1$@ totali · %2$@ swap";
+"memory.caption.pressure" = "pressione %1$@ · %2$@ swap";
 "metric.battery" = "Batteria";
 "metric.disk" = "Disco";
 "metric.fans" = "Ventole";
@@ -66,6 +67,9 @@
 "power.adapter" = "su alimentatore da %lld W";
 "power.none" = "non disponibile";
 "power.total" = "totale di sistema";
+"pressure.critical" = "critica";
+"pressure.normal" = "normale";
+"pressure.warning" = "alta";
 "thermal.battery" = "batteria %lld°";
 "thermal.case" = "scocca %lld°";
 "thermal.none" = "nessun sensore";

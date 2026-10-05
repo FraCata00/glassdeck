@@ -66,6 +66,10 @@
 "Warn above" = "Warn above";
 "A notification once the hottest sensor passes %lld°C, and not again until it has cooled down." = "A notification once the hottest sensor passes %lld°C, and not again until it has cooled down.";
 "Running hot: %1$lld°C, above the %2$lld°C you asked about." = "Running hot: %1$lld°C, above the %2$lld°C you asked about.";
+"Warn when memory runs short" = "Warn when memory runs short";
+"A notification when macOS reports high memory pressure, and again if it turns critical. A full memory bar on its own is normal on a Mac." = "A notification when macOS reports high memory pressure, and again if it turns critical. A full memory bar on its own is normal on a Mac.";
+"Memory pressure is critical. Quit an app or close some tabs before the Mac slows to a crawl." = "Memory pressure is critical. Quit an app or close some tabs before the Mac slows to a crawl.";
+"Memory pressure is high: the Mac is compressing memory and using swap (%@)." = "Memory pressure is high: the Mac is compressing memory and using swap (%@).";
 
 /* Modules tab */
 "Modules" = "Modules";

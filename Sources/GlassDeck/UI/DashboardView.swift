@@ -244,11 +244,13 @@ private struct MetricCard: View {
             }
     }
 
+    /// Follows the strain rather than the fill: for memory, a full bar is
+    /// healthy and only the kernel's pressure level is cause for colour.
     private var statusDot: some View {
         Circle()
-            .fill(Theme.statusTint(snapshot.fraction(for: kind)))
+            .fill(Theme.statusTint(snapshot.strain(for: kind)))
             .frame(width: 5, height: 5)
-            .opacity(snapshot.fraction(for: kind) > 0.7 ? 1 : 0.35)
+            .opacity(snapshot.strain(for: kind) > 0.7 ? 1 : 0.35)
     }
 }
 

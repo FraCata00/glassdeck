@@ -19,6 +19,7 @@ final class Preferences {
         static let metricOrder = "metricOrder"
         static let temperatureAlert = "temperatureAlert"
         static let temperatureThreshold = "temperatureThreshold"
+        static let memoryPressureAlert = "memoryPressureAlert"
         static let panelModules = "panelModules"
         static let clockZones = "clockZones"
         static let menuBarClockZone = "menuBarClockZone"
@@ -115,6 +116,11 @@ final class Preferences {
         didSet { defaults.set(isTemperatureAlertEnabled, forKey: Key.temperatureAlert) }
     }
 
+    /// Off by default, for the same reason as the temperature alert.
+    var isMemoryPressureAlertEnabled: Bool {
+        didSet { defaults.set(isMemoryPressureAlertEnabled, forKey: Key.memoryPressureAlert) }
+    }
+
     /// Degrees Celsius. 85 is where a Mac is working hard but not yet throttling.
     var temperatureThreshold: Double {
         didSet { defaults.set(temperatureThreshold, forKey: Key.temperatureThreshold) }
@@ -140,6 +146,7 @@ final class Preferences {
         metricOrder = Self.repairedOrder(defaults.nonEmpty(Key.metricOrder))
         isTemperatureAlertEnabled = defaults.object(forKey: Key.temperatureAlert) as? Bool ?? false
         temperatureThreshold = defaults.positive(Key.temperatureThreshold) ?? 85
+        isMemoryPressureAlertEnabled = defaults.object(forKey: Key.memoryPressureAlert) as? Bool ?? false
 
         // Selections stored before the order was changed — or before this
         // version — are brought into line. Assigned here rather than through the
