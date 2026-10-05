@@ -261,9 +261,20 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
                       self.preferences.touchBarPresentation == .alwaysOn,
                       !self.isReleasedForSession
                 else { return }
-                self.present(self.mode == .collapsed ? .expanded : self.mode)
+                self.reassert()
             }
         }
+    }
+
+    /// Puts the bar that is already built back up.
+    ///
+    /// Going through `present` here took the bar down, built a new one with new
+    /// views and presented that: the Touch Bar visibly reloaded on every app and
+    /// Space switch although nothing on it had changed. The layout is rebuilt
+    /// only when it really changes, by `rebuildBarIfNeeded`.
+    private func reassert() {
+        guard let presentedBar, mode != .collapsed else { return present(.expanded) }
+        SystemTouchBar.presentSystemModal(presentedBar, identifier: Self.controlStripIdentifier, placement: mode.placement)
     }
 
     private func stopReasserting() {
