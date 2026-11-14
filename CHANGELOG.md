@@ -5,6 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-11-14
+
+### Changed
+
+- **A metric's detail follows the Touch Bar style.** Tapping a panel used to
+  open its detail in the Glass look whatever style the bar was drawn in. The
+  detail now takes the bar's style: the same background, type and colours as
+  the panels, with the history drawn the style's own way — a segmented meter
+  for Instrument, columns for Histogram, block characters for Terminal, the
+  whole bar for Ambient, a curve for the others. Its fonts are worked out once
+  per style rather than on every sample, so the detail costs no more to keep
+  open than before.
+- **The settings window is laid out like System Settings.** A sidebar with a
+  search field and a coloured icon for every page, and each page a grouped
+  list headed by its icon, title and what it is for. The switches, menus and
+  sliders are the system's own, so on macOS 26 they and the toolbar are drawn
+  in Liquid Glass; the toolbar shows the page's title, with back and forward
+  buttons that step through the pages you visited. The Touch Bar styles are
+  chosen from a grid of previews, the way the system's appearance is, with a
+  preview of the detail in the chosen style underneath.
+- **The settings window can be resized**, down to a size that keeps the style
+  previews legible.
+
 ## [2.0.0] - 2026-11-14
 
 ### Added
@@ -531,6 +554,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[2.1.0]: https://github.com/FraCata00/glassdeck/releases/tag/v2.1.0
 [2.0.0]: https://github.com/FraCata00/glassdeck/releases/tag/v2.0.0
 [1.11.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.11.0
 [1.10.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.10.0
