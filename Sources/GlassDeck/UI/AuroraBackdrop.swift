@@ -10,6 +10,16 @@ import SwiftUI
 struct AuroraBackdrop: View {
     let snapshot: MetricsSnapshot
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The field holds still when the user has asked for less motion, and in
+    /// Low Power Mode: each step of the drift is eased over longer than the gap
+    /// between two samples, so while it drifts the window never stops
+    /// rendering — the one thing here that costs a display-link's worth.
+    private var isStill: Bool {
+        reduceMotion || ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
+
     var body: some View {
         ZStack {
             VisualEffectView(material: .underWindowBackground, blending: .behindWindow)
@@ -17,7 +27,7 @@ struct AuroraBackdrop: View {
             MeshGradient(width: 3, height: 3, points: points, colors: colors)
                 .blur(radius: 70)
                 .opacity(0.55)
-                .animation(.smooth(duration: 2.6), value: phase)
+                .animation(isStill ? nil : .smooth(duration: 2.6), value: phase)
                 .blendMode(.plusLighter)
         }
         .ignoresSafeArea()
@@ -26,12 +36,17 @@ struct AuroraBackdrop: View {
     /// Advances by a small amount on every sample, so the field drifts at about
     /// the pace of a lava lamp.
     private var phase: Double {
-        snapshot.timestamp.timeIntervalSinceReferenceDate / 14
+        guard !isStill else { return 0 }
+        return snapshot.timestamp.timeIntervalSinceReferenceDate / 14
     }
 
     /// The hottest metric decides how far the field swells.
+    ///
+    /// Held at a fixed swell while still, or the field would jump — unanimated —
+    /// with every sample instead of resting.
     private var load: Double {
-        max(snapshot.cpu.total, snapshot.gpu.utilisation)
+        guard !isStill else { return 0.25 }
+        return max(snapshot.cpu.total, snapshot.gpu.utilisation)
     }
 
     private var points: [SIMD2<Float>] {
