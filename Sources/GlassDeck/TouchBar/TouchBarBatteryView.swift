@@ -18,6 +18,12 @@ final class TouchBarBatteryView: NSView {
 
     override var intrinsicContentSize: NSSize { NSSize(width: 62, height: 30) }
 
+    /// The panels' style, followed only as far as the background goes: the
+    /// glyph is the part worth keeping the same everywhere.
+    var style: TouchBarStyle = .glass {
+        didSet { if style != oldValue { needsDisplay = true } }
+    }
+
     /// Tapping the chip expands the battery's own bar, where the power draw lives.
     var onTap: (() -> Void)?
 
@@ -42,9 +48,7 @@ final class TouchBarBatteryView: NSView {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         context.clear(dirtyRect)
 
-        let background = NSBezierPath(roundedRect: bounds.insetBy(dx: 0, dy: 1), xRadius: 7, yRadius: 7)
-        NSColor.white.withAlphaComponent(0.08).setFill()
-        background.fill()
+        TouchBarPalette.drawChrome(style.chrome, in: bounds)
 
         let tint: NSColor = battery.isCharging
             ? .systemGreen

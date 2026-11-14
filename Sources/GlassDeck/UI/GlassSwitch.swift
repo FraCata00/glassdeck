@@ -14,13 +14,19 @@ struct GlassSwitchStyle: ToggleStyle {
     private static let height: CGFloat = 24
     private static let knobInset: CGFloat = 2.5
 
+    /// Off where the switch sits on a row that already names it. A custom
+    /// style draws its own label, so `labelsHidden()` does not reach it.
+    var showsLabel = true
+
     func makeBody(configuration: Configuration) -> some View {
         Button {
             withAnimation(.smooth(duration: 0.22)) { configuration.isOn.toggle() }
         } label: {
             HStack(spacing: 8) {
-                configuration.label
-                Spacer(minLength: 8)
+                if showsLabel {
+                    configuration.label
+                    Spacer(minLength: 8)
+                }
                 track(isOn: configuration.isOn)
             }
             .contentShape(Rectangle())

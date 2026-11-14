@@ -171,8 +171,10 @@ final class AppModel {
             showPanel()
         }
 
-        if environment["GLASSDECK_OPEN_SETTINGS"] == "1" {
-            showSettings()
+        // "1" opens the first page; a page's name opens that one, so a page
+        // can be looked at without clicking through the window.
+        if let requested = environment["GLASSDECK_OPEN_SETTINGS"] {
+            showSettings(page: SettingsPage(rawValue: requested) ?? .general)
         }
 
     }
@@ -197,12 +199,12 @@ final class AppModel {
         }
     }
 
-    func showSettings() {
+    func showSettings(page: SettingsPage = .general) {
         show(\.settingsWindow) {
             makeGlassWindow(
                 title: String(localized: "GlassDeck Settings"),
-                size: NSSize(width: 460, height: 330),
-                content: SettingsView(),
+                size: SettingsMetrics.windowSize,
+                content: SettingsView(page: page),
                 isResizable: false,
                 isTransparent: false
             )

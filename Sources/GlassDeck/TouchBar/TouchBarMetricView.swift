@@ -1,15 +1,37 @@
 import AppKit
 import GlassDeckKit
 
-/// A metric panel for the expanded Touch Bar: title, live value, and a history
-/// curve drawn from the monitor's ring buffer.
+/// A metric panel for the expanded Touch Bar: title, live value, and — in the
+/// styles that have one — a picture of the history from the monitor's ring
+/// buffer.
+///
+/// Every style is drawn here rather than in a view of its own: the panel is
+/// rebuilt with the bar, the style can change while it is up, and the text
+/// fitting and accessibility below are the same whatever the paint.
 final class TouchBarMetricView: NSView {
     let kind: MetricKind
 
     var snapshot: MetricsSnapshot = .empty { didSet { needsDisplay = true } }
+    /// Only set for styles that draw it: the controller does not copy the ring
+    /// buffer into a panel that would not look at it.
     var history: [Double] = [] { didSet { needsDisplay = true } }
     /// Panels are narrower on the shorter bar that leaves the Control Strip in place.
-    var width: CGFloat = 168 { didSet { invalidateIntrinsicContentSize(); needsDisplay = true } }
+    var width: CGFloat = 168 {
+        didSet {
+            guard width != oldValue else { return }
+            invalidateIntrinsicContentSize()
+            needsDisplay = true
+        }
+    }
+    var style: TouchBarStyle = .glass {
+        didSet {
+            guard style != oldValue else { return }
+            // The fitted text depends on the font, which the style chooses.
+            fittedTitle = nil
+            fittedValue = nil
+            needsDisplay = true
+        }
+    }
 
     /// The last answer `fitting` gave for the title and for the value.
     ///
@@ -57,45 +79,296 @@ final class TouchBarMetricView: NSView {
         onTap?()
     }
 
+    private var isCompact: Bool { bounds.width < 120 }
+    private var fraction: Double { snapshot.fraction(for: kind).clamped01 }
+
     override func draw(_ dirtyRect: NSRect) {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         context.clear(dirtyRect)
 
         let color = TouchBarPalette.color(for: kind)
-        let background = NSBezierPath(roundedRect: bounds.insetBy(dx: 0, dy: 1), xRadius: 7, yRadius: 7)
-        NSColor.white.withAlphaComponent(0.08).setFill()
-        background.fill()
+        switch style {
+        case .glass: drawGlass(color: color)
+        case .instrument: drawInstrument(color: color)
+        case .capsule: drawCapsule(color: color, context: context)
+        case .ambient: drawAmbient(color: color, context: context)
+        case .rings: drawRings(color: color)
+        case .terminal: drawTerminal()
+        case .histogram: drawHistogram(color: color)
+        case .signal: drawSignal()
+        case .tinted: drawTinted(color: color, context: context)
+        }
+        if style.marksMemoryPressure { drawPressureDot() }
+    }
+
+    // MARK: - Styles
+
+    private func drawGlass(color: NSColor) {
+        TouchBarPalette.drawChrome(style.chrome, in: bounds)
 
         // Narrow panels hand more width to the graph; what the text says is then
         // decided by measuring it, not by the same threshold.
-        let isCompact = width < 120
-        let labelWidth = isCompact ? bounds.width * 0.40 : bounds.width * 0.42
-        let sparklineRect = NSRect(
-            x: labelWidth + 10,
-            y: 4,
-            width: bounds.width - labelWidth - 16,
-            height: bounds.height - 8
+        let labelWidth = bounds.width * (isCompact ? 0.40 : 0.42)
+        let sparklineRect = NSRect(x: labelWidth + 10, y: 4, width: bounds.width - labelWidth - 16, height: bounds.height - 8)
+        drawCurve(in: sparklineRect, color: color, lineWidth: 1.6, fillAlpha: 0.18)
+        drawLabelStack(
+            x: 8,
+            width: labelWidth,
+            titleFont: .systemFont(ofSize: 8, weight: .semibold),
+            titleColor: color.withAlphaComponent(0.9),
+            valueFont: .monospacedDigitSystemFont(ofSize: isCompact ? 11 : 12, weight: .semibold),
+            valueColor: .white
         )
-        drawSparkline(in: sparklineRect, color: color)
+    }
 
-        let titleFont = NSFont.systemFont(ofSize: 8, weight: .semibold)
-        let valueFont = NSFont.monospacedDigitSystemFont(ofSize: isCompact ? 11 : 12, weight: .semibold)
+    /// The meter is ten filled rectangles and no path, which makes this the
+    /// cheapest style to draw after the terminal.
+    private func drawInstrument(color: NSColor) {
+        TouchBarPalette.drawChrome(style.chrome, in: bounds)
 
+        let labelWidth = bounds.width * (isCompact ? 0.46 : 0.42)
+        drawLabelStack(
+            x: 8,
+            width: labelWidth,
+            titleFont: .systemFont(ofSize: 7, weight: .semibold),
+            titleColor: .white.withAlphaComponent(0.55),
+            valueFont: .monospacedSystemFont(ofSize: isCompact ? 12 : 13, weight: .medium),
+            valueColor: .white,
+            kern: 0.6
+        )
+
+        let region = NSRect(x: 8 + labelWidth + 4, y: (bounds.height - 12) / 2, width: bounds.width - labelWidth - 18, height: 12)
+        let gap: CGFloat = 1.5
+        let count = TouchBarHistory.meterSegmentCount(width: region.width)
+        let segment = (region.width - gap * CGFloat(count - 1)) / CGFloat(count)
+        guard segment >= 1 else { return }
+        let lit = TouchBarHistory.litSegments(fraction, count: count)
+        let rects = (0..<count).map { index in
+            NSRect(x: region.minX + CGFloat(index) * (segment + gap), y: region.minY, width: segment, height: region.height)
+        }
+        color.setFill()
+        rects[..<lit].forEach { $0.fill() }
+        Theme.TouchBar.track.setFill()
+        rects[lit...].forEach { $0.fill() }
+    }
+
+    private func drawCapsule(color: NSColor, context: CGContext) {
+        let rect = bounds.insetBy(dx: 1, dy: 2)
+        let path = NSBezierPath(roundedRect: rect, xRadius: rect.height / 2, yRadius: rect.height / 2)
+        NSColor.white.withAlphaComponent(0.09).setFill()
+        path.fill()
+
+        context.saveGState()
+        path.addClip()
+        color.withAlphaComponent(0.34).setFill()
+        NSRect(x: rect.minX, y: rect.minY, width: rect.width * fraction, height: rect.height).fill()
+        context.restoreGState()
+
+        drawRow(
+            in: rect.insetBy(dx: 10, dy: 0),
+            titleFont: .systemFont(ofSize: 8.5, weight: .semibold),
+            titleColor: .white.withAlphaComponent(0.85),
+            valueFont: .monospacedDigitSystemFont(ofSize: isCompact ? 11 : 12, weight: .bold),
+            valueColor: .white
+        )
+    }
+
+    /// The most expensive style: a filled path across the whole cell. It is
+    /// redrawn at the same cadence as the glass sparkline, no more.
+    private func drawAmbient(color: NSColor, context: CGContext) {
+        let rect = bounds.insetBy(dx: 0, dy: 1)
+        let path = NSBezierPath(roundedRect: rect, xRadius: 6, yRadius: 6)
+        NSColor.white.withAlphaComponent(0.04).setFill()
+        path.fill()
+
+        context.saveGState()
+        path.addClip()
+        drawCurve(in: rect.insetBy(dx: 0, dy: 2), color: color, lineWidth: 1.2, fillAlpha: 0.22, fillsToEdge: true)
+        context.restoreGState()
+
+        drawLabelStack(
+            x: 7,
+            width: bounds.width - 14,
+            titleFont: .systemFont(ofSize: 7, weight: .semibold),
+            titleColor: .white.withAlphaComponent(0.72),
+            valueFont: .monospacedDigitSystemFont(ofSize: isCompact ? 12 : 13, weight: .bold),
+            valueColor: .white
+        )
+    }
+
+    private func drawRings(color: NSColor) {
+        let centre = NSPoint(x: 6 + 11, y: bounds.midY)
+        let radius: CGFloat = 9.5
+
+        let track = NSBezierPath()
+        track.appendArc(withCenter: centre, radius: radius, startAngle: 0, endAngle: 360)
+        track.lineWidth = 3
+        Theme.TouchBar.track.setStroke()
+        track.stroke()
+
+        if fraction > 0 {
+            // From twelve o'clock, clockwise, like the panel's rings.
+            let arc = NSBezierPath()
+            arc.appendArc(withCenter: centre, radius: radius, startAngle: 90, endAngle: 90 - 360 * CGFloat(fraction), clockwise: true)
+            arc.lineWidth = 3
+            arc.lineCapStyle = .round
+            color.setStroke()
+            arc.stroke()
+        }
+
+        drawLabelStack(
+            x: 33,
+            width: bounds.width - 37,
+            titleFont: .systemFont(ofSize: 7, weight: .semibold),
+            titleColor: .white.withAlphaComponent(0.55),
+            valueFont: .monospacedDigitSystemFont(ofSize: isCompact ? 11 : 12, weight: .semibold),
+            valueColor: .white,
+            kern: 0.4
+        )
+    }
+
+    /// One attributed string and nothing else. Its width is worked out by
+    /// counting characters, which a monospaced font allows, rather than by
+    /// measuring the string on every sample.
+    private func drawTerminal() {
+        let phosphor = Theme.nsPhosphor
+        let characters = Int((bounds.width - 10) / TouchBarPalette.terminalCharacterWidth)
+        let layout = TouchBarHistory.terminalLine(
+            title: kind.shortTitle,
+            candidates: headlineCandidates,
+            history: history,
+            characters: characters
+        )
+
+        let line = NSMutableAttributedString()
+        if let title = layout.title {
+            line.append(NSAttributedString(string: title + " ", attributes: [.font: Self.terminalFont, .foregroundColor: phosphor.withAlphaComponent(0.55)]))
+        }
+        line.append(NSAttributedString(string: layout.headline, attributes: [.font: Self.terminalBoldFont, .foregroundColor: phosphor]))
+        if !layout.sparkline.isEmpty {
+            line.append(NSAttributedString(string: " " + layout.sparkline, attributes: [.font: Self.terminalFont, .foregroundColor: phosphor.withAlphaComponent(0.85)]))
+        }
+        line.draw(in: NSRect(x: 6, y: (bounds.height - 13) / 2, width: bounds.width - 8, height: 13))
+    }
+
+    private static let terminalFont = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
+    private static let terminalBoldFont = NSFont.monospacedSystemFont(ofSize: 10, weight: .bold)
+
+    private func drawHistogram(color: NSColor) {
+        TouchBarPalette.drawChrome(style.chrome, in: bounds)
+
+        let labelWidth = bounds.width * 0.40
+        drawLabelStack(
+            x: 7,
+            width: labelWidth,
+            titleFont: .systemFont(ofSize: 7, weight: .semibold),
+            titleColor: color,
+            valueFont: .monospacedDigitSystemFont(ofSize: 11, weight: .semibold),
+            valueColor: .white
+        )
+
+        let region = NSRect(x: 7 + labelWidth + 4, y: 5, width: bounds.width - labelWidth - 17, height: bounds.height - 10)
+        let count = TouchBarHistory.columnCount(width: region.width)
+        let columns = TouchBarHistory.columns(history, count: count)
+        guard !columns.isEmpty else { return }
+        let gap: CGFloat = 1
+        let columnWidth = (region.width - gap * CGFloat(count - 1)) / CGFloat(count)
+        // Right-aligned, so a short history grows in from where the newest sample is.
+        let start = region.maxX - CGFloat(columns.count) * (columnWidth + gap) + gap
+        let dimmed = color.withAlphaComponent(0.45)
+        for (index, height) in columns.enumerated() {
+            (index == columns.count - 1 ? color : dimmed).setFill()
+            NSRect(x: start + CGFloat(index) * (columnWidth + gap), y: region.minY, width: columnWidth, height: region.height * CGFloat(height)).fill()
+        }
+    }
+
+    /// Strain, not the fill, picks the colour — so memory that is full but
+    /// healthy stays grey, the same rule the panel's dots follow.
+    private func drawSignal() {
+        let band = StrainBand(strain: snapshot.strain(for: kind))
+        let isCalm = band == .calm
+        TouchBarPalette.fillChip(isCalm ? Theme.TouchBar.chip : Theme.nsStatusTint(band), in: bounds, radius: 6)
+        let text: NSColor = isCalm ? .white.withAlphaComponent(0.78) : .black.withAlphaComponent(0.85)
+        drawRow(
+            in: bounds.insetBy(dx: 9, dy: 0),
+            titleFont: .systemFont(ofSize: 8, weight: .bold),
+            titleColor: text,
+            valueFont: .monospacedDigitSystemFont(ofSize: isCompact ? 12 : 13, weight: .bold),
+            valueColor: text
+        )
+    }
+
+    private func drawTinted(color: NSColor, context: CGContext) {
+        let rect = bounds.insetBy(dx: 0.5, dy: 1.5)
+        let path = NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8)
+        color.withAlphaComponent(0.18).setFill()
+        path.fill()
+        path.lineWidth = 0.5
+        color.withAlphaComponent(0.4).setStroke()
+        path.stroke()
+
+        context.saveGState()
+        path.addClip()
+        color.setFill()
+        NSRect(x: rect.minX, y: rect.minY, width: rect.width * fraction, height: 2).fill()
+        context.restoreGState()
+
+        drawRow(
+            in: rect.insetBy(dx: 9, dy: 0).offsetBy(dx: 0, dy: 1),
+            titleFont: .systemFont(ofSize: 8, weight: .semibold),
+            titleColor: .white.withAlphaComponent(0.75),
+            valueFont: .monospacedDigitSystemFont(ofSize: isCompact ? 11.5 : 12.5, weight: .bold),
+            valueColor: color
+        )
+    }
+
+    // MARK: - Pieces
+
+    /// Title above, value below, left-aligned from `x`.
+    private func drawLabelStack(
+        x: CGFloat,
+        width: CGFloat,
+        titleFont: NSFont,
+        titleColor: NSColor,
+        valueFont: NSFont,
+        valueColor: NSColor,
+        kern: CGFloat = 0
+    ) {
         draw(
-            text: fitting([kind.title.uppercased(), kind.shortTitle], font: titleFont, within: labelWidth, cache: &fittedTitle),
-            in: NSRect(x: 8, y: bounds.height - 14, width: labelWidth, height: 11),
+            text: fitting([kind.title.uppercased(), kind.shortTitle], font: titleFont, within: width, cache: &fittedTitle),
+            in: NSRect(x: x, y: bounds.height - 14, width: width, height: 11),
             font: titleFont,
-            color: color.withAlphaComponent(0.9),
+            color: titleColor,
+            alignment: .left,
+            kern: kern
+        )
+        draw(
+            text: fitting(headlineCandidates, font: valueFont, within: width, cache: &fittedValue),
+            in: NSRect(x: x, y: 3, width: width, height: 15),
+            font: valueFont,
+            color: valueColor,
+            alignment: .left
+        )
+    }
+
+    /// Title on the left and value on the right, on one line.
+    private func drawRow(in rect: NSRect, titleFont: NSFont, titleColor: NSColor, valueFont: NSFont, valueColor: NSColor) {
+        let valueWidth = rect.width * 0.62
+        let titleWidth = rect.width - valueWidth - 4
+        draw(
+            text: fitting([kind.shortTitle], font: titleFont, within: titleWidth, cache: &fittedTitle),
+            in: NSRect(x: rect.minX, y: (bounds.height - 11) / 2, width: titleWidth, height: 11),
+            font: titleFont,
+            color: titleColor,
             alignment: .left
         )
         draw(
-            text: fitting(headlineCandidates, font: valueFont, within: labelWidth, cache: &fittedValue),
-            in: NSRect(x: 8, y: 3, width: labelWidth, height: 14),
+            text: fitting(headlineCandidates, font: valueFont, within: valueWidth, cache: &fittedValue),
+            in: NSRect(x: rect.maxX - valueWidth, y: (bounds.height - 15) / 2, width: valueWidth, height: 15),
             font: valueFont,
-            color: .white,
-            alignment: .left
+            color: valueColor,
+            alignment: .right
         )
-        drawPressureDot()
     }
 
     /// Memory's warning light. The value and the curve show how full RAM is,
@@ -110,30 +383,32 @@ final class TouchBarMetricView: NSView {
         NSBezierPath(ovalIn: dot).fill()
     }
 
-    private func drawSparkline(in rect: NSRect, color: NSColor) {
+    /// The history as a line with a faint fill under it. `fillsToEdge` runs the
+    /// fill down to the bottom of the cell rather than of `rect`.
+    private func drawCurve(in rect: NSRect, color: NSColor, lineWidth: CGFloat, fillAlpha: CGFloat, fillsToEdge: Bool = false) {
         guard history.count > 1 else { return }
-        let window = Self.window(for: history)
+        let window = TouchBarHistory.window(for: history)
         let step = rect.width / CGFloat(history.count - 1)
         let path = NSBezierPath()
-        path.lineWidth = 1.6
+        path.lineWidth = lineWidth
         path.lineCapStyle = .round
         path.lineJoinStyle = .round
 
         for (index, value) in history.enumerated() {
-            let normalised = (value.clamped01 - window.lowerBound) / (window.upperBound - window.lowerBound)
+            let normalised = TouchBarHistory.normalised(value, in: window)
             let point = NSPoint(
                 x: rect.minX + CGFloat(index) * step,
-                y: rect.minY + CGFloat(normalised.clamped01) * (rect.height - 2) + 1
+                y: rect.minY + CGFloat(normalised) * (rect.height - 2) + 1
             )
             if index == 0 { path.move(to: point) } else { path.line(to: point) }
         }
 
-        // Faint fill under the curve, then the stroke on top.
+        let floor = fillsToEdge ? bounds.minY : rect.minY
         let fill = path.copy() as! NSBezierPath
-        fill.line(to: NSPoint(x: rect.maxX, y: rect.minY))
-        fill.line(to: NSPoint(x: rect.minX, y: rect.minY))
+        fill.line(to: NSPoint(x: rect.maxX, y: floor))
+        fill.line(to: NSPoint(x: rect.minX, y: floor))
         fill.close()
-        color.withAlphaComponent(0.18).setFill()
+        color.withAlphaComponent(fillAlpha).setFill()
         fill.fill()
 
         color.setStroke()
@@ -164,7 +439,8 @@ final class TouchBarMetricView: NSView {
     }
 
     /// As above, measured only when the candidates or the width have changed.
-    /// The font follows from the width, so it needs no place in the key.
+    /// The font follows from the width and the style, and a change of style
+    /// clears the cache, so it needs no place in the key.
     private func fitting(_ candidates: [String], font: NSFont, within width: CGFloat, cache: inout Fit?) -> String {
         if let cache, cache.candidates == candidates, cache.width == width { return cache.text }
         let text = Self.fitting(candidates, font: font, within: width)
@@ -172,34 +448,32 @@ final class TouchBarMetricView: NSView {
         return text
     }
 
-    /// Vertical range the curve is drawn in.
-    ///
-    /// Metrics such as memory and disk barely move, and drawing them against the
-    /// full 0–100 % scale turns the curve into a flat slab. When the observed
-    /// spread is small the window zooms in around it, which is what makes the
-    /// Touch Bar graph worth glancing at.
-    private static func window(for values: [Double]) -> ClosedRange<Double> {
-        let minimum = values.min() ?? 0
-        let maximum = values.max() ?? 1
-        let spread = maximum - minimum
-        guard spread < 0.08 else { return minimum...maximum }
-        let centre = (minimum + maximum) / 2
-        let lower = max(0, centre - 0.04)
-        return lower...(lower + 0.08)
-    }
-
     private func draw(
         text: String,
         in rect: NSRect,
         font: NSFont,
         color: NSColor,
-        alignment: NSTextAlignment
+        alignment: NSTextAlignment,
+        kern: CGFloat = 0
     ) {
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = alignment
-        NSAttributedString(
-            string: text,
-            attributes: [.font: font, .foregroundColor: color, .paragraphStyle: paragraph]
-        ).draw(in: rect)
+        (text as NSString).draw(
+            in: rect,
+            withAttributes: [
+                .font: font,
+                .foregroundColor: color,
+                .paragraphStyle: alignment == .right ? Self.rightAligned : Self.leftAligned,
+                .kern: kern,
+            ]
+        )
+    }
+
+    // Built once rather than on each of the two text draws per panel per sample.
+    private static let leftAligned = paragraphStyle(.left)
+    private static let rightAligned = paragraphStyle(.right)
+
+    private static func paragraphStyle(_ alignment: NSTextAlignment) -> NSParagraphStyle {
+        let style = NSMutableParagraphStyle()
+        style.alignment = alignment
+        return style
     }
 }

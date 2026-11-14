@@ -169,7 +169,7 @@ public struct MemoryUsage: Sendable, Equatable {
     }
 
     /// How close memory is to trouble, on the scale the status tints use
-    /// (green below 0.7, orange below 0.88, red above).
+    /// (see `StrainBand`).
     ///
     /// Not `usedFraction`: macOS keeps RAM full on purpose, so a nearly full
     /// bar is the normal state of a healthy Mac. The kernel's pressure level

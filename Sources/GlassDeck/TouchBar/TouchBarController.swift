@@ -83,8 +83,10 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
             : controller.monitor.coarseSnapshot
         _ = controller.preferences.touchBarMetrics
         _ = controller.preferences.touchBarAlignment
+        _ = controller.preferences.touchBarStyle
     } onChange: { controller in
         controller.applyMetricsToStrips()
+        controller.applyStyle()
         controller.rebuildBarIfNeeded()
         controller.refresh()
     }
@@ -342,9 +344,12 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
             detailView.snapshot = snapshot
             detailView.history = monitor.history(for: kind)
         }
+        let drawsHistory = preferences.touchBarStyle.drawsHistory
         for (kind, view) in metricViews {
             view.snapshot = snapshot
-            view.history = monitor.history(for: kind)
+            // A ring-buffer copy per panel per sample, skipped for the styles
+            // that would never look at it.
+            if drawsHistory { view.history = monitor.history(for: kind) }
         }
     }
 
@@ -357,6 +362,20 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         stripView.metrics = metrics
         miniStripView.metrics = metrics
         applicationStripView.metrics = metrics
+    }
+
+    /// Repaints the panels already on the bar in the chosen style. Setting it
+    /// is cheap — each view redraws only if the style actually changed — so
+    /// this runs with every change rather than tracking which one it was.
+    private func applyStyle() {
+        let style = preferences.touchBarStyle
+        batteryView.style = style
+        for (kind, view) in metricViews where view.style != style {
+            view.style = style
+            // `refresh` stopped feeding the history while the old style did not
+            // draw it; a style that does must not start from a stale curve.
+            if style.drawsHistory { view.history = monitor.history(for: kind) }
+        }
     }
 
     private func layout(for mode: Mode) -> TouchBarLayout {
@@ -472,6 +491,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         case Self.batteryItem:
             let item = NSCustomTouchBarItem(identifier: identifier)
             batteryView.battery = monitor.snapshot.battery
+            batteryView.style = preferences.touchBarStyle
             item.view = batteryView
             return item
         case Self.dashboardItem:
@@ -502,8 +522,9 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         let item = NSCustomTouchBarItem(identifier: identifier)
         let view = TouchBarMetricView(kind: kind)
         view.width = presentedLayout?.panelWidth ?? TouchBarLayout.minimumPanelWidth
+        view.style = preferences.touchBarStyle
         view.snapshot = monitor.snapshot
-        view.history = monitor.history(for: kind)
+        if view.style.drawsHistory { view.history = monitor.history(for: kind) }
         view.onTap = { [weak self] in self?.expand(kind) }
         metricViews[kind] = view
         item.view = view

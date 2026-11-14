@@ -63,12 +63,56 @@ enum Theme {
     /// system's green, orange and red, which are louder than anything else in
     /// the panel and made a healthy dot the brightest thing on screen.
     static func statusTint(_ fraction: Double) -> Color {
-        let hue: Double = switch fraction {
-        case ..<0.7: 0.37
-        case ..<0.88: 0.09
-        default: 0.0
+        switch StrainBand(strain: fraction) {
+        case .calm: calmTint
+        case .elevated: elevatedTint
+        case .high: highTint
         }
-        return Color(hue: hue, saturation: accentSaturation + 0.08, brightness: accentBrightness)
+    }
+
+    /// The same tint for the surfaces drawn in AppKit, by band.
+    static func nsStatusTint(_ band: StrainBand) -> NSColor {
+        switch band {
+        case .calm: nsCalmTint
+        case .elevated: nsElevatedTint
+        case .high: nsHighTint
+        }
+    }
+
+    // Built once: the dots and the signal style ask for these on every sample.
+    private static let nsCalmTint = statusColour(hue: 0.37)
+    private static let nsElevatedTint = statusColour(hue: 0.09)
+    private static let nsHighTint = statusColour(hue: 0.0)
+    private static let calmTint = Color(nsColor: nsCalmTint)
+    private static let elevatedTint = Color(nsColor: nsElevatedTint)
+    private static let highTint = Color(nsColor: nsHighTint)
+
+    private static func statusColour(hue: Double) -> NSColor {
+        NSColor(hue: hue, saturation: accentSaturation + 0.08, brightness: accentBrightness, alpha: 1)
+    }
+
+    /// The Touch Bar terminal style's one colour: the amber of an old phosphor
+    /// screen, readable on the black panel without competing with the accents.
+    static let nsPhosphor = NSColor(red: 1, green: 0.69, blue: 0, alpha: 1)
+
+    /// The translucent fills the Touch Bar draws on its black panel.
+    enum TouchBar {
+        /// Behind a chip.
+        static let chip = NSColor.white.withAlphaComponent(0.08)
+        /// The unlit part of a meter or a ring.
+        static let track = NSColor.white.withAlphaComponent(0.12)
+        /// The rule between cells in the open styles.
+        static let hairline = NSColor.white.withAlphaComponent(0.14)
+        static let chipRadius: CGFloat = 7
+    }
+
+    /// The settings window's surfaces.
+    enum Settings {
+        static let cardRadius: CGFloat = 10
+        /// Behind a card of rows.
+        static let card = Color.primary.opacity(0.05)
+        /// Behind a pill: a tag, the segment track, an unfilled button.
+        static let pill = Color.primary.opacity(0.08)
     }
 }
 
