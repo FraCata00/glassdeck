@@ -97,7 +97,7 @@ before and after touching any of this, and keep these invariants:
 The Touch Bar and a menu bar extra cannot be scripted, so a build can be brought
 up in a given state with environment variables (see
 `AppModel.applyDevelopmentOverrides`): `GLASSDECK_OPEN_DASHBOARD=1`,
-`GLASSDECK_OPEN_PANEL=1`, `GLASSDECK_OPEN_SETTINGS=1`,
+`GLASSDECK_OPEN_PANEL=1`, `GLASSDECK_OPEN_SETTINGS=1|<page>` (e.g. `touchBar`),
 `GLASSDECK_TOUCHBAR_MODE=fullscreen|expanded|mini|detail:<metric>`.
 
 A released build is usually already running on this machine. A second instance

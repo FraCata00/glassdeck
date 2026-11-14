@@ -88,13 +88,17 @@ struct SettingsView: View {
     @Environment(ClockTicker.self) private var clock
     @Environment(\.controlActiveState) private var controlActiveState
 
-    @State private var page: SettingsPage = .general
+    @State private var page: SettingsPage
     @State private var query = ""
     @State private var touchBarPart: TouchBarPart = .style
     @State private var launchesAtLogin = LoginItem.isEnabled
     @State private var live = LiveReadings()
 
     enum TouchBarPart: Hashable { case style, placement, metrics }
+
+    init(page: SettingsPage = .general) {
+        _page = State(initialValue: page)
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -110,6 +114,10 @@ struct SettingsView: View {
             .id(page)
         }
         .frame(width: SettingsMetrics.windowSize.width, height: SettingsMetrics.windowSize.height)
+        // Glass buttons in a plain window otherwise come out as rounded
+        // rectangles, which read as ordinary push buttons; the capsule is
+        // what makes them read as Liquid Glass.
+        .buttonBorderShape(.capsule)
         // The window outlives its closing — `isReleasedWhenClosed` is false — so
         // the gate the panel and the dashboard need applies here too.
         .tracksVisibility($live, monitor: monitor, clock: clock)
