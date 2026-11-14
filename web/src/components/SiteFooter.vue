@@ -1,5 +1,5 @@
 <script setup>
-import { repo } from '@/data/content'
+import { repo, sponsors } from '@/data/content'
 import icon from '#images/icon.png'
 
 const links = [
@@ -8,6 +8,7 @@ const links = [
   { label: 'Changelog', href: `${repo}/blob/main/CHANGELOG.md` },
   { label: 'Issues', href: `${repo}/issues` },
   { label: 'License', href: `${repo}/blob/main/LICENSE` },
+  { label: 'Sponsor', href: sponsors },
 ]
 </script>
 

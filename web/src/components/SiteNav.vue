@@ -10,7 +10,6 @@ import icon from '#images/icon.png'
 const links = [
   { label: 'Touch Bar', href: '#touchbar' },
   { label: 'Metrics', href: '#metrics' },
-  { label: 'How it works', href: '#how' },
   { label: 'Install', href: '#install' },
 ]
 

@@ -8,12 +8,11 @@
 defineProps({
   src: { type: String, required: true },
   alt: { type: String, required: true },
-  glow: { type: Boolean, default: false },
 })
 </script>
 
 <template>
-  <figure class="strip" :class="{ 'strip--glow': glow }">
+  <figure class="strip">
     <div class="strip__scroller">
       <div class="strip__bezel">
         <img :src="src" :alt="alt" class="strip__image" loading="lazy" decoding="async" />
@@ -26,22 +25,6 @@ defineProps({
 .strip {
   margin: 0;
   position: relative;
-}
-
-/* The coloured haze behind the bar, which is the app's own accent gradient. */
-.strip--glow::before {
-  content: '';
-  position: absolute;
-  inset: -60% -6% -90%;
-  background: radial-gradient(
-    58% 130% at 50% 50%,
-    rgba(95, 216, 255, 0.26) 0%,
-    rgba(167, 139, 255, 0.16) 42%,
-    transparent 72%
-  );
-  filter: blur(26px);
-  z-index: 0;
-  pointer-events: none;
 }
 
 .strip__bezel {

@@ -9,222 +9,84 @@
 [![CI](https://github.com/FraCata00/glassdeck/actions/workflows/ci.yml/badge.svg)](https://github.com/FraCata00/glassdeck/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/FraCata00/glassdeck?color=blue)](https://github.com/FraCata00/glassdeck/releases/latest)
 [![Platform](https://img.shields.io/badge/macOS-15%2B-black?logo=apple)](https://www.apple.com/macos/)
-[![Swift](https://img.shields.io/badge/Swift-6.1%2B-orange?logo=swift)](https://swift.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **[fracata00.github.io/glassdeck](https://fracata00.github.io/glassdeck/)**
 
 </div>
 
-GlassDeck is a menu bar system monitor for macOS. It reads CPU, GPU, memory, disk,
-network, fan speed and battery straight from the kernel, renders them in the
-macOS 26 Liquid Glass material, and — on a MacBook Pro that has one — puts them
-on the Touch Bar where they are actually glanceable.
+A menu bar system monitor for macOS: CPU, GPU, memory, disk, network, fans,
+temperature, power and battery, read straight from the kernel and drawn in
+Liquid Glass. On a MacBook Pro with a Touch Bar, it puts them there too.
 
-No Dock icon. No network access. No root. No helper daemon.
-
----
-
-## The Touch Bar, properly
-
-**Full width** — every metric, fan RPM, battery, and controls to shrink, open the
-dashboard or collapse back:
+No Dock icon, no network access, no root, no helper daemon.
 
 <img src="docs/images/touchbar-full-width.png" alt="GlassDeck across the full Touch Bar">
 
-**Compact** — four live graphs and the battery, with the system Control Strip
-untouched:
-
-<img src="docs/images/touchbar-compact.png" alt="GlassDeck beside the Control Strip">
-
-**Expanded metric** — tap any panel to open its own bar with the numbers behind
-the headline:
-
-<img src="docs/images/touchbar-detail.png" alt="The CPU panel expanded across the Touch Bar">
-
-**Mini** — just the meters, parked next to the Control Strip:
-
-<img src="docs/images/touchbar-mini.png" alt="GlassDeck as a small meter beside the Control Strip">
-
-The ⌄ button steps *down* one size at a time and stops at the mini meter, so a
-single tap can never make GlassDeck vanish:
-
-| Size | What you get | How to get there |
-| --- | --- | --- |
-| **Full width** | Every metric plus **fan RPM**, across the whole bar | ⤢ from compact |
-| **Compact** | Four live graphs, battery, controls; Control Strip stays visible | ⌄ from full width, or ⤢ from mini |
-| **Mini** | The four meters and two buttons | ⌄ from compact |
-| **One metric** | A single metric across the bar, with its details and history | Tap any panel or the battery chip |
-| **Released** | The Touch Bar goes back to the system and the frontmost app | ✕ on the mini bar |
-
-Once released, tapping the meter in the Control Strip brings GlassDeck straight
-back. Nothing a tap does is written to your settings.
-
-*Settings → Touch Bar → Position* puts the compact and mini bars on the left, in
-the centre, or beside the Control Strip (the default).
-
-## Features
-
-- **CPU** — total, user/system split, per-core bars grouped into Apple silicon's
-  performance and efficiency clusters, plus load average.
-- **GPU** — device, renderer and tiler utilisation with allocated video memory,
-  read from the IOKit accelerator registry.
-- **Memory** — used (active + wired + compressed), the same arithmetic Activity
-  Monitor uses, plus swap.
-- **Disk** — capacity of the boot volume and live read/write throughput.
-- **Network** — aggregate up/down throughput across active interfaces.
-- **Fans** — live RPM and each fan's rated range, read from the SMC.
-- **Temperature** — CPU, GPU, battery and enclosure sensors, discovered by
-  enumerating the SMC rather than guessing per-model key names.
-- **Power** — what the machine is drawing right now, scaled against the rating of
-  the adapter that is plugged in.
-- **Battery** — charge, charging state and time to full/empty.
-- **Bluetooth** — the charge of every paired device that reports one, earbuds
-  split into left, right and case. Disconnected devices keep the level they were
-  last seen at, so those rows are dimmed and marked rather than passed off as
-  live. Off until you switch it on, because that is when macOS asks for the
-  Bluetooth permission it needs.
-- **Clock** — as many time zones as you like, each with its own label and the
-  offset from here, and one of them in the menu bar if you want it there.
-- **Top processes** — the busiest processes, sampled only while a window is open.
-- **English and Italian**, following the system language.
-- **Liquid Glass everywhere** — real `glassEffect` surfaces on macOS 26+, with a
-  vibrant-material fallback on macOS 15.
-
-> **On signing:** releases are signed ad hoc, not notarised — notarising requires
-> a paid Apple Developer account. Every build is produced in the open by the
-> [release workflow](.github/workflows/release.yml) from a tagged commit, and the
-> archive's SHA-256 is published beside it, so you can check what you downloaded:
-> `shasum -a 256 GlassDeck.zip`.
-
-## Requirements
-
-- macOS 15 or later (Liquid Glass surfaces need macOS 26+; older systems get the
-  material fallback)
-- Apple silicon or Intel
-- A Touch Bar for the Touch Bar features — everything else works without one
-
 ## Install
-
-### Homebrew
 
 ```sh
 brew tap fracata00/tap
-brew trust fracata00/tap          # Homebrew asks this of every third-party tap
+brew trust fracata00/tap
 brew install --cask glassdeck
 ```
 
-Then open GlassDeck from `/Applications` and look for the meters in the menu bar.
+Or download `GlassDeck.zip` from the [latest release](https://github.com/FraCata00/glassdeck/releases/latest),
+move the app to `/Applications`, and right-click → **Open** the first time.
+Releases are signed ad hoc rather than notarised (that needs a paid developer
+account); the Homebrew cask clears the quarantine flag for you.
 
-### From a release
+Requires macOS 15 or later, on Apple silicon or Intel. Liquid Glass needs macOS 26;
+older systems get a vibrant-material fallback. Everything except the Touch Bar
+works without one.
 
-1. Download `GlassDeck.zip` from the [latest release](https://github.com/FraCata00/glassdeck/releases/latest).
-2. Move `GlassDeck.app` to `/Applications`.
-3. GlassDeck is signed ad hoc rather than notarised, so Gatekeeper needs one
-   nudge the first time. Either right-click the app and choose **Open** (then
-   **Open** again in the dialog), or run:
+## What it shows
 
-   ```sh
-   xattr -dr com.apple.quarantine /Applications/GlassDeck.app
-   ```
+- **CPU** — total, user/system, per-core bars by performance and efficiency cluster, load average
+- **GPU** — utilisation and video memory
+- **Memory** — used and swap, counted the way Activity Monitor does, with the kernel's memory pressure
+- **Disk** — read/write throughput and boot-volume capacity
+- **Network** — up and down across every active interface
+- **Fans, temperature, power** — from the SMC, read-only
+- **Battery** — charge, state, time to full or empty
+- **Bluetooth** — the charge of paired devices (off until you switch it on, since that is when macOS asks permission)
+- **Clock** — extra time zones, one of them optionally in the menu bar
+- **Top processes** — sampled only while a window is open
 
-   The Homebrew cask above does this for you.
+In English and Italian, following the system language.
 
-### From source
+## The Touch Bar
 
-```sh
-git clone https://github.com/FraCata00/glassdeck.git
-cd glassdeck
-Scripts/bundle.sh --universal          # builds .build/bundle/GlassDeck.app
-open .build/bundle/GlassDeck.app
-```
+Four sizes, and shrinking never makes GlassDeck disappear: ⌄ steps down one
+size at a time, ⤢ steps back up.
 
-## Usage
-
-- The status item shows a live bar per metric; click it for the glass panel.
-- **Dashboard** opens the full window: hero gauge, per-core grid, metric cards,
-  top processes.
-- **Settings** covers the sampling interval, which metrics appear where, the
-  Touch Bar placement, and opening at login.
-
-## How it works
-
-Everything is read directly from public kernel interfaces — no shelling out to
-`ps`, `powermetrics` or `ioreg`, and nothing that needs privileges.
-
-| Metric | Source |
+| Size | What you get |
 | --- | --- |
-| CPU | `host_processor_info(PROCESSOR_CPU_LOAD_INFO)` tick deltas, `hw.perflevel*.logicalcpu`, `getloadavg` |
-| GPU | `IOAccelerator` → `PerformanceStatistics` |
-| Memory | `host_statistics64(HOST_VM_INFO64)`, `vm.swapusage` |
-| Disk | `URLResourceValues` + `IOBlockStorageDriver` → `Statistics` |
-| Network | `getifaddrs` → `if_data` counters |
-| Fans | `AppleSMC` user client (`FNum`, `F<n>Ac/Mn/Mx`), read-only |
-| Temperature | `AppleSMC`, keys discovered on the first sample and filtered to plausible readings |
-| Power | `AppleSMC` (`PSTR` and friends), with the adapter rating as full scale |
-| Battery | `IOPSCopyPowerSourcesInfo` |
-| Processes | `libproc` (`proc_listpids`, `proc_pidinfo`) |
+| **Full width** | Every metric, fan RPM and battery |
+| **Compact** | Four graphs and the battery, beside the system Control Strip |
+| **Mini** | Just the meters |
+| **One metric** | Tap any panel for its details and history |
 
-The Control Strip item uses two private DFRFoundation entry points
-(`DFRElementSetControlStripPresenceForIdentifier`,
-`DFRSystemModalShowsCloseBoxWhenFrontMost`) and the private
-`NSTouchBarItem.addSystemTrayItem` / `NSTouchBar.presentSystemModalTouchBar`
-selectors — the same route every Touch Bar utility takes, since Apple never
-shipped a public one. All of them are resolved at runtime through `dlsym` and the
-Objective-C runtime: on a Mac without a Touch Bar, or a macOS that drops them,
-they degrade to no-ops instead of breaking the app.
+The panels can be drawn in nine styles — Glass, Instrument, Capsule, Ambient,
+Rings, Terminal, Histogram, Signal and Tinted glass — chosen in
+*Settings → Touch Bar*, with a live preview of each.
 
-**GlassDeck never writes to the SMC.** Fan control is out of scope by design.
+The Control Strip item relies on private DFRFoundation and `NSTouchBar` entry
+points, resolved at runtime; on a Mac without a Touch Bar they do nothing.
 
-## Architecture
-
-```
-Sources/
-├── GlassDeckKit/          # No UI. Samplers, models, the sampling actor.
-│   ├── Model/             # MetricsSnapshot, MetricKind, per-metric value types
-│   ├── Samplers/          # One file per data source (CPU, GPU, memory, disk, …)
-│   ├── MetricsEngine.swift  # actor: serialises every sampler
-│   └── SystemMonitor.swift  # @MainActor @Observable façade + rolling history
-└── GlassDeck/             # The app.
-    ├── UI/                # SwiftUI: glass surfaces, gauges, cards, dashboard
-    ├── TouchBar/          # AppKit: Control Strip item, expanded bars, DFR bridge
-    └── System/            # Preferences, login item, window ownership
-```
-
-Samplers hold mutable tick baselines and are confined to `MetricsEngine`; the
-snapshots they produce are immutable value types, so the whole pipeline is
-`Sendable` under Swift 6 strict concurrency.
-
-## Development
+## Build from source
 
 ```sh
-swift build                 # build
-swift test                  # 22 tests, including live sampling assertions
-Scripts/bundle.sh --debug   # assemble a runnable .app
-Scripts/make-icon.swift .   # regenerate the icon artwork from code
+git clone https://github.com/FraCata00/glassdeck.git && cd glassdeck
+swift build && swift test
+Scripts/bundle.sh --debug && open .build/bundle/GlassDeck.app
 ```
 
-Two environment variables help with manual testing, since neither the Touch Bar
-nor a menu bar extra can be driven by scripted clicks:
-
-```sh
-GLASSDECK_TOUCHBAR_MODE=fullscreen|expanded    # come up with the bar presented
-GLASSDECK_OPEN_DASHBOARD=1                     # come up with the dashboard open
-```
-
-The product page lives in [`web/`](web/README.md) — Vue 3 and Vuetify, published
-to GitHub Pages on every push to `main` that touches it.
-
-## Sponsoring
-
-GlassDeck is free and MIT-licensed, and stays that way. If it has earned its
-place in your menu bar, you can [sponsor the work](https://github.com/sponsors/FraCata00).
-
-## Contributing
-
-Commits follow [Conventional Commits](https://www.conventionalcommits.org/) and
-are checked in CI. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Swift 6, SwiftPM only, no dependencies. The product page lives in
+[`web/`](web/README.md). Commits follow [Conventional Commits](https://www.conventionalcommits.org/);
+see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-[MIT](LICENSE) © Francesco Cataldo
+[MIT](LICENSE) © Francesco Cataldo. If GlassDeck has earned its place in your
+menu bar, you can [sponsor the work](https://github.com/sponsors/FraCata00).
