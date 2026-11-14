@@ -5,6 +5,40 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-11-14
+
+### Changed
+
+- **GlassDeck now costs less to run.** Profiling found that drawing, not
+  sampling, was where its time went, and most of it was redrawing things that
+  had not changed. The menu bar item is now redrawn only when it would look
+  different: a temperature holding at 54°, a battery at 80% or bars that moved
+  by less than a pixel no longer redraw it. The Touch Bar panels stop measuring
+  the same text on every sample, and the compact meter skips redraws that
+  would change nothing. Measured with the Touch Bar always on, the app's main
+  thread went from about 5.7% of a core to about 3.6%.
+- **Sampling runs at a lower priority**, so macOS can keep it on the efficiency
+  cores, and its timer may be shifted a little to share a wake-up with work
+  the Mac was already doing. The readings do not change: rates are worked out
+  from the real time between samples.
+- **The dashboard backdrop moves in steps.** It used to drift without ever
+  coming to rest, so the window rendered for as long as it was open. It now
+  moves every eight seconds and rests in between, without the heavy blur it
+  used to sit under, and holds completely still under Reduce Motion or in Low
+  Power Mode.
+- **A metric is the same colour everywhere.** The panel, the menu bar and the
+  Touch Bar each used a slightly different shade of every accent; they now
+  share one. The green, orange and red status dots are toned down to match,
+  so a healthy dot is no longer the brightest thing in the panel.
+- **One set of text styles** across the panel and the dashboard, in place of
+  ten point sizes that let two cards set the same kind of label a size apart.
+- **Selection is shown in the glass.** The selected gauge and the focused
+  dashboard card take on their metric's colour instead of being outlined by a
+  thin ring.
+- **Sparklines have a reference.** A faint line marks half scale, and a dot
+  marks the latest value, so a flat line at 10% no longer looks like one at
+  60%.
+
 ## [1.10.0] - 2026-10-05
 
 ### Added
@@ -468,6 +502,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[1.11.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.11.0
 [1.10.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.10.0
 [1.9.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.9.1
 [1.9.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.9.0
