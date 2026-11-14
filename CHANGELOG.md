@@ -5,6 +5,35 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-11-14
+
+### Added
+
+- **The Touch Bar panels can be drawn in nine styles.** Glass is the look
+  GlassDeck has always had and stays the default; beside it are Instrument
+  (hairlines, large monospaced figures and a segmented meter), Capsule (each
+  chip fills up to its reading), Ambient (the history fills the whole cell),
+  Rings, Terminal (one line of monospaced text in a single colour), Histogram,
+  Signal (grey until a metric needs attention, so colour means state rather
+  than metric) and Tinted glass. The choice is in the Touch Bar settings, each
+  style with a live preview drawn by the same view the bar uses. Only the
+  painting changes: every style reads the same samples at the same rate, and
+  the styles that draw no history are not handed one, so none of them costs
+  more to run than another.
+
+### Changed
+
+- **A new settings window.** The single long form is replaced by a sidebar of
+  pages, grouped into essentials, the monitor and the optional modules, with a
+  search field that finds a setting by what it does as well as by its name.
+  Each page is a set of cards with one setting per row, and where a setting has
+  a cost worth knowing before switching it on, the row says so: the metrics
+  read from the SMC show how long their readings are cached, and Bluetooth
+  says that turning it on is what raises the permission prompt.
+- **Liquid Glass controls throughout the settings**, with capsule buttons and
+  the glass switch, on macOS 26 and later; earlier systems keep the same layout
+  with standard controls.
+
 ## [1.11.0] - 2026-11-14
 
 ### Changed
@@ -502,6 +531,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[2.0.0]: https://github.com/FraCata00/glassdeck/releases/tag/v2.0.0
 [1.11.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.11.0
 [1.10.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.10.0
 [1.9.1]: https://github.com/FraCata00/glassdeck/releases/tag/v1.9.1
