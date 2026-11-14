@@ -313,9 +313,7 @@ struct SettingsView: View {
                 Text("Detail, when a panel is tapped")
                 TouchBarDetailPreview(style: preferences.touchBarStyle)
                     .aspectRatio(TouchBarDetailPreview.aspectRatio, contentMode: .fit)
-                    .padding(5)
-                    .background(Color.black, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-                    .accessibilityHidden(true)
+                    .touchBarPreviewFrame()
             }
         } header: {
             Text("Style")
@@ -369,12 +367,7 @@ struct SettingsView: View {
             VStack(spacing: 6) {
                 TouchBarStylePreview(style: style)
                     .frame(height: 30)
-                    .padding(4)
-                    .background(Color.black, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .strokeBorder(isSelected ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: isSelected ? 2.5 : 1)
-                    }
+                    .touchBarPreviewFrame(isSelected: isSelected)
                 Text(style.title)
                     .font(.callout.weight(isSelected ? .semibold : .regular))
                     .foregroundStyle(isSelected ? .primary : .secondary)
@@ -642,15 +635,46 @@ private struct WithSnapshot<Content: View>: View {
 }
 
 /// Names the window after the page, which is the title System Settings shows
-/// in its toolbar. Set on the window directly: a hosting controller does not
-/// pass a split view's navigation title through to a window it did not open.
+/// in its toolbar. A hosting controller does not pass a split view's
+/// navigation title through to a window it did not open, so the title is set
+/// on the controller, whose title the window follows.
 private struct WindowTitle: NSViewRepresentable {
     let title: String
 
-    func makeNSView(context: Context) -> NSView { NSView() }
+    func makeNSView(context: Context) -> TitleView { TitleView() }
 
-    func updateNSView(_ view: NSView, context: Context) {
-        // The view is not in a window yet the first time round.
-        DispatchQueue.main.async { view.window?.title = title }
+    func updateNSView(_ view: TitleView, context: Context) {
+        view.title = title
+    }
+
+    final class TitleView: NSView {
+        var title = "" {
+            didSet { if title != oldValue { apply() } }
+        }
+
+        // The first title arrives before the view is in a window.
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            apply()
+        }
+
+        private func apply() {
+            guard let controller = window?.contentViewController, controller.title != title else { return }
+            controller.title = title
+        }
+    }
+}
+
+private extension View {
+    /// The black of the bar behind a Touch Bar preview, ringed in the accent
+    /// colour when it is the style in use.
+    func touchBarPreviewFrame(isSelected: Bool = false) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.TouchBar.chipRadius, style: .continuous)
+        return padding(4)
+            .background(Color.black, in: shape)
+            .overlay {
+                shape.strokeBorder(isSelected ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: isSelected ? 2.5 : 1)
+            }
+            .accessibilityHidden(true)
     }
 }

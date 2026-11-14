@@ -57,13 +57,10 @@ enum TouchBarPaint {
         let segment = (region.width - gap * CGFloat(count - 1)) / CGFloat(count)
         guard segment >= 1 else { return }
         let lit = TouchBarHistory.litSegments(fraction, count: count)
-        let rects = (0..<count).map { index in
-            NSRect(x: region.minX + CGFloat(index) * (segment + gap), y: region.minY, width: segment, height: region.height)
+        for index in 0..<count {
+            (index < lit ? color : Theme.TouchBar.track).setFill()
+            NSRect(x: region.minX + CGFloat(index) * (segment + gap), y: region.minY, width: segment, height: region.height).fill()
         }
-        color.setFill()
-        rects[..<lit].forEach { $0.fill() }
-        Theme.TouchBar.track.setFill()
-        rects[lit...].forEach { $0.fill() }
     }
 
     /// The latest samples as columns, right-aligned so a short history grows in
@@ -99,12 +96,12 @@ enum TouchBarPaint {
         arc.stroke()
     }
 
-    /// A rounded shape filled up to `fraction` from the leading edge, over a
-    /// faint track: the capsule style's gauge.
-    static func fill(_ path: NSBezierPath, upTo fraction: Double, color: NSColor, in context: CGContext) {
+    /// A capsule filled up to `fraction` from the leading edge, over a faint
+    /// track: the capsule style's gauge.
+    static func capsule(_ fraction: Double, in rect: NSRect, color: NSColor, context: CGContext) {
+        let path = NSBezierPath(roundedRect: rect, xRadius: rect.height / 2, yRadius: rect.height / 2)
         NSColor.white.withAlphaComponent(0.09).setFill()
         path.fill()
-        let rect = path.bounds
         context.saveGState()
         path.addClip()
         color.withAlphaComponent(0.34).setFill()
@@ -112,19 +109,31 @@ enum TouchBarPaint {
         context.restoreGState()
     }
 
-    /// A shape in the metric's colour with its level as a rule along the
-    /// bottom: the tinted style's background.
-    static func tint(_ path: NSBezierPath, level fraction: Double, color: NSColor, in context: CGContext) {
+    /// A rounded cell in the metric's colour with its level as a rule along
+    /// the bottom: the tinted style's background.
+    static func tint(level fraction: Double, in rect: NSRect, color: NSColor, context: CGContext) {
+        let path = NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8)
         color.withAlphaComponent(0.18).setFill()
         path.fill()
         path.lineWidth = 0.5
         color.withAlphaComponent(0.4).setStroke()
         path.stroke()
-        let rect = path.bounds
         context.saveGState()
         path.addClip()
         color.setFill()
         NSRect(x: rect.minX, y: rect.minY, width: rect.width * fraction, height: 2).fill()
+        context.restoreGState()
+    }
+
+    /// The history filling a whole cell behind its text: the ambient style.
+    static func ambient(_ history: [Double], in bounds: NSRect, color: NSColor, context: CGContext) {
+        let rect = bounds.insetBy(dx: 0, dy: 1)
+        let path = NSBezierPath(roundedRect: rect, xRadius: 6, yRadius: 6)
+        NSColor.white.withAlphaComponent(0.04).setFill()
+        path.fill()
+        context.saveGState()
+        path.addClip()
+        curve(history, in: rect.insetBy(dx: 0, dy: 2), color: color, lineWidth: 1.2, fillAlpha: 0.22, floor: bounds.minY)
         context.restoreGState()
     }
 

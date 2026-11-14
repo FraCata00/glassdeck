@@ -60,8 +60,7 @@ struct TouchBarStylePreview: NSViewRepresentable {
 struct TouchBarDetailPreview: NSViewRepresentable {
     let style: TouchBarStyle
 
-    /// The detail's size on the bar, which `TouchBarController` gives it.
-    private static let barSize = NSSize(width: 856, height: 30)
+    private static let barSize = NSSize(width: TouchBarDetailView.barWidth, height: 30)
     static let aspectRatio = barSize.width / barSize.height
 
     func makeNSView(context: Context) -> ScaledView { ScaledView() }
@@ -71,7 +70,7 @@ struct TouchBarDetailPreview: NSViewRepresentable {
     }
 
     final class ScaledView: NSView {
-        let detail = TouchBarDetailView(width: barSize.width)
+        let detail = TouchBarDetailView()
 
         init() {
             super.init(frame: NSRect(origin: .zero, size: barSize))
@@ -91,7 +90,7 @@ struct TouchBarDetailPreview: NSViewRepresentable {
         // Whatever frame SwiftUI gives, the content is drawn as on the bar.
         override func layout() {
             super.layout()
-            setBoundsSize(barSize)
+            if bounds.size != barSize { setBoundsSize(barSize) }
         }
     }
 }

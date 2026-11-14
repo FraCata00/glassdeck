@@ -9,17 +9,27 @@ import GlassDeckKit
 /// detail always shows the history — it is what the bar is opened for — and a
 /// style whose panel has none draws it here in its own manner.
 final class TouchBarDetailView: NSView {
-    var kind: MetricKind = .cpu { didSet { needsDisplay = true } }
+    var kind: MetricKind = .cpu {
+        didSet { cachedInk = nil; needsDisplay = true }
+    }
     var snapshot: MetricsSnapshot = .empty { didSet { needsDisplay = true } }
     var history: [Double] = [] { didSet { needsDisplay = true } }
     var style: TouchBarStyle = .glass {
-        didSet { if style != oldValue { needsDisplay = true } }
+        didSet {
+            guard style != oldValue else { return }
+            cachedInk = nil
+            needsDisplay = true
+        }
     }
     var onTap: (() -> Void)?
 
+    /// The detail's width on the bar. The settings preview draws at it too,
+    /// so the miniature is the bar's own layout.
+    static let barWidth: CGFloat = 856
+
     private let width: CGFloat
 
-    init(width: CGFloat) {
+    init(width: CGFloat = TouchBarDetailView.barWidth) {
         self.width = width
         super.init(frame: NSRect(x: 0, y: 0, width: width, height: 30))
     }
@@ -60,6 +70,10 @@ final class TouchBarDetailView: NSView {
         var kern: CGFloat = 0
     }
 
+    /// The ink for the current style and metric, built once rather than on
+    /// every sample: it changes only when one of the two does.
+    private var cachedInk: Ink?
+
     private var fraction: Double { snapshot.fraction(for: kind).clamped01 }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -67,7 +81,9 @@ final class TouchBarDetailView: NSView {
         context.clear(dirtyRect)
 
         let accent = TouchBarPalette.color(for: kind)
-        let ink = drawBackground(accent: accent, context: context)
+        var ink = cachedInk ?? Self.ink(for: style, accent: accent)
+        cachedInk = ink
+        drawBackground(accent: accent, context: context, ink: &ink)
 
         // The ring sits ahead of the headline; every other style starts with it.
         var headlineX: CGFloat = 12
@@ -91,84 +107,74 @@ final class TouchBarDetailView: NSView {
         }
     }
 
-    /// Paints what sits behind the text and returns the ink that reads on it.
-    private func drawBackground(accent: NSColor, context: CGContext) -> Ink {
-        let systemInk = Ink(
+    /// What a style sets its text in. Every colour but the signal style's is
+    /// fixed by the style and the metric; that one is recoloured as drawn.
+    private static func ink(for style: TouchBarStyle, accent: NSColor) -> Ink {
+        var ink = Ink(
             title: (.systemFont(ofSize: 8, weight: .semibold), accent.withAlphaComponent(0.9)),
             headline: (.monospacedDigitSystemFont(ofSize: 13, weight: .semibold), .white),
             label: (.systemFont(ofSize: 8, weight: .regular), .white.withAlphaComponent(0.55)),
             value: (.monospacedDigitSystemFont(ofSize: 12, weight: .medium), .white)
         )
-
         switch style {
         case .glass, .histogram:
-            TouchBarPalette.drawChrome(.chip, in: bounds)
-            return systemInk
-
+            break
         case .instrument:
-            var ink = systemInk
             ink.title = (.systemFont(ofSize: 7, weight: .semibold), .white.withAlphaComponent(0.55))
             ink.headline = (.monospacedSystemFont(ofSize: 14, weight: .medium), .white)
             ink.label = (.systemFont(ofSize: 7, weight: .semibold), .white.withAlphaComponent(0.55))
             ink.value = (.monospacedSystemFont(ofSize: 12, weight: .medium), .white)
             ink.kern = 0.6
-            return ink
-
         case .capsule:
-            let rect = bounds.insetBy(dx: 1, dy: 2)
-            TouchBarPaint.fill(NSBezierPath(roundedRect: rect, xRadius: rect.height / 2, yRadius: rect.height / 2), upTo: fraction, color: accent, in: context)
-            var ink = systemInk
             ink.title = (.systemFont(ofSize: 8.5, weight: .semibold), .white.withAlphaComponent(0.85))
             ink.headline = (.monospacedDigitSystemFont(ofSize: 13, weight: .bold), .white)
-            return ink
-
         case .ambient:
-            let rect = bounds.insetBy(dx: 0, dy: 1)
-            let path = NSBezierPath(roundedRect: rect, xRadius: 6, yRadius: 6)
-            NSColor.white.withAlphaComponent(0.04).setFill()
-            path.fill()
-            context.saveGState()
-            path.addClip()
-            TouchBarPaint.curve(history, in: rect.insetBy(dx: 0, dy: 2), color: accent, lineWidth: 1.2, fillAlpha: 0.22, floor: bounds.minY)
-            context.restoreGState()
-            var ink = systemInk
             ink.title = (.systemFont(ofSize: 7, weight: .semibold), .white.withAlphaComponent(0.72))
             ink.headline = (.monospacedDigitSystemFont(ofSize: 14, weight: .bold), .white)
             ink.label = (.systemFont(ofSize: 8, weight: .regular), .white.withAlphaComponent(0.72))
-            return ink
-
         case .rings:
-            var ink = systemInk
             ink.title = (.systemFont(ofSize: 7, weight: .semibold), .white.withAlphaComponent(0.55))
             ink.kern = 0.4
-            return ink
-
         case .terminal:
-            let phosphor = Theme.nsPhosphor
             // Names a size down from the figures, so two lines fit the bar.
-            return Ink(
-                title: (Self.terminalSmallFont, phosphor.withAlphaComponent(0.55)),
-                headline: (Self.terminalBoldFont, phosphor),
-                label: (Self.terminalSmallFont, phosphor.withAlphaComponent(0.55)),
-                value: (Self.terminalBoldFont, phosphor)
+            let phosphor = Theme.nsPhosphor
+            ink = Ink(
+                title: (terminalSmallFont, phosphor.withAlphaComponent(0.55)),
+                headline: (TouchBarPalette.terminalBoldFont, phosphor),
+                label: (terminalSmallFont, phosphor.withAlphaComponent(0.55)),
+                value: (TouchBarPalette.terminalBoldFont, phosphor)
             )
-
         case .signal:
-            let text = TouchBarPaint.signal(snapshot.strain(for: kind), in: bounds, radius: 6)
-            return Ink(
-                title: (.systemFont(ofSize: 8, weight: .bold), text),
-                headline: (.monospacedDigitSystemFont(ofSize: 13, weight: .bold), text),
-                label: (.systemFont(ofSize: 8, weight: .regular), text.withAlphaComponent(0.7)),
-                value: (.monospacedDigitSystemFont(ofSize: 12, weight: .semibold), text)
-            )
-
+            ink.title.font = .systemFont(ofSize: 8, weight: .bold)
+            ink.headline.font = .monospacedDigitSystemFont(ofSize: 13, weight: .bold)
+            ink.value.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
         case .tinted:
-            let rect = bounds.insetBy(dx: 0.5, dy: 1.5)
-            TouchBarPaint.tint(NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8), level: fraction, color: accent, in: context)
-            var ink = systemInk
             ink.title = (.systemFont(ofSize: 8, weight: .semibold), .white.withAlphaComponent(0.75))
             ink.headline = (.monospacedDigitSystemFont(ofSize: 13, weight: .bold), accent)
-            return ink
+        }
+        return ink
+    }
+
+    /// Paints what sits behind the text. The signal style's background says
+    /// the state, and its text takes the colour that reads on it.
+    private func drawBackground(accent: NSColor, context: CGContext, ink: inout Ink) {
+        switch style {
+        case .glass, .histogram:
+            TouchBarPalette.drawChrome(.chip, in: bounds)
+        case .capsule:
+            TouchBarPaint.capsule(fraction, in: bounds.insetBy(dx: 1, dy: 2), color: accent, context: context)
+        case .ambient:
+            TouchBarPaint.ambient(history, in: bounds, color: accent, context: context)
+        case .tinted:
+            TouchBarPaint.tint(level: fraction, in: bounds.insetBy(dx: 0.5, dy: 1.5), color: accent, context: context)
+        case .signal:
+            let text = TouchBarPaint.signal(snapshot.strain(for: kind), in: bounds, radius: 6)
+            ink.title.color = text
+            ink.headline.color = text
+            ink.label.color = text.withAlphaComponent(0.7)
+            ink.value.color = text
+        case .instrument, .rings, .terminal:
+            break
         }
     }
 
@@ -214,7 +220,6 @@ final class TouchBarDetailView: NSView {
     }
 
     private static let terminalSmallFont = NSFont.monospacedSystemFont(ofSize: 8, weight: .regular)
-    private static let terminalBoldFont = NSFont.monospacedSystemFont(ofSize: 10, weight: .bold)
 
     private func drawText(_ text: String, in rect: NSRect, _ ink: (font: NSFont, color: NSColor), kern: CGFloat = 0) {
         (text as NSString).draw(in: rect, withAttributes: [.font: ink.font, .foregroundColor: ink.color, .kern: kern])

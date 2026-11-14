@@ -137,11 +137,14 @@ enum TouchBarPalette {
         Theme.nsAccent(kind)
     }
 
+    /// The terminal style's two weights, shared by the panels and the detail.
+    @MainActor static let terminalFont = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
+    @MainActor static let terminalBoldFont = NSFont.monospacedSystemFont(ofSize: 10, weight: .bold)
+
     /// Advance of one character in the terminal style's font, measured once.
     /// Every glyph in a monospaced font has it, so a line's width is a count.
-    static let terminalCharacterWidth: CGFloat = {
-        let font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
-        return max(1, ("0" as NSString).size(withAttributes: [.font: font]).width)
+    @MainActor static let terminalCharacterWidth: CGFloat = {
+        max(1, ("0" as NSString).size(withAttributes: [.font: terminalFont]).width)
     }()
 
     /// The background a style puts behind an item: a chip, a leading hairline,

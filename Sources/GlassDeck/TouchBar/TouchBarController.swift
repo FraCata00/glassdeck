@@ -47,7 +47,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     private var presentedBar: NSTouchBar?
     private var metricViews: [MetricKind: TouchBarMetricView] = [:]
     private let batteryView = TouchBarBatteryView()
-    private let detailView = TouchBarDetailView(width: 856)
+    private let detailView = TouchBarDetailView()
     /// Shown by the system whenever GlassDeck itself is frontmost and no bar of
     /// its own is presented — without it the Touch Bar would simply go black,
     /// because a menu bar app defines no Touch Bar of its own.

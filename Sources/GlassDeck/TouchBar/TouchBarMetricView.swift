@@ -142,8 +142,7 @@ final class TouchBarMetricView: NSView {
 
     private func drawCapsule(color: NSColor, context: CGContext) {
         let rect = bounds.insetBy(dx: 1, dy: 2)
-        let path = NSBezierPath(roundedRect: rect, xRadius: rect.height / 2, yRadius: rect.height / 2)
-        TouchBarPaint.fill(path, upTo: fraction, color: color, in: context)
+        TouchBarPaint.capsule(fraction, in: rect, color: color, context: context)
 
         drawRow(
             in: rect.insetBy(dx: 10, dy: 0),
@@ -157,15 +156,7 @@ final class TouchBarMetricView: NSView {
     /// The most expensive style: a filled path across the whole cell. It is
     /// redrawn at the same cadence as the glass sparkline, no more.
     private func drawAmbient(color: NSColor, context: CGContext) {
-        let rect = bounds.insetBy(dx: 0, dy: 1)
-        let path = NSBezierPath(roundedRect: rect, xRadius: 6, yRadius: 6)
-        NSColor.white.withAlphaComponent(0.04).setFill()
-        path.fill()
-
-        context.saveGState()
-        path.addClip()
-        TouchBarPaint.curve(history, in: rect.insetBy(dx: 0, dy: 2), color: color, lineWidth: 1.2, fillAlpha: 0.22, floor: bounds.minY)
-        context.restoreGState()
+        TouchBarPaint.ambient(history, in: bounds, color: color, context: context)
 
         drawLabelStack(
             x: 7,
@@ -206,17 +197,15 @@ final class TouchBarMetricView: NSView {
 
         let line = NSMutableAttributedString()
         if let title = layout.title {
-            line.append(NSAttributedString(string: title + " ", attributes: [.font: Self.terminalFont, .foregroundColor: phosphor.withAlphaComponent(0.55)]))
+            line.append(NSAttributedString(string: title + " ", attributes: [.font: TouchBarPalette.terminalFont, .foregroundColor: phosphor.withAlphaComponent(0.55)]))
         }
-        line.append(NSAttributedString(string: layout.headline, attributes: [.font: Self.terminalBoldFont, .foregroundColor: phosphor]))
+        line.append(NSAttributedString(string: layout.headline, attributes: [.font: TouchBarPalette.terminalBoldFont, .foregroundColor: phosphor]))
         if !layout.sparkline.isEmpty {
-            line.append(NSAttributedString(string: " " + layout.sparkline, attributes: [.font: Self.terminalFont, .foregroundColor: phosphor.withAlphaComponent(0.85)]))
+            line.append(NSAttributedString(string: " " + layout.sparkline, attributes: [.font: TouchBarPalette.terminalFont, .foregroundColor: phosphor.withAlphaComponent(0.85)]))
         }
         line.draw(in: NSRect(x: 6, y: (bounds.height - 13) / 2, width: bounds.width - 8, height: 13))
     }
 
-    private static let terminalFont = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
-    private static let terminalBoldFont = NSFont.monospacedSystemFont(ofSize: 10, weight: .bold)
 
     private func drawHistogram(color: NSColor) {
         TouchBarPalette.drawChrome(style.chrome, in: bounds)
@@ -250,7 +239,7 @@ final class TouchBarMetricView: NSView {
 
     private func drawTinted(color: NSColor, context: CGContext) {
         let rect = bounds.insetBy(dx: 0.5, dy: 1.5)
-        TouchBarPaint.tint(NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8), level: fraction, color: color, in: context)
+        TouchBarPaint.tint(level: fraction, in: rect, color: color, context: context)
 
         drawRow(
             in: rect.insetBy(dx: 9, dy: 0).offsetBy(dx: 0, dy: 1),
