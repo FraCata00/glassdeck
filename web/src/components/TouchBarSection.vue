@@ -12,11 +12,12 @@ const current = ref(touchBarStates[0].id)
   <section id="touchbar" class="deck-section touchbar">
     <div class="deck-measure touchbar__head">
       <h2 class="deck-headline touchbar__title" v-reveal>
-        The strip Apple gave up on,<br class="d-none d-sm-block" />
+        The Touch Bar,<br class="d-none d-sm-block" />
         finally worth looking at.
       </h2>
       <p class="deck-lead deck-dim touchbar__lead" v-reveal>
-        Four sizes, and a rule: shrinking never makes GlassDeck disappear.
+        Four sizes, and nine styles to draw them in — Glass, Instrument, Capsule,
+        Ambient, Rings, Terminal, Histogram, Signal and Tinted glass.
       </p>
     </div>
 
@@ -38,11 +39,7 @@ const current = ref(touchBarStates[0].id)
         <v-window-item v-for="state in touchBarStates" :key="state.id" :value="state.id">
           <TouchBarStrip :src="state.image" :alt="state.alt" />
 
-          <div class="touchbar__caption">
-            <h3 class="deck-title">{{ state.title }}</h3>
-            <p class="deck-body deck-dim">{{ state.body }}</p>
-            <p class="deck-caption touchbar__reach">{{ state.reach }}</p>
-          </div>
+          <p class="deck-body deck-dim touchbar__caption">{{ state.body }}</p>
         </v-window-item>
       </v-window>
     </div>
@@ -82,16 +79,5 @@ const current = ref(touchBarStates[0].id)
   max-width: 600px;
   margin: clamp(2.5rem, 5vw, 3.5rem) auto 0;
   text-align: center;
-}
-
-.touchbar__caption h3 {
-  color: var(--deck-ink);
-  margin-bottom: 12px;
-}
-
-/* How you reach this size, kept quiet: it matters once, when you first try it. */
-.touchbar__reach {
-  margin-top: 18px;
-  color: #6e6e73;
 }
 </style>

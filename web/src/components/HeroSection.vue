@@ -1,12 +1,10 @@
 <script setup>
 import { mdiChevronRight } from '@mdi/js'
-import TouchBarStrip from './TouchBarStrip.vue'
 import { useLatestRelease } from '@/composables/useLatestRelease'
-import { touchBarStates, latestRelease, repo } from '@/data/content'
+import { latestRelease, repo } from '@/data/content'
 import icon from '#images/icon.png'
 
 const { version } = useLatestRelease()
-const hero = touchBarStates[0]
 </script>
 
 <template>
@@ -38,10 +36,6 @@ const hero = touchBarStates[0]
       <p class="deck-caption deck-dim hero__meta" v-reveal>
         Version {{ version }} · macOS 15 or later · Apple silicon and Intel · Free and open source
       </p>
-    </div>
-
-    <div class="deck-measure-wide hero__shot" v-reveal>
-      <TouchBarStrip :src="hero.image" :alt="hero.alt" glow />
     </div>
   </section>
 </template>
@@ -95,11 +89,5 @@ const hero = touchBarStates[0]
 
 .hero__meta {
   margin-top: 22px;
-}
-
-.hero__shot {
-  position: relative;
-  z-index: 1;
-  margin-top: clamp(3.5rem, 7vw, 6rem);
 }
 </style>
