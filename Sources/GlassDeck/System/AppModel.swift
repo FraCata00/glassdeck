@@ -201,7 +201,7 @@ final class AppModel {
         show(\.settingsWindow) {
             makeGlassWindow(
                 title: String(localized: "GlassDeck Settings"),
-                size: NSSize(width: 460, height: 330),
+                size: SettingsMetrics.windowSize,
                 content: SettingsView(),
                 isResizable: false,
                 isTransparent: false

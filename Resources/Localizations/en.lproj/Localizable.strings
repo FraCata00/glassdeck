@@ -83,3 +83,40 @@
 
 /* Bluetooth card */
 "not connected" = "not connected";
+
+/* Settings window */
+"Essentials" = "Essentials";
+"Monitor" = "Monitor";
+"Search settings" = "Search settings";
+"Panel and dashboard" = "Panel and dashboard";
+"Alerts" = "Alerts";
+"Style" = "Style";
+"How often GlassDeck samples and how it starts. Nothing here uses the network." = "How often GlassDeck samples and how it starts. Nothing here uses the network.";
+"Sampling" = "Sampling";
+"Start-up" = "Start-up";
+"Starts in the menu bar, with no Dock icon." = "Starts in the menu bar, with no Dock icon.";
+"What the icon in the menu bar shows. It is redrawn only when the label would actually look different." = "What the icon in the menu bar shows. It is redrawn only when the label would actually look different.";
+"Label" = "Label";
+"Choose how the metric panels are drawn on the Touch Bar. Only the painting changes: sampling stays exactly the same." = "Choose how the metric panels are drawn on the Touch Bar. Only the painting changes: sampling stays exactly the same.";
+"Style in use: %@" = "Style in use: %@";
+"Reset" = "Reset";
+"Strip style" = "Strip style";
+"Applies to the full-width and compact bar. The Control Strip meter and a metric's detail keep their own look." = "Applies to the full-width and compact bar. The Control Strip meter and a metric's detail keep their own look.";
+"Apply" = "Apply";
+"In use" = "In use";
+"Where GlassDeck sits on the Touch Bar, and how it hands the bar to other apps." = "Where GlassDeck sits on the Touch Bar, and how it hands the bar to other apps.";
+"Presentation" = "Presentation";
+"Which metrics appear on the Touch Bar. Their order is the one set in Panel and dashboard." = "Which metrics appear on the Touch Bar. Their order is the one set in Panel and dashboard.";
+"%lld of %lld metrics on the Touch Bar" = "%lld of %lld metrics on the Touch Bar";
+"SMC, cached %lld s" = "SMC, cached %lld s";
+"The metrics in the panel and the dashboard. The order set here is shared by every surface." = "The metrics in the panel and the dashboard. The order set here is shared by every surface.";
+"%lld of %lld metrics shown" = "%lld of %lld metrics shown";
+"Processes" = "Processes";
+"Sampled only while the panel is open." = "Sampled only while the panel is open.";
+"Only while visible" = "Only while visible";
+"Notifications when something needs attention. They read the slow reading, at most every two seconds." = "Notifications when something needs attention. They read the slow reading, at most every two seconds.";
+"When to warn" = "When to warn";
+"Devices" = "Devices";
+"Asks for permission" = "Asks for permission";
+"macOS asks for permission the first time this is switched on." = "macOS asks for permission the first time this is switched on.";
+"Time zones" = "Time zones";
