@@ -17,26 +17,26 @@ struct MetricDetailCard: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 Label(kind.title, systemImage: kind.symbolName)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(Typography.heading)
                     .foregroundStyle(.secondary)
                 Spacer()
                 Text(snapshot.headline(for: kind))
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(Typography.value)
                     .monospacedDigit()
                     .contentTransition(.numericText())
             }
 
-            Sparkline(values: history, gradient: Theme.gradient(kind))
+            Sparkline(values: history, gradient: Theme.gradient(kind), accent: Theme.accent(kind))
                 .frame(height: 44)
 
             HStack(spacing: 14) {
                 ForEach(details) { detail in
                     VStack(alignment: .leading, spacing: 1) {
                         Text(detail.value)
-                            .font(.system(size: 12, weight: .medium))
+                            .font(Typography.heading)
                             .monospacedDigit()
                         Text(detail.label)
-                            .font(.system(size: 10))
+                            .font(Typography.caption)
                             .foregroundStyle(.secondary)
                     }
                     if detail.id != details.last?.id { Spacer(minLength: 0) }

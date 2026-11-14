@@ -131,8 +131,10 @@ final class TouchBarStripView: NSView {
 
 /// Colours and abbreviations shared by both Touch Bar surfaces.
 enum TouchBarPalette {
+    /// The app's one accent per metric, so a metric is the same colour on
+    /// the Touch Bar as in the panel and the menu bar.
     static func color(for kind: MetricKind) -> NSColor {
-        NSColor(hue: kind.hue, saturation: 0.75, brightness: 1.0, alpha: 1.0)
+        Theme.nsAccent(kind)
     }
 
     /// `1.4k`, `820` — fan speed squeezed into four characters.

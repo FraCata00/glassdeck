@@ -34,7 +34,7 @@ enum MenuBarGlyph {
                     xRadius: barWidth / 2,
                     yRadius: barWidth / 2
                 )
-                NSColor(hue: kind.hue, saturation: 0.7, brightness: 0.95, alpha: 1).setFill()
+                Theme.nsAccent(kind).setFill()
                 bar.fill()
             }
             return true

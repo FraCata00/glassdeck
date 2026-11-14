@@ -20,16 +20,16 @@ struct ModuleCard<Content: View>: View {
                     .frame(width: 22, height: 22)
                     .overlay {
                         Image(systemName: module.symbolName)
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(Typography.chipIcon)
                             .foregroundStyle(Theme.accent(module))
                     }
                 Text(module.title)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(Typography.heading)
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 0)
                 if let headline {
                     Text(headline)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(Typography.value)
                         .monospacedDigit()
                         .contentTransition(.numericText())
                 }
@@ -54,10 +54,10 @@ struct BatteryPip: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 4) {
                 Text(ValueFormatter.percent(fraction))
-                    .font(.system(size: 11, weight: .medium))
+                    .font(Typography.label)
                     .monospacedDigit()
                 Text(label)
-                    .font(.system(size: 10))
+                    .font(Typography.caption)
                     .foregroundStyle(.secondary)
             }
             Capsule()

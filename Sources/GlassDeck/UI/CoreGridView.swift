@@ -43,7 +43,7 @@ struct CoreGridView: View {
                 }
             }
             Text(title)
-                .font(.system(size: 9, weight: .medium))
+                .font(Typography.caption)
                 .foregroundStyle(.secondary)
         }
     }

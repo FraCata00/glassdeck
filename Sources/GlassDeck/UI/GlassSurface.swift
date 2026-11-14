@@ -12,6 +12,11 @@ struct GlassSurface: ViewModifier {
             content.glassEffect(glass, in: .rect(cornerRadius: cornerRadius))
         } else {
             content
+                .background {
+                    if let isTinted {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).fill(isTinted)
+                    }
+                }
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)

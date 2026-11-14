@@ -8,12 +8,12 @@ struct ProcessListView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Top processes")
-                .font(.system(size: 11, weight: .medium))
+                .font(Typography.label)
                 .foregroundStyle(.secondary)
 
             if processes.isEmpty {
                 Text("Sampling…")
-                    .font(.system(size: 11))
+                    .font(Typography.body)
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
@@ -23,16 +23,16 @@ struct ProcessListView: View {
                     }
                     HStack(spacing: 8) {
                         Text(process.name)
-                            .font(.system(size: 11, weight: .medium))
+                            .font(Typography.label)
                             .lineLimit(1)
                             .truncationMode(.middle)
                         Spacer(minLength: 6)
                         Text(ValueFormatter.bytes(process.memoryBytes))
-                            .font(.system(size: 10))
+                            .font(Typography.caption)
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
                         Text(String(format: "%.1f%%", process.cpuPercent))
-                            .font(.system(size: 11, weight: .medium))
+                            .font(Typography.label)
                             .monospacedDigit()
                             .frame(width: 46, alignment: .trailing)
                     }

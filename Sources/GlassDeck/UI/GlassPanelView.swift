@@ -144,18 +144,18 @@ struct GlassPanelView: View {
     private var header: some View {
         HStack(spacing: 8) {
             Image(systemName: "gauge.with.dots.needle.67percent")
-                .font(.system(size: 13, weight: .semibold))
+                .font(Typography.title)
                 .foregroundStyle(Theme.gradient(MetricKind.cpu))
             VStack(alignment: .leading, spacing: 0) {
                 Text("GlassDeck")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Typography.title)
                 Text(SystemIdentity.machineDescription)
-                    .font(.system(size: 10))
+                    .font(Typography.caption)
                     .foregroundStyle(.secondary)
             }
             Spacer()
             Text(SystemIdentity.uptimeDescription)
-                .font(.system(size: 10))
+                .font(Typography.caption)
                 .monospacedDigit()
                 .foregroundStyle(.tertiary)
         }
@@ -189,13 +189,12 @@ struct GlassPanelView: View {
             .padding(Self.gaugePadding)
         }
         .buttonStyle(.plain)
-        .glassSurface(cornerRadius: gaugeSize, interactive: true)
+        .glassSurface(
+            cornerRadius: gaugeSize,
+            interactive: true,
+            tint: selectedMetric == kind ? Theme.selectionTint(kind) : nil
+        )
         .glassMorph(id: kind, in: glassNamespace)
-        .overlay {
-            if selectedMetric == kind {
-                Circle().strokeBorder(Theme.accent(kind).opacity(0.55), lineWidth: 1.2)
-            }
-        }
         .overlay(alignment: .topTrailing) {
             // Memory's warning light: the ring shows how full RAM is, which on
             // a Mac is nearly always "very"; this shows when that is a shortage.
@@ -246,7 +245,7 @@ struct GlassPanelView: View {
                 model.showDashboard()
             } label: {
                 Label("Dashboard", systemImage: "rectangle.on.rectangle")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(Typography.label)
             }
             .glassButton(prominent: true)
 
