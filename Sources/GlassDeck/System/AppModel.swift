@@ -20,6 +20,8 @@ final class AppModel {
     /// Drives the clock module and the menu bar clock, on its own once-a-minute
     /// cadence rather than the sampler's.
     let clock = ClockTicker()
+    /// What the menu bar label draws, republished only when it changes.
+    let statusItem: StatusItemReadout
 
     @ObservationIgnored private let alerts: ThresholdAlerts
     /// Mirrors settings changes into the parts of the app that are not SwiftUI views.
@@ -49,6 +51,7 @@ final class AppModel {
         self.monitor = monitor
         self.touchBar = TouchBarController(monitor: monitor, preferences: preferences)
         self.alerts = ThresholdAlerts(preferences: preferences, monitor: monitor)
+        self.statusItem = StatusItemReadout(monitor: monitor, preferences: preferences)
         touchBar.onOpenDashboard = { [weak self] in self?.showDashboard() }
     }
 
@@ -60,6 +63,7 @@ final class AppModel {
         synchroniseModules()
         observePowerEvents()
         alerts.start()
+        statusItem.start()
         installSignalHandlers()
 
         applyDevelopmentOverrides()
