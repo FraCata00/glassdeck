@@ -110,7 +110,7 @@ final class TouchBarMetricView: NSView {
         // decided by measuring it, not by the same threshold.
         let labelWidth = bounds.width * (isCompact ? 0.40 : 0.42)
         let sparklineRect = NSRect(x: labelWidth + 10, y: 4, width: bounds.width - labelWidth - 16, height: bounds.height - 8)
-        drawCurve(in: sparklineRect, color: color, lineWidth: 1.6, fillAlpha: 0.18)
+        TouchBarPaint.curve(history, in: sparklineRect, color: color, lineWidth: 1.6, fillAlpha: 0.18)
         drawLabelStack(
             x: 8,
             width: labelWidth,
@@ -121,8 +121,7 @@ final class TouchBarMetricView: NSView {
         )
     }
 
-    /// The meter is ten filled rectangles and no path, which makes this the
-    /// cheapest style to draw after the terminal.
+    /// The cheapest style to draw after the terminal: the meter has no path.
     private func drawInstrument(color: NSColor) {
         TouchBarPalette.drawChrome(style.chrome, in: bounds)
 
@@ -138,31 +137,13 @@ final class TouchBarMetricView: NSView {
         )
 
         let region = NSRect(x: 8 + labelWidth + 4, y: (bounds.height - 12) / 2, width: bounds.width - labelWidth - 18, height: 12)
-        let gap: CGFloat = 1.5
-        let count = TouchBarHistory.meterSegmentCount(width: region.width)
-        let segment = (region.width - gap * CGFloat(count - 1)) / CGFloat(count)
-        guard segment >= 1 else { return }
-        let lit = TouchBarHistory.litSegments(fraction, count: count)
-        let rects = (0..<count).map { index in
-            NSRect(x: region.minX + CGFloat(index) * (segment + gap), y: region.minY, width: segment, height: region.height)
-        }
-        color.setFill()
-        rects[..<lit].forEach { $0.fill() }
-        Theme.TouchBar.track.setFill()
-        rects[lit...].forEach { $0.fill() }
+        TouchBarPaint.meter(fraction, in: region, color: color)
     }
 
     private func drawCapsule(color: NSColor, context: CGContext) {
         let rect = bounds.insetBy(dx: 1, dy: 2)
         let path = NSBezierPath(roundedRect: rect, xRadius: rect.height / 2, yRadius: rect.height / 2)
-        NSColor.white.withAlphaComponent(0.09).setFill()
-        path.fill()
-
-        context.saveGState()
-        path.addClip()
-        color.withAlphaComponent(0.34).setFill()
-        NSRect(x: rect.minX, y: rect.minY, width: rect.width * fraction, height: rect.height).fill()
-        context.restoreGState()
+        TouchBarPaint.fill(path, upTo: fraction, color: color, in: context)
 
         drawRow(
             in: rect.insetBy(dx: 10, dy: 0),
@@ -183,7 +164,7 @@ final class TouchBarMetricView: NSView {
 
         context.saveGState()
         path.addClip()
-        drawCurve(in: rect.insetBy(dx: 0, dy: 2), color: color, lineWidth: 1.2, fillAlpha: 0.22, fillsToEdge: true)
+        TouchBarPaint.curve(history, in: rect.insetBy(dx: 0, dy: 2), color: color, lineWidth: 1.2, fillAlpha: 0.22, floor: bounds.minY)
         context.restoreGState()
 
         drawLabelStack(
@@ -197,24 +178,7 @@ final class TouchBarMetricView: NSView {
     }
 
     private func drawRings(color: NSColor) {
-        let centre = NSPoint(x: 6 + 11, y: bounds.midY)
-        let radius: CGFloat = 9.5
-
-        let track = NSBezierPath()
-        track.appendArc(withCenter: centre, radius: radius, startAngle: 0, endAngle: 360)
-        track.lineWidth = 3
-        Theme.TouchBar.track.setStroke()
-        track.stroke()
-
-        if fraction > 0 {
-            // From twelve o'clock, clockwise, like the panel's rings.
-            let arc = NSBezierPath()
-            arc.appendArc(withCenter: centre, radius: radius, startAngle: 90, endAngle: 90 - 360 * CGFloat(fraction), clockwise: true)
-            arc.lineWidth = 3
-            arc.lineCapStyle = .round
-            color.setStroke()
-            arc.stroke()
-        }
+        TouchBarPaint.ring(fraction, centre: NSPoint(x: 6 + 11, y: bounds.midY), radius: 9.5, color: color)
 
         drawLabelStack(
             x: 33,
@@ -268,27 +232,13 @@ final class TouchBarMetricView: NSView {
         )
 
         let region = NSRect(x: 7 + labelWidth + 4, y: 5, width: bounds.width - labelWidth - 17, height: bounds.height - 10)
-        let count = TouchBarHistory.columnCount(width: region.width)
-        let columns = TouchBarHistory.columns(history, count: count)
-        guard !columns.isEmpty else { return }
-        let gap: CGFloat = 1
-        let columnWidth = (region.width - gap * CGFloat(count - 1)) / CGFloat(count)
-        // Right-aligned, so a short history grows in from where the newest sample is.
-        let start = region.maxX - CGFloat(columns.count) * (columnWidth + gap) + gap
-        let dimmed = color.withAlphaComponent(0.45)
-        for (index, height) in columns.enumerated() {
-            (index == columns.count - 1 ? color : dimmed).setFill()
-            NSRect(x: start + CGFloat(index) * (columnWidth + gap), y: region.minY, width: columnWidth, height: region.height * CGFloat(height)).fill()
-        }
+        TouchBarPaint.columns(history, in: region, color: color)
     }
 
     /// Strain, not the fill, picks the colour — so memory that is full but
     /// healthy stays grey, the same rule the panel's dots follow.
     private func drawSignal() {
-        let band = StrainBand(strain: snapshot.strain(for: kind))
-        let isCalm = band == .calm
-        TouchBarPalette.fillChip(isCalm ? Theme.TouchBar.chip : Theme.nsStatusTint(band), in: bounds, radius: 6)
-        let text: NSColor = isCalm ? .white.withAlphaComponent(0.78) : .black.withAlphaComponent(0.85)
+        let text = TouchBarPaint.signal(snapshot.strain(for: kind), in: bounds, radius: 6)
         drawRow(
             in: bounds.insetBy(dx: 9, dy: 0),
             titleFont: .systemFont(ofSize: 8, weight: .bold),
@@ -300,18 +250,7 @@ final class TouchBarMetricView: NSView {
 
     private func drawTinted(color: NSColor, context: CGContext) {
         let rect = bounds.insetBy(dx: 0.5, dy: 1.5)
-        let path = NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8)
-        color.withAlphaComponent(0.18).setFill()
-        path.fill()
-        path.lineWidth = 0.5
-        color.withAlphaComponent(0.4).setStroke()
-        path.stroke()
-
-        context.saveGState()
-        path.addClip()
-        color.setFill()
-        NSRect(x: rect.minX, y: rect.minY, width: rect.width * fraction, height: 2).fill()
-        context.restoreGState()
+        TouchBarPaint.tint(NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8), level: fraction, color: color, in: context)
 
         drawRow(
             in: rect.insetBy(dx: 9, dy: 0).offsetBy(dx: 0, dy: 1),
@@ -381,38 +320,6 @@ final class TouchBarMetricView: NSView {
         let dot = NSRect(x: bounds.maxX - diameter - 6, y: bounds.maxY - diameter - 5, width: diameter, height: diameter)
         color.setFill()
         NSBezierPath(ovalIn: dot).fill()
-    }
-
-    /// The history as a line with a faint fill under it. `fillsToEdge` runs the
-    /// fill down to the bottom of the cell rather than of `rect`.
-    private func drawCurve(in rect: NSRect, color: NSColor, lineWidth: CGFloat, fillAlpha: CGFloat, fillsToEdge: Bool = false) {
-        guard history.count > 1 else { return }
-        let window = TouchBarHistory.window(for: history)
-        let step = rect.width / CGFloat(history.count - 1)
-        let path = NSBezierPath()
-        path.lineWidth = lineWidth
-        path.lineCapStyle = .round
-        path.lineJoinStyle = .round
-
-        for (index, value) in history.enumerated() {
-            let normalised = TouchBarHistory.normalised(value, in: window)
-            let point = NSPoint(
-                x: rect.minX + CGFloat(index) * step,
-                y: rect.minY + CGFloat(normalised) * (rect.height - 2) + 1
-            )
-            if index == 0 { path.move(to: point) } else { path.line(to: point) }
-        }
-
-        let floor = fillsToEdge ? bounds.minY : rect.minY
-        let fill = path.copy() as! NSBezierPath
-        fill.line(to: NSPoint(x: rect.maxX, y: floor))
-        fill.line(to: NSPoint(x: rect.minX, y: floor))
-        fill.close()
-        color.withAlphaComponent(fillAlpha).setFill()
-        fill.fill()
-
-        color.setStroke()
-        path.stroke()
     }
 
     /// What the value could say, best first. Byte- and rate-valued metrics fall

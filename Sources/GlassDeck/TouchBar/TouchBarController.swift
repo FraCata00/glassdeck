@@ -370,6 +370,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     private func applyStyle() {
         let style = preferences.touchBarStyle
         batteryView.style = style
+        detailView.style = style
         for (kind, view) in metricViews where view.style != style {
             view.style = style
             // `refresh` stopped feeding the history while the old style did not
@@ -447,6 +448,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
             let item = NSCustomTouchBarItem(identifier: identifier)
             if let kind = mode.expandedMetric {
                 detailView.kind = kind
+                detailView.style = preferences.touchBarStyle
                 detailView.snapshot = monitor.snapshot
                 detailView.history = monitor.history(for: kind)
             }
