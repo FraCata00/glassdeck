@@ -7,7 +7,26 @@ import GlassDeckKit
 /// fills from the bottom, the metric's short name, and its current value.
 final class TouchBarStripView: NSView {
     var metrics: [MetricKind] = MetricKind.defaultSelection { didSet { invalidateIntrinsicContentSize(); needsDisplay = true } }
-    var snapshot: MetricsSnapshot = .empty { didSet { needsDisplay = true } }
+    /// Redrawn only when a chip would come out different: a snapshot is new on
+    /// every sample by its timestamp alone, while what the chips show — a whole
+    /// percentage, a level a pixel tall — often has not moved at all.
+    var snapshot: MetricsSnapshot = .empty {
+        didSet { if chips() != drawnChips { needsDisplay = true } }
+    }
+
+    /// What one chip shows, down to the pixel and no further.
+    private struct Chip: Equatable {
+        let value: String
+        let level: Int
+    }
+
+    /// What the last `draw` put on the bar.
+    private var drawnChips: [Chip] = []
+
+    private func chips() -> [Chip] {
+        // The level is 28 pt tall on a 2x panel: 56 distinguishable steps.
+        metrics.map { Chip(value: shortValue(for: $0), level: Int((snapshot.fraction(for: $0).clamped01 * 56).rounded())) }
+    }
 
     /// Width of a single metric chip, chosen so four metrics stay inside the slot
     /// the Control Strip grants a tray item.
@@ -35,6 +54,7 @@ final class TouchBarStripView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         context.clear(dirtyRect)
+        drawnChips = chips()
 
         for (index, kind) in metrics.enumerated() {
             let origin = CGFloat(index) * (chipWidth + chipSpacing)

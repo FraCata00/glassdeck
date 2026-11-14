@@ -10,6 +10,20 @@ final class TouchBarMetricView: NSView {
     var history: [Double] = [] { didSet { needsDisplay = true } }
     /// Panels are narrower on the shorter bar that leaves the Control Strip in place.
     var width: CGFloat = 168 { didSet { invalidateIntrinsicContentSize(); needsDisplay = true } }
+
+    /// The last answer `fitting` gave for the title and for the value.
+    ///
+    /// Measuring text was more than half of what drawing a panel cost, and it
+    /// was done twice on every sample for strings that had not changed: the
+    /// title never does, and the value only when the reading moves.
+    private var fittedTitle: Fit?
+    private var fittedValue: Fit?
+
+    private struct Fit {
+        let candidates: [String]
+        let width: CGFloat
+        let text: String
+    }
     /// Tapping a panel expands it into the metric's own bar.
     var onTap: (() -> Void)?
 
@@ -68,14 +82,14 @@ final class TouchBarMetricView: NSView {
         let valueFont = NSFont.monospacedDigitSystemFont(ofSize: isCompact ? 11 : 12, weight: .semibold)
 
         draw(
-            text: Self.fitting([kind.title.uppercased(), kind.shortTitle], font: titleFont, within: labelWidth),
+            text: fitting([kind.title.uppercased(), kind.shortTitle], font: titleFont, within: labelWidth, cache: &fittedTitle),
             in: NSRect(x: 8, y: bounds.height - 14, width: labelWidth, height: 11),
             font: titleFont,
             color: color.withAlphaComponent(0.9),
             alignment: .left
         )
         draw(
-            text: Self.fitting(headlineCandidates, font: valueFont, within: labelWidth),
+            text: fitting(headlineCandidates, font: valueFont, within: labelWidth, cache: &fittedValue),
             in: NSRect(x: 8, y: 3, width: labelWidth, height: 14),
             font: valueFont,
             color: .white,
@@ -147,6 +161,15 @@ final class TouchBarMetricView: NSView {
     private static func fitting(_ candidates: [String], font: NSFont, within width: CGFloat) -> String {
         candidates.first { ($0 as NSString).size(withAttributes: [.font: font]).width <= width }
             ?? candidates.last ?? ""
+    }
+
+    /// As above, measured only when the candidates or the width have changed.
+    /// The font follows from the width, so it needs no place in the key.
+    private func fitting(_ candidates: [String], font: NSFont, within width: CGFloat, cache: inout Fit?) -> String {
+        if let cache, cache.candidates == candidates, cache.width == width { return cache.text }
+        let text = Self.fitting(candidates, font: font, within: width)
+        cache = Fit(candidates: candidates, width: width, text: text)
+        return text
     }
 
     /// Vertical range the curve is drawn in.
