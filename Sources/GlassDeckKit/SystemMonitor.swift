@@ -84,13 +84,24 @@ public final class SystemMonitor {
     /// Counted rather than flagged: the menu bar panel and the dashboard can be
     /// open at the same time, and whichever of them closes first must not switch
     /// the scan off under the other.
-    private var processObservers = 0
+    @ObservationIgnored private var processObservers = 0
 
-    private var lastCoarsePublish: Date?
-    private var history: [MetricKind: RingBuffer<Double>] = [:]
+    @ObservationIgnored private var lastCoarsePublish: Date?
+    /// Left out of observation on purpose: it changes in the same breath as
+    /// `snapshot`, which every surface that draws a history already reads, so
+    /// tracking it too only bought nine more notifications per sample.
+    @ObservationIgnored private var history: [MetricKind: RingBuffer<Double>] = [:]
     private let engine = MetricsEngine()
-    private var task: Task<Void, Never>?
-    private var powerSources: PowerSourceObserver?
+    @ObservationIgnored private var task: Task<Void, Never>?
+    @ObservationIgnored private var powerSources: PowerSourceObserver?
+
+    /// How much of the interval the loop lets the system move a wake-up by.
+    ///
+    /// A timer with no leeway has to fire on its own; one with a little can be
+    /// folded into a wake-up the machine was already going to make. The rates
+    /// are worked out from the real time between samples, so a tick that lands
+    /// a tenth late reports the same numbers.
+    static let wakeTolerance = 0.1
 
     public init(interval: TimeInterval = SystemMonitor.defaultInterval) {
         self.interval = interval
@@ -187,7 +198,13 @@ public final class SystemMonitor {
         task = nil
         guard isRunning, !isSuspended else { return }
 
-        task = Task { [weak self] in
+        // Utility rather than the user-initiated priority a task started from
+        // the main actor inherits: the engine runs at the priority of whoever
+        // is waiting on it, and at utility the scheduler is free to keep the
+        // sampling on the efficiency cores. Nothing here is worth a
+        // performance core — a reading that lands a few milliseconds later is
+        // the same reading.
+        task = Task(priority: .utility) { [weak self] in
             // A leading sample makes the window feel instant when it opens.
             // The loop owns no strong reference, so it retires on its own once
             // the monitor is deallocated.
@@ -197,7 +214,11 @@ public final class SystemMonitor {
                 // Power Mode is picked up at the next tick without the loop
                 // having to be torn down and rebuilt to notice.
                 guard let self else { return }
-                try? await Task.sleep(for: .seconds(self.effectiveInterval))
+                let interval = self.effectiveInterval
+                try? await Task.sleep(
+                    for: .seconds(interval),
+                    tolerance: .seconds(interval * Self.wakeTolerance)
+                )
                 guard !Task.isCancelled else { return }
                 await self.tick()
             }
