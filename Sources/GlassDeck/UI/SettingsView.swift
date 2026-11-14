@@ -15,25 +15,13 @@ enum SettingsPage: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    enum Group: CaseIterable {
-        case essentials, monitor, modules
-
-        var title: Text {
-            switch self {
-            case .essentials: Text("Essentials")
-            case .monitor: Text("Monitor")
-            case .modules: Text("Modules")
-            }
-        }
-    }
-
-    var group: Group {
-        switch self {
-        case .general, .menuBar, .touchBar: .essentials
-        case .panel, .alerts: .monitor
-        case .bluetooth, .clocks: .modules
-        }
-    }
+    /// The sidebar's three runs of pages, set apart by space rather than by
+    /// headings, the way System Settings groups its own.
+    static let groups: [[SettingsPage]] = [
+        [.general, .menuBar, .touchBar],
+        [.panel, .alerts],
+        [.bluetooth, .clocks],
+    ]
 
     var title: String {
         switch self {
@@ -49,13 +37,39 @@ enum SettingsPage: String, CaseIterable, Identifiable {
 
     var symbol: String {
         switch self {
-        case .general: "gearshape"
+        case .general: "gearshape.fill"
         case .menuBar: "menubar.rectangle"
-        case .touchBar: "rectangle.and.hand.point.up.left"
-        case .panel: "square.grid.2x2"
-        case .alerts: "bell"
+        case .touchBar: "rectangle.and.hand.point.up.left.fill"
+        case .panel: "square.grid.2x2.fill"
+        case .alerts: "bell.badge.fill"
         case .bluetooth: ModuleKind.bluetooth.symbolName
         case .clocks: ModuleKind.clock.symbolName
+        }
+    }
+
+    /// The colour of the page's icon tile.
+    var tint: Color {
+        switch self {
+        case .general: .gray
+        case .menuBar: .blue
+        case .touchBar: .indigo
+        case .panel: .teal
+        case .alerts: .red
+        case .bluetooth: .blue
+        case .clocks: .orange
+        }
+    }
+
+    /// The sentence under the page's title.
+    var summary: Text {
+        switch self {
+        case .general: Text("How often GlassDeck samples and how it starts. Nothing here uses the network.")
+        case .menuBar: Text("What the icon in the menu bar shows. It is redrawn only when the label would actually look different.")
+        case .touchBar: Text("How GlassDeck is drawn on the Touch Bar, where it sits, and which metrics it shows.")
+        case .panel: Text("The metrics in the panel and the dashboard. The order set here is shared by every surface.")
+        case .alerts: Text("Notifications when something needs attention. They read the slow reading, at most every two seconds.")
+        case .bluetooth: Text("The charge of every paired device that reports one. A device that is not connected keeps publishing the level it was last seen at, so those rows are dimmed and marked rather than hidden.")
+        case .clocks: Text("Rename a row to whatever the clock is for. Drag to reorder.")
         }
     }
 
@@ -80,44 +94,58 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     }
 }
 
-/// Settings window: a sidebar of pages, each a stack of cards.
+/// Settings window, laid out the way System Settings is: a searchable sidebar
+/// of pages beside grouped forms.
+///
+/// Built from the system's own containers and controls rather than drawn by
+/// hand, so that on macOS 26 the sidebar floats as Liquid Glass and every
+/// switch, menu and slider is the current system control — and on macOS 15
+/// the same window is simply the earlier look, with nothing to fall back from.
 struct SettingsView: View {
     @Environment(Preferences.self) private var preferences
     @Environment(TouchBarController.self) private var touchBar
     @Environment(SystemMonitor.self) private var monitor
     @Environment(ClockTicker.self) private var clock
-    @Environment(\.controlActiveState) private var controlActiveState
 
     @State private var page: SettingsPage
+    /// The pages visited before and after the current one, for the toolbar's
+    /// back and forward buttons.
+    @State private var back: [SettingsPage] = []
+    @State private var forward: [SettingsPage] = []
     @State private var query = ""
-    @State private var touchBarPart: TouchBarPart = .style
     @State private var launchesAtLogin = LoginItem.isEnabled
     @State private var live = LiveReadings()
-
-    enum TouchBarPart: Hashable { case style, placement, metrics }
 
     init(page: SettingsPage = .general) {
         _page = State(initialValue: page)
     }
 
     var body: some View {
-        HStack(spacing: 0) {
+        NavigationSplitView {
             sidebar
-            Divider()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
-                    content
-                }
-                .padding(20)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        } detail: {
+            Form {
+                header(page)
+                content(page)
             }
+            .formStyle(.grouped)
             .id(page)
+            .toolbar {
+                ToolbarItemGroup(placement: .navigation) {
+                    Button { step(from: &back, to: &forward) } label: {
+                        Label("Back", systemImage: "chevron.left")
+                    }
+                    .disabled(back.isEmpty)
+                    Button { step(from: &forward, to: &back) } label: {
+                        Label("Forward", systemImage: "chevron.right")
+                    }
+                    .disabled(forward.isEmpty)
+                }
+            }
         }
-        .frame(width: SettingsMetrics.windowSize.width, height: SettingsMetrics.windowSize.height)
-        // Glass buttons in a plain window otherwise come out as rounded
-        // rectangles, which read as ordinary push buttons; the capsule is
-        // what makes them read as Liquid Glass.
-        .buttonBorderShape(.capsule)
+        .background(WindowTitle(title: page.title))
+        .toggleStyle(.switch)
+        .frame(minWidth: SettingsMetrics.minimumSize.width, minHeight: SettingsMetrics.minimumSize.height)
         // The window outlives its closing — `isReleasedWhenClosed` is false — so
         // the gate the panel and the dashboard need applies here too.
         .tracksVisibility($live, monitor: monitor, clock: clock)
@@ -126,65 +154,70 @@ struct SettingsView: View {
     // MARK: - Sidebar
 
     private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Search settings", text: $query)
-                    .textFieldStyle(.plain)
-            }
-            .font(.system(size: 13))
-            .padding(.horizontal, 10)
-            .frame(height: 28)
-            .background(Theme.Settings.pill, in: Capsule())
-            .overlay(Capsule().strokeBorder(Color.primary.opacity(0.1)))
-            .padding(.bottom, 4)
-
-            ForEach(SettingsPage.Group.allCases, id: \.self) { group in
-                let pages = SettingsPage.allCases.filter { $0.group == group && $0.matches(query) }
-                if !pages.isEmpty {
-                    group.title
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 12)
-                        .padding(.bottom, 2)
-                        .padding(.leading, 8)
-                    ForEach(pages) { sidebarButton($0) }
+        List(selection: selection) {
+            ForEach(SettingsPage.groups.indices, id: \.self) { index in
+                Section {
+                    ForEach(SettingsPage.groups[index].filter { $0.matches(query) }) { item in
+                        Label {
+                            Text(item.title)
+                        } icon: {
+                            SettingsIcon(page: item, size: 20)
+                        }
+                        .tag(item)
+                    }
                 }
             }
-            Spacer(minLength: 0)
         }
-        .padding(10)
-        .frame(width: SettingsMetrics.sidebarWidth)
+        .searchable(text: $query, placement: .sidebar, prompt: Text("Search settings"))
+        .frame(minWidth: SettingsMetrics.sidebarWidth)
+        .navigationSplitViewColumnWidth(SettingsMetrics.sidebarWidth)
+        .toolbar(removing: .sidebarToggle)
     }
 
-    private func sidebarButton(_ item: SettingsPage) -> some View {
-        let isSelected = item == page
-        // An inactive window drains the accent out of the glass, and white
-        // text on the grey that is left is barely legible.
-        let isHighlighted = isSelected && controlActiveState != .inactive
-        return Button { page = item } label: {
-            HStack(spacing: 8) {
-                Image(systemName: item.symbol)
-                    .font(.system(size: 13))
-                    .foregroundStyle(isHighlighted ? Color.white : Color.accentColor)
-                    .frame(width: 18)
-                Text(item.title).font(.system(size: 13, weight: isSelected ? .semibold : .regular))
-                Spacer(minLength: 0)
+    /// The sidebar's selection. Choosing a page records the one left behind,
+    /// as a browser does, and forgets the pages that were ahead of it.
+    private var selection: Binding<SettingsPage?> {
+        Binding(
+            get: { page },
+            set: { chosen in
+                guard let chosen, chosen != page else { return }
+                back.append(page)
+                forward.removeAll()
+                page = chosen
             }
-            .padding(.horizontal, 10)
-            .frame(height: 28)
-            .foregroundStyle(isHighlighted ? Color.white : Color.primary)
-            .modifier(SidebarSelection(isSelected: isSelected))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        )
+    }
+
+    /// Moves one page through the history: the current page goes on `other`,
+    /// and the last one on `stack` becomes current.
+    private func step(from stack: inout [SettingsPage], to other: inout [SettingsPage]) {
+        guard let next = stack.popLast() else { return }
+        other.append(page)
+        page = next
     }
 
     // MARK: - Pages
 
+    /// The large icon, the title and what the page is for, at the head of
+    /// every page as System Settings has it.
+    private func header(_ page: SettingsPage) -> some View {
+        Section {
+            VStack(spacing: 8) {
+                SettingsIcon(page: page, size: 48)
+                Text(page.title).font(.title2.weight(.semibold))
+                page.summary
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+        }
+    }
+
     @ViewBuilder
-    private var content: some View {
+    private func content(_ page: SettingsPage) -> some View {
         switch page {
         case .general: general
         case .menuBar: menuBar
@@ -196,363 +229,238 @@ struct SettingsView: View {
         }
     }
 
-    private func pageTitle(_ page: SettingsPage) -> some View {
-        Text(page.title).font(.system(size: 15, weight: .bold))
-    }
-
+    @ViewBuilder
     private var general: some View {
         @Bindable var preferences = preferences
-        return Group {
-            SettingsIntroCard(header: { pageTitle(.general) }, text: Text("How often GlassDeck samples and how it starts. Nothing here uses the network."))
+        Section {
+            LabeledContent {
+                Slider(value: $preferences.refreshInterval, in: 0.5...5, step: 0.5)
+                    .labelsHidden()
+                    .frame(width: 180)
+            } label: {
+                Text("Refresh interval")
+                Text("Sampling every \(ValueFormatter.seconds(preferences.refreshInterval))s. Lower is snappier, higher is kinder to the battery.")
+            }
+        }
 
-            SettingsSectionHeader(Text("Sampling"))
-            SettingsCard {
-                SettingsRow(
-                    symbol: "timer",
-                    title: Text("Refresh interval"),
-                    subtitle: Text("Sampling every \(ValueFormatter.seconds(preferences.refreshInterval))s. Lower is snappier, higher is kinder to the battery.")
-                ) {
-                    Slider(value: $preferences.refreshInterval, in: 0.5...5, step: 0.5)
-                        .frame(width: 150)
-                        .labelsHidden()
+        Section {
+            // Written through a binding rather than `onChange` so that only the
+            // user's own taps register the login item: refreshing the switch
+            // from the system below must not write back.
+            Toggle(isOn: Binding(
+                get: { launchesAtLogin },
+                set: { wanted in
+                    launchesAtLogin = LoginItem.setEnabled(wanted) ? wanted : LoginItem.isEnabled
                 }
+            )) {
+                Text("Open at login")
+                Text("Starts in the menu bar, with no Dock icon.")
             }
-
-            SettingsSectionHeader(Text("Start-up"))
-            SettingsCard {
-                SettingsRow(symbol: "power", title: Text("Open at login"), subtitle: Text("Starts in the menu bar, with no Dock icon.")) {
-                    // Written through a binding rather than `onChange` so that only
-                    // the user's own taps register the login item: refreshing the
-                    // toggle from the system below must not write back.
-                    Toggle("Open at login", isOn: Binding(
-                        get: { launchesAtLogin },
-                        set: { wanted in
-                            launchesAtLogin = LoginItem.setEnabled(wanted) ? wanted : LoginItem.isEnabled
-                        }
-                    ))
-                    .settingsSwitch()
-                }
-            }
-            // The switch also lives in System Settings, so the window can be
-            // sitting on a stale answer by the time it is looked at again.
-            .onAppear { launchesAtLogin = LoginItem.isEnabled }
-            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-                launchesAtLogin = LoginItem.isEnabled
-            }
+        }
+        // The switch also lives in System Settings, so the window can be
+        // sitting on a stale answer by the time it is looked at again.
+        .onAppear { launchesAtLogin = LoginItem.isEnabled }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            launchesAtLogin = LoginItem.isEnabled
         }
     }
 
+    @ViewBuilder
     private var menuBar: some View {
         @Bindable var preferences = preferences
-        return Group {
-            SettingsIntroCard(header: { pageTitle(.menuBar) }, text: Text("What the icon in the menu bar shows. It is redrawn only when the label would actually look different."))
-
-            SettingsSectionHeader(Text("Label"))
-            SettingsCard {
-                SettingsRow(symbol: "menubar.rectangle", title: Text("Menu bar")) {
-                    Picker("Menu bar", selection: $preferences.menuBarStyle) {
-                        ForEach(Preferences.MenuBarStyle.allCases) { style in
-                            Text(style.title).tag(style)
-                        }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
-                }
-                SettingsRowDivider()
-                // Only what this Mac can actually report: offering "Fans" on a
-                // fanless Mac just pins the status item to n/a.
-                SettingsRow(symbol: "chart.bar", title: Text("Menu bar metric")) {
-                    WithSnapshot(readings: live, monitor: monitor) { snapshot in
-                        Picker("Menu bar metric", selection: $preferences.menuBarMetric) {
-                            ForEach(Self.reportableMetrics(in: snapshot)) { kind in
-                                Text(kind.title).tag(kind)
-                            }
-                        }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
-                    .disabled(preferences.menuBarStyle == .graph)
+        Section {
+            Picker("Menu bar", selection: $preferences.menuBarStyle) {
+                ForEach(Preferences.MenuBarStyle.allCases) { style in
+                    Text(style.title).tag(style)
                 }
             }
+            // Only what this Mac can actually report: offering "Fans" on a
+            // fanless Mac just pins the status item to n/a.
+            WithSnapshot(readings: live, monitor: monitor) { snapshot in
+                Picker("Menu bar metric", selection: $preferences.menuBarMetric) {
+                    ForEach(Self.reportableMetrics(in: snapshot)) { kind in
+                        Text(kind.title).tag(kind)
+                    }
+                }
+            }
+            .disabled(preferences.menuBarStyle == .graph)
         }
     }
 
     // MARK: Touch Bar
 
+    @ViewBuilder
     private var touchBarPage: some View {
-        Group {
-            switch touchBarPart {
-            case .style: touchBarStyle
-            case .placement: touchBarPlacement
-            case .metrics: touchBarMetrics
-            }
-        }
-    }
-
-    private var touchBarSegments: some View {
-        SettingsSegments(
-            options: [
-                (TouchBarPart.style, Text("Style")),
-                (TouchBarPart.placement, Text("Placement")),
-                (TouchBarPart.metrics, Text("Metrics")),
-            ],
-            selection: $touchBarPart
-        )
-    }
-
-    private var touchBarStyle: some View {
-        Group {
-            SettingsIntroCard(
-                header: { touchBarSegments },
-                text: Text("Choose how the metric panels are drawn on the Touch Bar. Only the painting changes: sampling stays exactly the same.")
-            ) {
-                Text("Style in use: \(preferences.touchBarStyle.title)").foregroundStyle(.secondary)
-                Spacer()
-                Button("Reset") { preferences.touchBarStyle = .glass }
-                    .glassButton()
-                    .disabled(preferences.touchBarStyle == .glass)
-            }
-
-            SettingsSectionHeader(Text("Strip style"))
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
-                ForEach(TouchBarStyle.allCases) { style in
-                    styleCard(style)
-                }
-            }
-            .padding(10)
-            .settingsCardBackground()
-            SettingsFootnote(Text("Applies to the full-width and compact bar. The Control Strip meter and a metric's detail keep their own look."))
-            if !touchBar.isSupported { noTouchBarNotice }
-        }
-    }
-
-    private func styleCard(_ style: TouchBarStyle) -> some View {
-        let isInUse = preferences.touchBarStyle == style
-        return VStack(alignment: .leading, spacing: 6) {
-            TouchBarStylePreview(style: style)
-                .frame(height: 30)
-                .padding(4)
-                .background(Color.black, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-                .accessibilityHidden(true)
-            Text(style.title).font(Typography.title)
-            Text(style.summary)
-                .font(Typography.body)
-                .foregroundStyle(.secondary)
-                .lineLimit(2, reservesSpace: true)
-            Button(isInUse ? "In use" : "Apply") { preferences.touchBarStyle = style }
-                .glassButton(prominent: isInUse)
-                .allowsHitTesting(!isInUse)
-        }
-        .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.Settings.card, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(Color.accentColor, lineWidth: isInUse ? 2 : 0)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(isInUse ? [.isSelected] : [])
-    }
-
-    private var touchBarPlacement: some View {
         @Bindable var preferences = preferences
         let isEnabled = preferences.isTouchBarEnabled
-        return Group {
-            SettingsIntroCard(
-                header: { touchBarSegments },
-                text: Text("Where GlassDeck sits on the Touch Bar, and how it hands the bar to other apps.")
-            )
 
-            SettingsSectionHeader(Text("Presentation"))
-            SettingsCard {
-                SettingsRow(symbol: "rectangle.and.hand.point.up.left", title: Text("Show GlassDeck on the Touch Bar")) {
-                    Toggle("Show GlassDeck on the Touch Bar", isOn: $preferences.isTouchBarEnabled).settingsSwitch()
-                }
-                SettingsRowDivider()
-                SettingsRow(
-                    symbol: "rectangle.split.3x1",
-                    title: Text("Placement"),
-                    subtitle: Text(preferences.touchBarPresentation.explanation)
-                ) {
-                    Picker("Placement", selection: $preferences.touchBarPresentation) {
-                        ForEach(Preferences.TouchBarPresentation.allCases) { mode in
-                            Text(mode.title).tag(mode)
-                        }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
-                    .disabled(!isEnabled)
-                }
-                SettingsRowDivider()
-                SettingsRow(symbol: "align.horizontal.right", title: Text("Position")) {
-                    Picker("Position", selection: $preferences.touchBarAlignment) {
-                        ForEach(Preferences.TouchBarAlignment.allCases) { alignment in
-                            Text(alignment.title).tag(alignment)
-                        }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
-                    .disabled(!isEnabled)
-                }
-                SettingsRowDivider()
-                SettingsRow(symbol: "command", title: Text("Hand-over shortcut")) {
-                    ShortcutRecorder(shortcut: $preferences.yieldShortcut) { touchBar.suspendShortcut($0) }
-                        .disabled(!isEnabled)
+        if !touchBar.isSupported {
+            Section {
+                Label("No Touch Bar detected on this Mac. The setting is kept for when GlassDeck runs on one.", systemImage: "info.circle")
+                    .foregroundStyle(.secondary)
+            }
+        }
+
+        Section {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 14) {
+                ForEach(TouchBarStyle.allCases) { style in
+                    styleTile(style)
                 }
             }
-            SettingsFootnote(Text("The shrink button steps down through full width, the compact bar and a small meter; only a tap on the smallest one hands the Touch Bar back, and the Control Strip meter brings it straight back."))
-            if !touchBar.isSupported { noTouchBarNotice }
+            .padding(.vertical, 4)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Detail, when a panel is tapped")
+                TouchBarDetailPreview(style: preferences.touchBarStyle)
+                    .aspectRatio(TouchBarDetailPreview.aspectRatio, contentMode: .fit)
+                    .touchBarPreviewFrame()
+            }
+        } header: {
+            Text("Style")
+        } footer: {
+            Text("\(preferences.touchBarStyle.summary) Applies to the full and compact bar, and to a metric's detail.")
+        }
+
+        Section {
+            Toggle("Show GlassDeck on the Touch Bar", isOn: $preferences.isTouchBarEnabled)
+            Picker(selection: $preferences.touchBarPresentation) {
+                ForEach(Preferences.TouchBarPresentation.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            } label: {
+                Text("Placement")
+                Text(preferences.touchBarPresentation.explanation)
+            }
+            .disabled(!isEnabled)
+            Picker("Position", selection: $preferences.touchBarAlignment) {
+                ForEach(Preferences.TouchBarAlignment.allCases) { alignment in
+                    Text(alignment.title).tag(alignment)
+                }
+            }
+            .disabled(!isEnabled)
+            LabeledContent("Hand-over shortcut") {
+                ShortcutRecorder(shortcut: $preferences.yieldShortcut) { touchBar.suspendShortcut($0) }
+            }
+            .disabled(!isEnabled)
+        } header: {
+            Text("Presentation")
+        } footer: {
+            Text("The shrink button steps down through full width, the compact bar and a small meter; only a tap on the smallest one hands the Touch Bar back, and the Control Strip meter brings it straight back.")
+        }
+
+        Section {
+            ForEach(preferences.metricOrder) { kind in
+                metricToggle(kind, in: \.touchBarMetrics)
+            }
+        } header: {
+            Text("Metrics")
+        } footer: {
+            Text("Their order is the one set in Panel and dashboard.")
         }
     }
 
-    private var touchBarMetrics: some View {
-        let selected = selectedCount(\.touchBarMetrics)
-        return Group {
-            SettingsIntroCard(
-                header: { touchBarSegments },
-                text: Text("Which metrics appear on the Touch Bar. Their order is the one set in Panel and dashboard.")
-            ) {
-                Text("\(selected) of \(preferences.metricOrder.count) metrics on the Touch Bar").foregroundStyle(.secondary)
+    /// One style as System Settings shows a choice of appearance: a picture
+    /// of it, its name underneath, and a ring round the one in use.
+    private func styleTile(_ style: TouchBarStyle) -> some View {
+        let isSelected = preferences.touchBarStyle == style
+        return Button { preferences.touchBarStyle = style } label: {
+            VStack(spacing: 6) {
+                TouchBarStylePreview(style: style)
+                    .frame(height: 30)
+                    .touchBarPreviewFrame(isSelected: isSelected)
+                Text(style.title)
+                    .font(.callout.weight(isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? .primary : .secondary)
             }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(style.summary)
+        .accessibilityLabel(style.title)
+        .accessibilityHint(style.summary)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
 
-            SettingsSectionHeader(Text("Metrics in the Touch Bar strip"))
-            SettingsCard {
-                ForEach(Array(preferences.metricOrder.enumerated()), id: \.element) { index, kind in
-                    if index > 0 { SettingsRowDivider() }
-                    SettingsRow(symbol: kind.symbolName, title: Text(kind.title), tag: costTag(for: kind)) {
-                        Toggle(kind.title, isOn: binding(for: kind, keyPath: \.touchBarMetrics)).settingsSwitch()
-                    }
+    /// A metric's switch, with what reading it costs where that is worth
+    /// knowing before switching it on.
+    private func metricToggle(_ kind: MetricKind, in keyPath: ReferenceWritableKeyPath<Preferences, [MetricKind]>) -> some View {
+        Toggle(isOn: binding(for: kind, keyPath: keyPath)) {
+            Label {
+                Text(kind.title)
+                if let interval = kind.smcCacheInterval {
+                    Text("SMC, cached \(Int(interval)) s")
                 }
+            } icon: {
+                Image(systemName: kind.symbolName)
+                    .foregroundStyle(Theme.accent(kind))
+                    .frame(width: 20)
             }
         }
-    }
-
-    private var noTouchBarNotice: some View {
-        Label("No Touch Bar detected on this Mac. The setting is kept for when GlassDeck runs on one.", systemImage: "info.circle")
-            .font(Typography.body)
-            .foregroundStyle(.secondary)
-    }
-
-    /// The readings that cost a kernel round trip per key, and how long each is
-    /// kept. Worth saying beside the switch, since turning one on is what makes
-    /// the SMC get asked at all.
-    private func costTag(for kind: MetricKind) -> Text? {
-        kind.smcCacheInterval.map { Text("SMC, cached \(Int($0)) s") }
     }
 
     // MARK: Monitor
 
-    /// A `List` inside the card, because rows have to be draggable and only a
-    /// list carries `onMove` on macOS. It does not scroll on its own: the page
-    /// does, and it is given the height of its rows.
+    @ViewBuilder
     private var panel: some View {
         @Bindable var preferences = preferences
-        let selected = selectedCount(\.dashboardMetrics)
-        return Group {
-            SettingsIntroCard(
-                header: { pageTitle(.panel) },
-                text: Text("The metrics in the panel and the dashboard. The order set here is shared by every surface.")
-            ) {
-                Text("\(selected) of \(preferences.metricOrder.count) metrics shown").foregroundStyle(.secondary)
+        Section {
+            ForEach(preferences.metricOrder) { kind in
+                metricToggle(kind, in: \.dashboardMetrics)
             }
+            .onMove { self.preferences.moveMetrics(fromOffsets: $0, toOffset: $1) }
+        } header: {
+            Text("Metrics")
+        } footer: {
+            Text("Drag to reorder. The order is shared by the panel, the Touch Bar and the menu bar.")
+        }
 
-            SettingsSectionHeader(Text("Shown in the panel and dashboard"))
-            List {
-                ForEach(preferences.metricOrder) { kind in
-                    SettingsRow(symbol: kind.symbolName, title: Text(kind.title), tag: costTag(for: kind)) {
-                        Toggle(kind.title, isOn: binding(for: kind, keyPath: \.dashboardMetrics)).settingsSwitch()
-                    }
-                    .listRowSeparator(.visible)
-                    .listRowBackground(Color.clear)
-                }
-                .onMove { self.preferences.moveMetrics(fromOffsets: $0, toOffset: $1) }
-            }
-            .settingsEmbeddedList(rows: preferences.metricOrder.count, rowHeight: SettingsMetrics.metricRowHeight)
-            SettingsFootnote(Text("Drag to reorder. The order is shared by the panel, the Touch Bar and the menu bar."))
-
-            SettingsSectionHeader(Text("Processes"))
-            SettingsCard {
-                SettingsRow(
-                    symbol: "list.bullet.rectangle",
-                    title: Text("Show top processes"),
-                    subtitle: Text("Sampled only while the panel is open."),
-                    tag: Text("Only while visible")
-                ) {
-                    Toggle("Show top processes", isOn: $preferences.showsProcesses).settingsSwitch()
-                }
+        Section {
+            Toggle(isOn: $preferences.showsProcesses) {
+                Text("Show top processes")
+                Text("Sampled only while the panel is open.")
             }
         }
     }
 
+    @ViewBuilder
     private var alerts: some View {
         @Bindable var preferences = preferences
-        return Group {
-            SettingsIntroCard(
-                header: { pageTitle(.alerts) },
-                text: Text("Notifications when something needs attention. They read the slow reading, at most every two seconds.")
-            )
-
-            SettingsSectionHeader(Text("When to warn"))
-            SettingsCard {
-                WithSnapshot(readings: live, monitor: monitor) { snapshot in
-                    if snapshot.supports(.temperature) {
-                        SettingsRow(
-                            symbol: "thermometer.medium",
-                            title: Text("Warn when the Mac runs hot"),
-                            subtitle: Text("A notification once the hottest sensor passes \(Int(preferences.temperatureThreshold))°C, and not again until it has cooled down."),
-                            tag: costTag(for: .temperature)
-                        ) {
-                            Toggle("Warn when the Mac runs hot", isOn: alertBinding(\.isTemperatureAlertEnabled))
-                                .settingsSwitch()
-                        }
-                        if preferences.isTemperatureAlertEnabled {
-                            SettingsRowDivider()
-                            SettingsRow(symbol: "dial.medium", title: Text("Warn above")) {
-                                HStack(spacing: 8) {
-                                    Slider(value: $preferences.temperatureThreshold, in: 60...100, step: 5)
-                                        .frame(width: 130)
-                                        .labelsHidden()
-                                    Text(verbatim: ValueFormatter.celsius(preferences.temperatureThreshold))
-                                        .font(.system(size: 12))
-                                        .monospacedDigit()
-                                        .frame(width: 40, alignment: .trailing)
-                                }
+        Section {
+            WithSnapshot(readings: live, monitor: monitor) { snapshot in
+                if snapshot.supports(.temperature) {
+                    Toggle(isOn: alertBinding(\.isTemperatureAlertEnabled)) {
+                        Text("Warn when the Mac runs hot")
+                        Text("A notification once the hottest sensor passes \(Int(preferences.temperatureThreshold))°C, and not again until it has cooled down.")
+                    }
+                    if preferences.isTemperatureAlertEnabled {
+                        LabeledContent("Warn above") {
+                            HStack(spacing: 8) {
+                                Slider(value: $preferences.temperatureThreshold, in: 60...100, step: 5)
+                                    .labelsHidden()
+                                    .frame(width: 150)
+                                Text(verbatim: ValueFormatter.celsius(preferences.temperatureThreshold))
+                                    .monospacedDigit()
+                                    .frame(width: 40, alignment: .trailing)
                             }
                         }
-                        SettingsRowDivider()
                     }
                 }
-                SettingsRow(
-                    symbol: "memorychip",
-                    title: Text("Warn when memory runs short"),
-                    subtitle: Text("A notification when macOS reports high memory pressure, and again if it turns critical. A full memory bar on its own is normal on a Mac.")
-                ) {
-                    Toggle("Warn when memory runs short", isOn: alertBinding(\.isMemoryPressureAlertEnabled))
-                        .settingsSwitch()
-                }
+            }
+            Toggle(isOn: alertBinding(\.isMemoryPressureAlertEnabled)) {
+                Text("Warn when memory runs short")
+                Text("A notification when macOS reports high memory pressure, and again if it turns critical. A full memory bar on its own is normal on a Mac.")
             }
         }
     }
 
     // MARK: Modules
 
+    @ViewBuilder
     private var bluetooth: some View {
-        Group {
-            SettingsIntroCard(
-                header: { pageTitle(.bluetooth) },
-                text: Text("The charge of every paired device that reports one. A device that is not connected keeps publishing the level it was last seen at, so those rows are dimmed and marked rather than hidden.")
-            )
-
-            SettingsSectionHeader(Text("Devices"))
-            SettingsCard {
-                SettingsRow(
-                    symbol: ModuleKind.bluetooth.symbolName,
-                    title: Text(ModuleKind.bluetooth.title),
-                    subtitle: Text("macOS asks for permission the first time this is switched on."),
-                    tag: Text("Asks for permission")
-                ) {
-                    Toggle(ModuleKind.bluetooth.title, isOn: moduleBinding(.bluetooth)).settingsSwitch()
-                }
+        Section {
+            Toggle(isOn: moduleBinding(.bluetooth)) {
+                Text(ModuleKind.bluetooth.title)
+                Text("macOS asks for permission the first time this is switched on.")
             }
             // Only once the module is on: with it off nothing is sampled, so
             // "nothing is reporting" would be true of every Mac.
@@ -560,7 +468,6 @@ struct SettingsView: View {
                 WithSnapshot(readings: live, monitor: monitor) { snapshot in
                     if !snapshot.bluetooth.isAvailable {
                         Label("Nothing paired is reporting a battery level right now.", systemImage: "info.circle")
-                            .font(Typography.body)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -568,12 +475,26 @@ struct SettingsView: View {
         }
     }
 
+    @ViewBuilder
     private var clocks: some View {
-        Group {
-            SettingsIntroCard(
-                header: { pageTitle(.clocks) },
-                text: Text("Rename a row to whatever the clock is for. Drag to reorder.")
-            ) {
+        Section {
+            Toggle(ModuleKind.clock.title, isOn: moduleBinding(.clock))
+            Picker("Show in the menu bar", selection: menuBarZoneBinding) {
+                Text("Off").tag(String?.none)
+                ForEach(preferences.clockZones) { zone in
+                    Text(zone.displayLabel).tag(String?.some(zone.identifier))
+                }
+            }
+            .disabled(preferences.clockZones.isEmpty)
+        }
+
+        Section("Time zones") {
+            ForEach(preferences.clockZones) { zone in
+                zoneRow(zone)
+            }
+            .onMove { self.preferences.moveClockZones(fromOffsets: $0, toOffset: $1) }
+
+            HStack {
                 Spacer()
                 Menu {
                     ForEach(Self.zoneRegions, id: \.name) { region in
@@ -588,40 +509,7 @@ struct SettingsView: View {
                 } label: {
                     Label("Add a time zone", systemImage: "plus")
                 }
-                .menuStyle(.button)
-                .glassButton()
                 .fixedSize()
-            }
-
-            SettingsSectionHeader(Text("Time zones"))
-            SettingsCard {
-                SettingsRow(symbol: ModuleKind.clock.symbolName, title: Text(ModuleKind.clock.title)) {
-                    Toggle(ModuleKind.clock.title, isOn: moduleBinding(.clock)).settingsSwitch()
-                }
-                SettingsRowDivider()
-                SettingsRow(symbol: "menubar.rectangle", title: Text("Show in the menu bar")) {
-                    Picker("Show in the menu bar", selection: menuBarZoneBinding) {
-                        Text("Off").tag(String?.none)
-                        ForEach(preferences.clockZones) { zone in
-                            Text(zone.displayLabel).tag(String?.some(zone.identifier))
-                        }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
-                    .disabled(preferences.clockZones.isEmpty)
-                }
-            }
-
-            if !preferences.clockZones.isEmpty {
-                List {
-                    ForEach(preferences.clockZones) { zone in
-                        zoneRow(zone)
-                            .padding(.vertical, 4)
-                            .listRowBackground(Color.clear)
-                    }
-                    .onMove { self.preferences.moveClockZones(fromOffsets: $0, toOffset: $1) }
-                }
-                .settingsEmbeddedList(rows: preferences.clockZones.count, rowHeight: SettingsMetrics.zoneRowHeight)
             }
         }
         // The rows preview a live time, and the ticker is otherwise asleep until
@@ -639,8 +527,8 @@ struct SettingsView: View {
                     set: { preferences.renameClockZone(zone.identifier, to: $0) }
                 )
             )
-            .textFieldStyle(.roundedBorder)
-            .frame(maxWidth: 150)
+            .labelsHidden()
+            .frame(maxWidth: 160)
 
             Text(zone.identifier)
                 .font(.caption)
@@ -652,7 +540,6 @@ struct SettingsView: View {
 
             if let timeZone = zone.timeZone {
                 Text(WorldClock.time(in: timeZone, at: clock.now))
-                    .font(Typography.label)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             }
@@ -708,11 +595,6 @@ struct SettingsView: View {
         )
     }
 
-    /// How many metrics a selection holds, counted against the full order.
-    private func selectedCount(_ keyPath: KeyPath<Preferences, [MetricKind]>) -> Int {
-        preferences.metricOrder.filter(preferences[keyPath: keyPath].contains).count
-    }
-
     private func moduleBinding(_ module: ModuleKind) -> Binding<Bool> {
         Binding(
             get: { preferences.panelModules.contains(module) },
@@ -752,17 +634,47 @@ private struct WithSnapshot<Content: View>: View {
     var body: some View { content(readings.snapshot(from: monitor)) }
 }
 
-/// The selected sidebar row: accent-tinted glass, so the selection reads as
-/// the material taking on colour — the app's selection language — rather than
-/// as a flat fill.
-private struct SidebarSelection: ViewModifier {
-    let isSelected: Bool
+/// Names the window after the page, which is the title System Settings shows
+/// in its toolbar. A hosting controller does not pass a split view's
+/// navigation title through to a window it did not open, so the title is set
+/// on the controller, whose title the window follows.
+private struct WindowTitle: NSViewRepresentable {
+    let title: String
 
-    func body(content: Content) -> some View {
-        if isSelected {
-            content.glassSurface(cornerRadius: 7, tint: .accentColor)
-        } else {
-            content
+    func makeNSView(context: Context) -> TitleView { TitleView() }
+
+    func updateNSView(_ view: TitleView, context: Context) {
+        view.title = title
+    }
+
+    final class TitleView: NSView {
+        var title = "" {
+            didSet { if title != oldValue { apply() } }
         }
+
+        // The first title arrives before the view is in a window.
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            apply()
+        }
+
+        private func apply() {
+            guard let controller = window?.contentViewController, controller.title != title else { return }
+            controller.title = title
+        }
+    }
+}
+
+private extension View {
+    /// The black of the bar behind a Touch Bar preview, ringed in the accent
+    /// colour when it is the style in use.
+    func touchBarPreviewFrame(isSelected: Bool = false) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.TouchBar.chipRadius, style: .continuous)
+        return padding(4)
+            .background(Color.black, in: shape)
+            .overlay {
+                shape.strokeBorder(isSelected ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: isSelected ? 2.5 : 1)
+            }
+            .accessibilityHidden(true)
     }
 }

@@ -105,15 +105,6 @@ enum Theme {
         static let hairline = NSColor.white.withAlphaComponent(0.14)
         static let chipRadius: CGFloat = 7
     }
-
-    /// The settings window's surfaces.
-    enum Settings {
-        static let cardRadius: CGFloat = 10
-        /// Behind a card of rows.
-        static let card = Color.primary.opacity(0.05)
-        /// Behind a pill: a tag, the segment track, an unfilled button.
-        static let pill = Color.primary.opacity(0.08)
-    }
 }
 
 /// The handful of text styles every surface draws with.

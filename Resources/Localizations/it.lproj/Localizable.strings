@@ -26,13 +26,11 @@
 "Icon only" = "Solo icona";
 
 /* Metriche */
-"Shown in the panel and dashboard" = "Visibili nel pannello e nella dashboard";
 
 /* Touch Bar */
 "Show GlassDeck on the Touch Bar" = "Mostra GlassDeck sulla Touch Bar";
 "Placement" = "Collocazione";
 "Position" = "Posizione";
-"Metrics in the Touch Bar strip" = "Metriche nella striscia Touch Bar";
 "Control Strip button" = "Pulsante nel Control Strip";
 "Take over the whole Touch Bar" = "Occupa tutta la Touch Bar";
 "A compact meter sits in the expanded Control Strip. Tap it for the full-width graphs." = "Un misuratore compatto resta nel Control Strip esteso. Toccalo per aprire i grafici a piena larghezza.";
@@ -56,7 +54,6 @@
 "Open the dashboard" = "Apri la dashboard";
 
 /* Window titles */
-"GlassDeck Settings" = "Impostazioni GlassDeck";
 
 /* Metrics tab */
 "Drag to reorder. The order is shared by the panel, the Touch Bar and the menu bar." = "Trascina per riordinare. L'ordine vale per il pannello, la Touch Bar e la barra dei menu.";
@@ -72,7 +69,6 @@
 "Memory pressure is high: the Mac is compressing memory and using swap (%@)." = "La pressione della memoria è alta: il Mac sta comprimendo la memoria e usando lo swap (%@).";
 
 /* Moduli */
-"Modules" = "Moduli";
 "The charge of every paired device that reports one. A device that is not connected keeps publishing the level it was last seen at, so those rows are dimmed and marked rather than hidden." = "La carica di ogni dispositivo abbinato che la comunica. Un dispositivo non connesso continua a pubblicare l'ultimo livello visto, quindi quelle righe restano visibili ma in grigio e con l'indicazione.";
 "Nothing paired is reporting a battery level right now." = "Al momento nessun dispositivo abbinato comunica il livello di batteria.";
 "Add a time zone" = "Aggiungi un fuso orario";
@@ -85,38 +81,23 @@
 "not connected" = "non connesso";
 
 /* Finestra impostazioni */
-"Essentials" = "Essenziali";
-"Monitor" = "Monitoraggio";
 "Search settings" = "Cerca nelle impostazioni";
 "Panel and dashboard" = "Pannello e dashboard";
 "Alerts" = "Avvisi";
 "Style" = "Stile";
 "How often GlassDeck samples and how it starts. Nothing here uses the network." = "Ogni quanto GlassDeck campiona e come si avvia. Niente qui usa la rete.";
-"Sampling" = "Campionamento";
-"Start-up" = "Avvio";
 "Starts in the menu bar, with no Dock icon." = "Parte nella barra dei menu, senza icona nel Dock.";
 "What the icon in the menu bar shows. It is redrawn only when the label would actually look different." = "Cosa mostra l'icona nella barra dei menu. Viene ridisegnata solo quando l'etichetta cambierebbe davvero.";
-"Label" = "Etichetta";
-"Choose how the metric panels are drawn on the Touch Bar. Only the painting changes: sampling stays exactly the same." = "Scegli come vengono disegnati i pannelli delle metriche sulla Touch Bar. Cambia solo il disegno: il campionamento resta identico.";
-"Style in use: %@" = "Stile in uso: %@";
-"Reset" = "Ripristina";
-"Strip style" = "Stile della striscia";
-"Applies to the full-width and compact bar. The Control Strip meter and a metric's detail keep their own look." = "Vale per la barra intera e per quella compatta. Il misuratore nella Control Strip e il dettaglio di una metrica mantengono il loro aspetto.";
-"Apply" = "Applica";
-"In use" = "In uso";
-"Where GlassDeck sits on the Touch Bar, and how it hands the bar to other apps." = "Dove sta GlassDeck sulla Touch Bar e come la cede alle altre app.";
 "Presentation" = "Presentazione";
-"Which metrics appear on the Touch Bar. Their order is the one set in Panel and dashboard." = "Quali metriche compaiono sulla Touch Bar. L'ordine è quello impostato in Pannello e dashboard.";
-"%lld of %lld metrics on the Touch Bar" = "%lld di %lld metriche sulla Touch Bar";
 "SMC, cached %lld s" = "SMC, in cache %lld s";
 "The metrics in the panel and the dashboard. The order set here is shared by every surface." = "Le metriche del pannello e della dashboard. L'ordine impostato qui vale per tutte le superfici.";
-"%lld of %lld metrics shown" = "%lld di %lld metriche visibili";
-"Processes" = "Processi";
 "Sampled only while the panel is open." = "Campionati solo mentre il pannello è aperto.";
-"Only while visible" = "Solo se visibile";
 "Notifications when something needs attention. They read the slow reading, at most every two seconds." = "Notifiche quando qualcosa merita attenzione. Usano la lettura lenta, al massimo ogni due secondi.";
-"When to warn" = "Quando avvisare";
-"Devices" = "Dispositivi";
-"Asks for permission" = "Chiede il permesso";
 "macOS asks for permission the first time this is switched on." = "macOS chiede il permesso la prima volta che lo attivi.";
 "Time zones" = "Fusi orari";
+"Back" = "Indietro";
+"Forward" = "Avanti";
+"How GlassDeck is drawn on the Touch Bar, where it sits, and which metrics it shows." = "Come GlassDeck viene disegnato sulla Touch Bar, dove si colloca e quali metriche mostra.";
+"Detail, when a panel is tapped" = "Dettaglio, quando tocchi un pannello";
+"%@ Applies to the full and compact bar, and to a metric's detail." = "%@ Vale per la barra intera e compatta, e per il dettaglio di una metrica.";
+"Their order is the one set in Panel and dashboard." = "L'ordine è quello impostato in Pannello e dashboard.";

@@ -3,9 +3,9 @@ import Foundation
 /// How the metric panels on the full and compact bar are drawn.
 ///
 /// Only the painting changes: every style reads the same snapshot at the same
-/// cadence, so choosing one costs nothing in sampling. The Control Strip meter
-/// and the expanded detail keep their own look — the first is 42 pt a chip and
-/// has no room for a style, the second has a layout of its own.
+/// cadence, so choosing one costs nothing in sampling. The expanded detail of
+/// a metric follows the style too; only the Control Strip meter keeps its own
+/// look, since a 42 pt chip has no room for one.
 public enum TouchBarStyle: String, Sendable, CaseIterable, Identifiable {
     /// Translucent chips with a sparkline: the look GlassDeck shipped with.
     case glass
