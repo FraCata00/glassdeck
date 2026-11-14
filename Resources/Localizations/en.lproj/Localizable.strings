@@ -26,13 +26,11 @@
 "Icon only" = "Icon only";
 
 /* Metrics tab */
-"Shown in the panel and dashboard" = "Shown in the panel and dashboard";
 
 /* Touch Bar tab */
 "Show GlassDeck on the Touch Bar" = "Show GlassDeck on the Touch Bar";
 "Placement" = "Placement";
 "Position" = "Position";
-"Metrics in the Touch Bar strip" = "Metrics in the Touch Bar strip";
 "Control Strip button" = "Control Strip button";
 "Take over the whole Touch Bar" = "Take over the whole Touch Bar";
 "A compact meter sits in the expanded Control Strip. Tap it for the full-width graphs." = "A compact meter sits in the expanded Control Strip. Tap it for the full-width graphs.";
@@ -56,7 +54,6 @@
 "Open the dashboard" = "Open the dashboard";
 
 /* Window titles */
-"GlassDeck Settings" = "GlassDeck Settings";
 
 /* Metrics tab */
 "Drag to reorder. The order is shared by the panel, the Touch Bar and the menu bar." = "Drag to reorder. The order is shared by the panel, the Touch Bar and the menu bar.";
@@ -72,7 +69,6 @@
 "Memory pressure is high: the Mac is compressing memory and using swap (%@)." = "Memory pressure is high: the Mac is compressing memory and using swap (%@).";
 
 /* Modules tab */
-"Modules" = "Modules";
 "The charge of every paired device that reports one. A device that is not connected keeps publishing the level it was last seen at, so those rows are dimmed and marked rather than hidden." = "The charge of every paired device that reports one. A device that is not connected keeps publishing the level it was last seen at, so those rows are dimmed and marked rather than hidden.";
 "Nothing paired is reporting a battery level right now." = "Nothing paired is reporting a battery level right now.";
 "Add a time zone" = "Add a time zone";
@@ -85,38 +81,23 @@
 "not connected" = "not connected";
 
 /* Settings window */
-"Essentials" = "Essentials";
-"Monitor" = "Monitor";
 "Search settings" = "Search settings";
 "Panel and dashboard" = "Panel and dashboard";
 "Alerts" = "Alerts";
 "Style" = "Style";
 "How often GlassDeck samples and how it starts. Nothing here uses the network." = "How often GlassDeck samples and how it starts. Nothing here uses the network.";
-"Sampling" = "Sampling";
-"Start-up" = "Start-up";
 "Starts in the menu bar, with no Dock icon." = "Starts in the menu bar, with no Dock icon.";
 "What the icon in the menu bar shows. It is redrawn only when the label would actually look different." = "What the icon in the menu bar shows. It is redrawn only when the label would actually look different.";
-"Label" = "Label";
-"Choose how the metric panels are drawn on the Touch Bar. Only the painting changes: sampling stays exactly the same." = "Choose how the metric panels are drawn on the Touch Bar. Only the painting changes: sampling stays exactly the same.";
-"Style in use: %@" = "Style in use: %@";
-"Reset" = "Reset";
-"Strip style" = "Strip style";
-"Applies to the full-width and compact bar. The Control Strip meter and a metric's detail keep their own look." = "Applies to the full-width and compact bar. The Control Strip meter and a metric's detail keep their own look.";
-"Apply" = "Apply";
-"In use" = "In use";
-"Where GlassDeck sits on the Touch Bar, and how it hands the bar to other apps." = "Where GlassDeck sits on the Touch Bar, and how it hands the bar to other apps.";
 "Presentation" = "Presentation";
-"Which metrics appear on the Touch Bar. Their order is the one set in Panel and dashboard." = "Which metrics appear on the Touch Bar. Their order is the one set in Panel and dashboard.";
-"%lld of %lld metrics on the Touch Bar" = "%lld of %lld metrics on the Touch Bar";
 "SMC, cached %lld s" = "SMC, cached %lld s";
 "The metrics in the panel and the dashboard. The order set here is shared by every surface." = "The metrics in the panel and the dashboard. The order set here is shared by every surface.";
-"%lld of %lld metrics shown" = "%lld of %lld metrics shown";
-"Processes" = "Processes";
 "Sampled only while the panel is open." = "Sampled only while the panel is open.";
-"Only while visible" = "Only while visible";
 "Notifications when something needs attention. They read the slow reading, at most every two seconds." = "Notifications when something needs attention. They read the slow reading, at most every two seconds.";
-"When to warn" = "When to warn";
-"Devices" = "Devices";
-"Asks for permission" = "Asks for permission";
 "macOS asks for permission the first time this is switched on." = "macOS asks for permission the first time this is switched on.";
 "Time zones" = "Time zones";
+"Back" = "Back";
+"Forward" = "Forward";
+"How GlassDeck is drawn on the Touch Bar, where it sits, and which metrics it shows." = "How GlassDeck is drawn on the Touch Bar, where it sits, and which metrics it shows.";
+"Detail, when a panel is tapped" = "Detail, when a panel is tapped";
+"%@ Applies to the full and compact bar, and to a metric's detail." = "%@ Applies to the full and compact bar, and to a metric's detail.";
+"Their order is the one set in Panel and dashboard." = "Their order is the one set in Panel and dashboard.";

@@ -199,15 +199,23 @@ final class AppModel {
         }
     }
 
+    /// Hosted by a controller rather than a bare hosting view so the page's
+    /// title and the sidebar's search field reach the window's toolbar, which
+    /// is where System Settings — and Liquid Glass — put them.
     func showSettings(page: SettingsPage = .general) {
         show(\.settingsWindow) {
-            makeGlassWindow(
-                title: String(localized: "GlassDeck Settings"),
-                size: SettingsMetrics.windowSize,
-                content: SettingsView(page: page),
-                isResizable: false,
-                isTransparent: false
-            )
+            let controller = NSHostingController(rootView: SettingsView(page: page).appEnvironment(self))
+            controller.sceneBridgingOptions = [.toolbars]
+            let window = NSWindow(contentViewController: controller)
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+            // An empty toolbar is enough for the split view to float its sidebar
+            // as glass and to put the page's title in the bar above it.
+            window.toolbar = NSToolbar(identifier: "settings")
+            window.toolbarStyle = .unified
+            window.setContentSize(SettingsMetrics.windowSize)
+            window.isReleasedWhenClosed = false
+            window.center()
+            return window
         }
     }
 
@@ -243,8 +251,7 @@ final class AppModel {
         title: String,
         size: NSSize,
         content: some View,
-        isResizable: Bool = true,
-        isTransparent: Bool = true
+        isResizable: Bool = true
     ) -> NSWindow {
         var style: NSWindow.StyleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
         if isResizable { style.insert(.resizable) }
@@ -260,12 +267,10 @@ final class AppModel {
         window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
 
-        if isTransparent {
-            window.titlebarAppearsTransparent = true
-            window.titleVisibility = .hidden
-            window.backgroundColor = .clear
-            window.isOpaque = false
-        }
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.backgroundColor = .clear
+        window.isOpaque = false
         window.center()
         return window
     }
