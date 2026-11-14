@@ -3,21 +3,22 @@ import GlassDeckKit
 
 /// Draws the status item image.
 ///
-/// The menu bar is redrawn on every sample, so the glyph is rendered straight
+/// The menu bar is redrawn whenever a bar moves, so the glyph is rendered straight
 /// into an `NSImage` rather than going through SwiftUI's renderer.
 enum MenuBarGlyph {
     /// A miniature bar chart, one coloured column per metric.
-    static func bars(for snapshot: MetricsSnapshot, metrics: [MetricKind]) -> NSImage {
+    static func bars(_ bars: [StatusItemReadout.Bar]) -> NSImage {
         let barWidth: CGFloat = 3.5
         let spacing: CGFloat = 2.5
         let height: CGFloat = 15
-        let count = max(metrics.count, 1)
+        let count = max(bars.count, 1)
         let width = CGFloat(count) * barWidth + CGFloat(count - 1) * spacing
 
         let image = NSImage(size: NSSize(width: width, height: height), flipped: false) { _ in
-            for (index, kind) in metrics.enumerated() {
+            for (index, bar) in bars.enumerated() {
+                let kind = bar.kind
                 let x = CGFloat(index) * (barWidth + spacing)
-                let fraction = snapshot.fraction(for: kind).clamped01
+                let fraction = bar.fraction
 
                 let track = NSBezierPath(
                     roundedRect: NSRect(x: x, y: 0, width: barWidth, height: height),
@@ -33,7 +34,7 @@ enum MenuBarGlyph {
                     xRadius: barWidth / 2,
                     yRadius: barWidth / 2
                 )
-                NSColor(hue: kind.hue, saturation: 0.7, brightness: 0.95, alpha: 1).setFill()
+                Theme.nsAccent(kind).setFill()
                 bar.fill()
             }
             return true

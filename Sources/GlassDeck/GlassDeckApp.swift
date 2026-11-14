@@ -14,15 +14,15 @@ struct GlassDeckApp: App {
             GlassPanelView()
                 .appEnvironment(model)
         } label: {
-            MenuBarLabel(monitor: model.monitor, preferences: model.preferences, clock: model.clock)
+            MenuBarLabel(readout: model.statusItem, preferences: model.preferences, clock: model.clock)
         }
         .menuBarExtraStyle(.window)
     }
 }
 
-/// The status item content, redrawn on every sample.
+/// The status item content, redrawn only when what it shows has changed.
 private struct MenuBarLabel: View {
-    @Bindable var monitor: SystemMonitor
+    let readout: StatusItemReadout
     @Bindable var preferences: Preferences
     @Bindable var clock: ClockTicker
 
@@ -57,20 +57,17 @@ private struct MenuBarLabel: View {
 
     @ViewBuilder
     private var meter: some View {
-        // Reads `coarseSnapshot`, never `snapshot`: redrawing the status item is
-        // the app's largest single cost, and this body re-runs — and the status
-        // item redraws — on every property it touches that changes.
-        switch preferences.menuBarStyle {
-        case .graph:
-            Image(nsImage: MenuBarGlyph.bars(for: monitor.coarseSnapshot, metrics: preferences.dashboardMetrics))
-        case .percentage:
-            // A metric stored before the hardware was known — fans on a fanless
-            // Mac — would otherwise sit in the menu bar reading n/a for good.
-            let metric = monitor.coarseSnapshot.supports(preferences.menuBarMetric)
-                ? preferences.menuBarMetric : .cpu
+        // Reads the readout, never a snapshot: redrawing the status item is the
+        // app's largest single cost, and this body re-runs — and the status
+        // item redraws — on every property it touches that changes. The
+        // readout changes only when the label would look different.
+        switch readout.content {
+        case let .bars(bars):
+            Image(nsImage: MenuBarGlyph.bars(bars))
+        case let .value(symbol, text):
             HStack(spacing: 3) {
-                Image(systemName: metric.symbolName)
-                Text(monitor.coarseSnapshot.headline(for: metric))
+                Image(systemName: symbol)
+                Text(text)
                     .monospacedDigit()
             }
         case .icon:

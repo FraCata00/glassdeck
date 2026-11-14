@@ -240,7 +240,7 @@ struct SettingsView: View {
 
             if let timeZone = zone.timeZone {
                 Text(WorldClock.time(in: timeZone, at: clock.now))
-                    .font(.system(size: 11, weight: .medium))
+                    .font(Typography.label)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             }

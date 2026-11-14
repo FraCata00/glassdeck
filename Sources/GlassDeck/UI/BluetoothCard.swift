@@ -25,17 +25,17 @@ struct BluetoothCard: View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
                 Image(systemName: device.symbolName)
-                    .font(.system(size: 11))
+                    .font(Typography.body)
                     .foregroundStyle(device.isConnected ? Theme.accent(ModuleKind.bluetooth) : .secondary)
                     .frame(width: 16)
                 Text(device.name)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(Typography.label)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Spacer(minLength: 4)
                 if !device.isConnected {
                     Text("not connected")
-                        .font(.system(size: 10))
+                        .font(Typography.caption)
                         .foregroundStyle(.tertiary)
                 }
             }

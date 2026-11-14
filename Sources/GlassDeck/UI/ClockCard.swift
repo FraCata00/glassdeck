@@ -16,16 +16,16 @@ struct ClockCard: View {
                 ForEach(readings) { reading in
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(reading.zone.displayLabel)
-                            .font(.system(size: 11, weight: .medium))
+                            .font(Typography.label)
                             .lineLimit(1)
                             .truncationMode(.tail)
                         Spacer(minLength: 6)
                         Text(reading.caption)
-                            .font(.system(size: 10))
+                            .font(Typography.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                         Text(reading.time)
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(Typography.value)
                             .monospacedDigit()
                             .contentTransition(.numericText())
                     }

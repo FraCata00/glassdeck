@@ -101,16 +101,16 @@ struct DashboardView: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text("GlassDeck")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Typography.title)
                 Text(SystemIdentity.machineDescription)
-                    .font(.system(size: 11))
+                    .font(Typography.body)
                     .foregroundStyle(.secondary)
             }
 
             Spacer()
 
             Label(SystemIdentity.uptimeDescription, systemImage: "clock")
-                .font(.system(size: 11, weight: .medium))
+                .font(Typography.label)
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
 
@@ -118,7 +118,7 @@ struct DashboardView: View {
                 model.showSettings()
             } label: {
                 Image(systemName: "gearshape")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(Typography.label)
             }
             .glassButton()
             .help("Settings")
@@ -138,7 +138,7 @@ struct DashboardView: View {
                     isSelected: true
                 )
                 Text(snapshot.caption(for: focusedMetric))
-                    .font(.system(size: 11))
+                    .font(Typography.body)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -150,11 +150,11 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(SystemIdentity.chipName)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(Typography.title)
                     Spacer()
                     if let load = snapshot.cpu.loadAverage.first {
                         Text("load \(ValueFormatter.decimal(load))")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(Typography.label)
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
                     }
@@ -162,7 +162,7 @@ struct DashboardView: View {
 
                 CoreGridView(cpu: snapshot.cpu)
 
-                Sparkline(values: history(for: focusedMetric), gradient: Theme.gradient(focusedMetric))
+                Sparkline(values: history(for: focusedMetric), gradient: Theme.gradient(focusedMetric), accent: Theme.accent(focusedMetric))
                     .frame(height: 46)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -186,26 +186,26 @@ private struct MetricCard: View {
             HStack(spacing: 8) {
                 iconChip
                 Text(kind.title)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(Typography.heading)
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 0)
                 statusDot
             }
 
             Text(snapshot.headline(for: kind))
-                .font(.system(size: 28, weight: .medium))
+                .font(Typography.display)
                 .monospacedDigit()
                 .contentTransition(.numericText())
                 .padding(.top, 10)
 
             Text(snapshot.caption(for: kind))
-                .font(.system(size: 11))
+                .font(Typography.body)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .padding(.top, 1)
 
-            Sparkline(values: history, gradient: Theme.gradient(kind))
+            Sparkline(values: history, gradient: Theme.gradient(kind), accent: Theme.accent(kind))
                 .frame(height: 38)
                 .padding(.top, 12)
 
@@ -224,13 +224,11 @@ private struct MetricCard: View {
             .padding(.top, 10)
         }
         .padding(16)
-        .glassSurface(cornerRadius: Theme.cornerRadius, interactive: true)
-        .overlay {
-            if isFocused {
-                RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
-                    .strokeBorder(Theme.accent(kind).opacity(0.45), lineWidth: 1)
-            }
-        }
+        .glassSurface(
+            cornerRadius: Theme.cornerRadius,
+            interactive: true,
+            tint: isFocused ? Theme.selectionTint(kind) : nil
+        )
     }
 
     private var iconChip: some View {
@@ -239,7 +237,7 @@ private struct MetricCard: View {
             .frame(width: 22, height: 22)
             .overlay {
                 Image(systemName: kind.symbolName)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(Typography.chipIcon)
                     .foregroundStyle(Theme.accent(kind))
             }
     }
