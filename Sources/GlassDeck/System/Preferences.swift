@@ -15,6 +15,7 @@ final class Preferences {
         static let touchBarEnabled = "touchBarEnabled"
         static let touchBarPresentation = "touchBarPresentation"
         static let touchBarAlignment = "touchBarAlignment"
+        static let touchBarStyle = "touchBarStyle"
         static let showsProcesses = "showsProcesses"
         static let metricOrder = "metricOrder"
         static let temperatureAlert = "temperatureAlert"
@@ -83,6 +84,9 @@ final class Preferences {
         didSet { defaults.store(touchBarPresentation, forKey: Key.touchBarPresentation) }
     }
     var touchBarAlignment: TouchBarAlignment { didSet { defaults.store(touchBarAlignment, forKey: Key.touchBarAlignment) } }
+    /// How the metric panels on the bar are drawn. Glass by default: it is the
+    /// look everyone had before there was a choice.
+    var touchBarStyle: TouchBarStyle { didSet { defaults.store(touchBarStyle, forKey: Key.touchBarStyle) } }
     var showsProcesses: Bool { didSet { defaults.set(showsProcesses, forKey: Key.showsProcesses) } }
 
     /// The shortcut that hands the Touch Bar to the frontmost app, or `nil` when
@@ -138,6 +142,7 @@ final class Preferences {
         isTouchBarEnabled = defaults.object(forKey: Key.touchBarEnabled) as? Bool ?? true
         touchBarPresentation = defaults.value(Key.touchBarPresentation) ?? .controlStrip
         touchBarAlignment = defaults.value(Key.touchBarAlignment) ?? .trailing
+        touchBarStyle = defaults.value(Key.touchBarStyle) ?? .glass
         showsProcesses = defaults.object(forKey: Key.showsProcesses) as? Bool ?? true
         panelModules = defaults.values(Key.panelModules) ?? ModuleKind.defaultSelection
         clockZones = Self.readClockZones(from: defaults)

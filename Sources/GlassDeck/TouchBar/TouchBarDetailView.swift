@@ -46,20 +46,19 @@ final class TouchBarDetailView: NSView {
         context.clear(dirtyRect)
 
         let accent = TouchBarPalette.color(for: kind)
-        NSColor.white.withAlphaComponent(0.08).setFill()
-        NSBezierPath(roundedRect: bounds.insetBy(dx: 0, dy: 1), xRadius: 7, yRadius: 7).fill()
+        TouchBarPalette.drawChrome(.chip, in: bounds)
 
         // Headline block.
         draw(
             text: kind.title.uppercased(),
             in: NSRect(x: 12, y: bounds.height - 14, width: 150, height: 11),
-            font: .systemFont(ofSize: 8, weight: .semibold),
+            font: Self.headingFont,
             color: accent.withAlphaComponent(0.9)
         )
         draw(
             text: snapshot.headline(for: kind),
             in: NSRect(x: 12, y: 3, width: 150, height: 15),
-            font: .monospacedDigitSystemFont(ofSize: 13, weight: .semibold),
+            font: Self.headlineFont,
             color: .white
         )
 
@@ -75,13 +74,13 @@ final class TouchBarDetailView: NSView {
             draw(
                 text: detail.label,
                 in: NSRect(x: x, y: bounds.height - 14, width: columnWidth - 8, height: 11),
-                font: .systemFont(ofSize: 8, weight: .regular),
+                font: Self.labelFont,
                 color: .white.withAlphaComponent(0.55)
             )
             draw(
                 text: detail.value,
                 in: NSRect(x: x, y: 4, width: columnWidth - 8, height: 14),
-                font: .monospacedDigitSystemFont(ofSize: 12, weight: .medium),
+                font: Self.valueFont,
                 color: .white
             )
         }
@@ -92,15 +91,17 @@ final class TouchBarDetailView: NSView {
         )
     }
 
+    // Resolved once: the detail redraws on every sample while it is up.
+    private static let headingFont = NSFont.systemFont(ofSize: 8, weight: .semibold)
+    private static let headlineFont = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
+    private static let labelFont = NSFont.systemFont(ofSize: 8, weight: .regular)
+    private static let valueFont = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
+
     private func drawSparkline(in rect: NSRect, color: NSColor) {
         guard history.count > 1 else { return }
-        let minimum = history.min() ?? 0
-        let maximum = history.max() ?? 1
-        let spread = maximum - minimum
         // Same zoom rule as the compact panels: a flat curve should still show
         // its shape rather than reading as a filled slab.
-        let lower = spread < 0.08 ? max(0, (minimum + maximum) / 2 - 0.04) : minimum
-        let upper = spread < 0.08 ? lower + 0.08 : maximum
+        let window = TouchBarHistory.window(for: history)
 
         let path = NSBezierPath()
         path.lineWidth = 1.6
@@ -109,7 +110,7 @@ final class TouchBarDetailView: NSView {
 
         let step = rect.width / CGFloat(history.count - 1)
         for (index, value) in history.enumerated() {
-            let normalised = ((value.clamped01 - lower) / (upper - lower)).clamped01
+            let normalised = TouchBarHistory.normalised(value, in: window)
             let point = NSPoint(x: rect.minX + CGFloat(index) * step, y: rect.minY + CGFloat(normalised) * rect.height)
             if index == 0 { path.move(to: point) } else { path.line(to: point) }
         }
@@ -118,9 +119,6 @@ final class TouchBarDetailView: NSView {
     }
 
     private func draw(text: String, in rect: NSRect, font: NSFont, color: NSColor) {
-        NSAttributedString(
-            string: text,
-            attributes: [.font: font, .foregroundColor: color]
-        ).draw(in: rect)
+        (text as NSString).draw(in: rect, withAttributes: [.font: font, .foregroundColor: color])
     }
 }

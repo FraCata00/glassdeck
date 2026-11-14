@@ -137,6 +137,32 @@ enum TouchBarPalette {
         Theme.nsAccent(kind)
     }
 
+    /// Advance of one character in the terminal style's font, measured once.
+    /// Every glyph in a monospaced font has it, so a line's width is a count.
+    static let terminalCharacterWidth: CGFloat = {
+        let font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
+        return max(1, ("0" as NSString).size(withAttributes: [.font: font]).width)
+    }()
+
+    /// The background a style puts behind an item: a chip, a leading hairline,
+    /// or nothing. Shared by the panels and the battery chip so the two match.
+    static func drawChrome(_ chrome: TouchBarStyle.Chrome, in bounds: NSRect) {
+        switch chrome {
+        case .chip: fillChip(Theme.TouchBar.chip, in: bounds, radius: Theme.TouchBar.chipRadius)
+        case .hairline:
+            Theme.TouchBar.hairline.setFill()
+            NSRect(x: bounds.minX, y: bounds.minY + 3, width: 1, height: bounds.height - 6).fill()
+        case .none: break
+        }
+    }
+
+    /// A rounded fill one point in from the top and bottom, the shape every
+    /// Touch Bar chip has.
+    static func fillChip(_ colour: NSColor, in bounds: NSRect, radius: CGFloat) {
+        colour.setFill()
+        NSBezierPath(roundedRect: bounds.insetBy(dx: 0, dy: 1), xRadius: radius, yRadius: radius).fill()
+    }
+
     /// `1.4k`, `820` — fan speed squeezed into four characters.
     static func compactRPM(_ rpm: Double, isAvailable: Bool) -> String {
         guard isAvailable else { return "–" }

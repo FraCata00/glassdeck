@@ -248,7 +248,7 @@ private struct MetricCard: View {
         Circle()
             .fill(Theme.statusTint(snapshot.strain(for: kind)))
             .frame(width: 5, height: 5)
-            .opacity(snapshot.strain(for: kind) > 0.7 ? 1 : 0.35)
+            .opacity(StrainBand(strain: snapshot.strain(for: kind)) == .calm ? 0.35 : 1)
     }
 }
 
