@@ -7,8 +7,10 @@ import AppKit
 /// `dlsym` at runtime: on a Mac without a Touch Bar — or on a future macOS that
 /// drops them — every call here degrades to a no-op instead of failing to launch.
 enum DFRSupport {
-    // Immutable process-wide handles: `nonisolated(unsafe)` states that these are
-    // never mutated after the first access, which `dlopen`/`dlsym` guarantee.
+    // The library handle is a raw pointer, which is not `Sendable`:
+    // `nonisolated(unsafe)` states that it is never mutated after the first
+    // access, which `dlopen` guarantees. The function pointers below are
+    // `Sendable` already and need no such promise.
     nonisolated(unsafe) private static let handle: UnsafeMutableRawPointer? = dlopen(
         "/System/Library/PrivateFrameworks/DFRFoundation.framework/DFRFoundation",
         RTLD_NOW
@@ -20,10 +22,10 @@ enum DFRSupport {
     /// True when the running system exposes the Control Strip API at all.
     static var isAvailable: Bool { handle != nil && controlStripPresence != nil }
 
-    nonisolated(unsafe) private static let controlStripPresence: SetControlStripPresence? = symbol(
+    private static let controlStripPresence: SetControlStripPresence? = symbol(
         "DFRElementSetControlStripPresenceForIdentifier"
     )
-    nonisolated(unsafe) private static let showsCloseBox: SetShowsCloseBox? = symbol(
+    private static let showsCloseBox: SetShowsCloseBox? = symbol(
         "DFRSystemModalShowsCloseBoxWhenFrontMost"
     )
 

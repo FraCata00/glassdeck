@@ -27,12 +27,14 @@ A change is not done until `swift build` and `swift test` are both clean.
     safe; all of them live inside the `MetricsEngine` actor.
   - `SystemMonitor.swift` — the `@MainActor @Observable` façade: the sampling
     loop, the history ring buffers, `snapshot` (every sample) and
-    `coarseSnapshot` (at most every 2 s).
+    `coarseSnapshot` (at most every 2 s, sooner when the load jumps).
+  - `Support/ObservationLoop.swift` — how everything outside SwiftUI watches
+    `@Observable` state; it has a `stop()`, and lives here to be tested.
   - `Model/` — `MetricsSnapshot` and the `*Usage` value types;
     `MetricsSnapshot+Presentation.swift` holds every user-visible string.
 - `Sources/GlassDeck/` — the app.
   - `System/` — `AppModel` (the singleton wiring everything), `Preferences`
-    (`UserDefaults`), `ObservationLoop`, `StatusItemReadout`, alerts, hot key.
+    (`UserDefaults`), `StatusItemReadout`, alerts, hot key.
   - `UI/` — SwiftUI: `GlassPanelView` (menu bar panel), `DashboardView`
     (window), `SettingsView`, and `Theme` for every colour and radius.
   - `TouchBar/` — AppKit views drawn by hand in `draw(_:)`, plus

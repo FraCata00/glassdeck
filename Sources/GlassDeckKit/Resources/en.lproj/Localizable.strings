@@ -48,7 +48,6 @@
 "detail.up" = "up";
 "detail.used" = "used";
 "detail.user" = "user";
-"detail.wired" = "wired";
 "detail.write" = "write";
 "disk.caption" = "%1$@ free of %2$@";
 "fans.missing" = "no fan";

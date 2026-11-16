@@ -25,8 +25,15 @@ final class ThresholdAlerts {
     /// when the pressure climbs past it, so high then critical is two alerts
     /// but a level that flickers is one; it resets once pressure is back to normal.
     private var notifiedPressure = MemoryPressure.normal
+    /// The snapshot is only read while an alert is switched on: with both off,
+    /// which is how a fresh install starts, there is nothing to check and no
+    /// reason to be woken by every coarse publication. The switches are read
+    /// either way, so turning one on starts the watch at once.
     private lazy var changes = ObservationLoop(self) { alerts in
-        _ = alerts.monitor.coarseSnapshot
+        let preferences = alerts.preferences
+        if preferences.isTemperatureAlertEnabled || preferences.isMemoryPressureAlertEnabled {
+            _ = alerts.monitor.coarseSnapshot
+        }
     } onChange: { alerts in
         alerts.check(alerts.monitor.coarseSnapshot)
     }
