@@ -71,6 +71,11 @@ struct MetricsModelTests {
         let gappy = CPUSampler.coreKinds(fromDeviceTree: [0: .efficiency, 2: .performance], performanceCount: 1, efficiencyCount: 1)
         #expect(gappy == [.efficiency, .performance])
 
+        // A tree that misses cores the kernel counts — a cluster type this
+        // build does not know — falls back to the counts as well.
+        let short = CPUSampler.coreKinds(fromDeviceTree: [0: .efficiency, 1: .performance], performanceCount: 2, efficiencyCount: 1)
+        #expect(short == [.efficiency, .performance, .performance])
+
         // Intel: no clusters at all.
         #expect(CPUSampler.coreKinds(fromDeviceTree: [:], performanceCount: 0, efficiencyCount: 0).isEmpty)
     }

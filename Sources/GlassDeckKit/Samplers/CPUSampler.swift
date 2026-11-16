@@ -27,16 +27,20 @@ public final class CPUSampler {
     /// Reconciles the device tree's per-core clusters with the kernel's counts.
     ///
     /// The device tree is the authority: it says, for each logical CPU, which
-    /// cluster it sits in. Where it cannot be read, or its numbering has a gap,
-    /// the counts are laid out efficiency first, which is how every Apple
-    /// silicon chip so far numbers its cores.
+    /// cluster it sits in. Where it cannot be read, its numbering has a gap, or
+    /// it covers fewer cores than the kernel counts — a cluster type this build
+    /// does not know — the counts are laid out efficiency first, which is how
+    /// every Apple silicon chip so far numbers its cores.
     static func coreKinds(
         fromDeviceTree tree: [Int: CoreKind],
         performanceCount: Int,
         efficiencyCount: Int
     ) -> [CoreKind] {
         let ordered = (0..<tree.count).compactMap { tree[$0] }
-        if !tree.isEmpty, ordered.count == tree.count { return ordered }
+        let counted = performanceCount + efficiencyCount
+        if !tree.isEmpty, ordered.count == tree.count, counted == 0 || counted == tree.count {
+            return ordered
+        }
         guard performanceCount > 0, efficiencyCount > 0 else { return [] }
         return Array(repeating: .efficiency, count: efficiencyCount)
             + Array(repeating: .performance, count: performanceCount)
