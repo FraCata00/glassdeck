@@ -16,6 +16,11 @@ final class ObservationLoop<Owner: AnyObject> {
     private let track: @MainActor (Owner) -> Void
     private let onChange: @MainActor (Owner) -> Void
     private var isRunning = false
+    /// Bumped on every start and stop. A tracking closure that was armed under
+    /// an older generation cannot be withdrawn — `withObservationTracking` has
+    /// no cancellation — so when it fires it is simply ignored, and a stop
+    /// followed by a start never leaves two chains re-arming side by side.
+    private var generation = 0
 
     /// - Parameters:
     ///   - track: Reads the properties to watch.
@@ -34,10 +39,20 @@ final class ObservationLoop<Owner: AnyObject> {
     func start() {
         guard !isRunning else { return }
         isRunning = true
-        arm()
+        generation += 1
+        arm(generation)
     }
 
-    private func arm() {
+    /// Stops watching: `onChange` does not run again until the next `start()`.
+    /// For an owner whose surface can go away while the owner lives on, such
+    /// as the Touch Bar switched off in settings.
+    func stop() {
+        guard isRunning else { return }
+        isRunning = false
+        generation += 1
+    }
+
+    private func arm(_ armedGeneration: Int) {
         guard let owner else { return }
         withObservationTracking {
             track(owner)
@@ -46,9 +61,9 @@ final class ObservationLoop<Owner: AnyObject> {
             // value is stored: the work waits for the main actor, by which time
             // the change has landed.
             Task { @MainActor [weak self] in
-                guard let self, let owner = self.owner else { return }
+                guard let self, self.generation == armedGeneration, let owner = self.owner else { return }
                 self.onChange(owner)
-                self.arm()
+                self.arm(armedGeneration)
             }
         }
     }

@@ -168,6 +168,10 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         stopReasserting()
         dismissPresentedBar()
         guard let stripItem else { return }
+        // Nothing of the bar is on screen any more: the readings it would be
+        // redrawn for every few seconds have nowhere to go. `install()`
+        // starts it again.
+        changes.stop()
         yieldHotKey.shortcut = nil
         yieldedApplication = nil
         DFRSupport.setControlStripPresence(Self.controlStripIdentifier, visible: false)
