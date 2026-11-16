@@ -10,8 +10,10 @@ public final class PowerSampler {
     /// How long a reading stands before the SMC is asked again.
     ///
     /// Kept to the shortest useful cache — the same two seconds the menu bar is
-    /// republished on — because power is the spikiest of the SMC metrics and its
-    /// sparkline is the one that would show a longer hold as a staircase.
+    /// throttled to — because power is the spikiest of the SMC metrics and its
+    /// sparkline is the one that would show a longer hold as a staircase. At the
+    /// default 1.5 s cadence a reading is taken every other tick, every three
+    /// seconds; asking on every tick would be a per-tick SMC read.
     static let refreshInterval: TimeInterval = 2
 
     private let smc: SMCService?

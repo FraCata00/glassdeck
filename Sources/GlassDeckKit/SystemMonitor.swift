@@ -21,11 +21,24 @@ public final class SystemMonitor {
     /// reads this and not `snapshot` is invalidated only when this is assigned.
     public private(set) var coarseSnapshot: MetricsSnapshot = .empty
 
-    /// Shortest gap between two `coarseSnapshot` publications. At the default
-    /// cadence this halves how often the status item is redrawn; the samples
-    /// in between are folded into the published one (see `CoarseAccumulator`)
-    /// rather than dropped.
+    /// Shortest gap between two `coarseSnapshot` publications, unless the load
+    /// jumps (see `coarseJumpThreshold`). At the default cadence this halves
+    /// how often the status item is redrawn; the samples in between are folded
+    /// into the published one (see `CoarseAccumulator`) rather than dropped.
     public static let coarseInterval: TimeInterval = 2
+
+    /// How far the CPU or GPU load has to move, as a fraction of full scale,
+    /// for the coarse snapshot to be published before the interval is up.
+    ///
+    /// The throttle makes the status item up to two ticks late, three to four
+    /// and a half seconds at the default cadence, and that lag is only felt
+    /// when the machine changes what it is doing: a build starting, a game
+    /// loading. Fifteen points is well clear of the few points an idle machine
+    /// wanders by, so a steady load still redraws at the throttled rate and
+    /// only the onset of a burst, or its end, jumps the queue. The worst case,
+    /// a load swinging by that much on every tick, redraws once per sample —
+    /// what a cadence slower than the throttle already does.
+    public static let coarseJumpThreshold = 0.15
     public private(set) var topProcesses: [ProcessSample] = []
     public private(set) var isRunning = false
 
@@ -242,7 +255,9 @@ public final class SystemMonitor {
         }
     }
 
-    private func ingest(_ snapshot: MetricsSnapshot) async {
+    /// Internal rather than private so a test can feed it readings it made up:
+    /// the real samplers report whatever the machine running the tests is doing.
+    func ingest(_ snapshot: MetricsSnapshot) async {
         self.snapshot = snapshot
         for kind in MetricKind.allCases {
             history[kind]?.append(snapshot.fraction(for: kind))
@@ -254,10 +269,25 @@ public final class SystemMonitor {
         // and every sample still counts towards what it shows.
         coarseWindow.add(snapshot)
         if let lastCoarsePublish,
-           snapshot.timestamp.timeIntervalSince(lastCoarsePublish) < Self.coarseInterval {
+           snapshot.timestamp.timeIntervalSince(lastCoarsePublish) < Self.coarseInterval,
+           !Self.isCoarseJump(from: coarseSnapshot, to: coarseWindow.pending) {
             return
         }
         lastCoarsePublish = snapshot.timestamp
         coarseSnapshot = coarseWindow.drain()
+    }
+
+    /// Whether the pending coarse reading has moved far enough from the one on
+    /// screen to be published ahead of the throttle.
+    ///
+    /// Only the loads are watched. They are what the menu bar is read for and
+    /// what a person sees change in the moment; disk and network throughput
+    /// swing by their whole range from one tick to the next as a matter of
+    /// course, and watching them would have undone the throttle. Memory,
+    /// temperature, fans, power and charge move too slowly to need it.
+    static func isCoarseJump(from published: MetricsSnapshot, to pending: MetricsSnapshot) -> Bool {
+        [MetricKind.cpu, .gpu].contains { kind in
+            abs(pending.fraction(for: kind) - published.fraction(for: kind)) >= coarseJumpThreshold
+        }
     }
 }
