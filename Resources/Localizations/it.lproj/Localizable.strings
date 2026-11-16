@@ -101,3 +101,5 @@
 "Detail, when a panel is tapped" = "Dettaglio, quando tocchi un pannello";
 "%@ Applies to the full and compact bar, and to a metric's detail." = "%@ Vale per la barra intera e compatta, e per il dettaglio di una metrica.";
 "Their order is the one set in Panel and dashboard." = "L'ordine è quello impostato in Pannello e dashboard.";
+"Real-time menu bar" = "Barra dei menu in tempo reale";
+"Follows every sample, the same figure as the panel. Off, it is redrawn every few seconds with the average since the last one, which costs about half as much." = "Segue ogni campione, con lo stesso valore del pannello. Disattivata, si aggiorna ogni pochi secondi con la media dall'ultimo aggiornamento, e costa circa la metà.";
