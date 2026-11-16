@@ -178,24 +178,69 @@ struct SamplingTests {
         #expect(monitor.samplesProcesses == false)
     }
 
+    /// A made-up reading, so the throttle can be tested without depending on
+    /// what the machine running the tests happens to be doing.
+    private func reading(at seconds: TimeInterval, cpu: Double, gpu: Double = 0, celsius: Double? = nil) -> MetricsSnapshot {
+        MetricsSnapshot(
+            timestamp: Date(timeIntervalSinceReferenceDate: seconds),
+            cpu: CPUUsage(user: cpu, idle: 1 - cpu),
+            gpu: GPUUsage(utilisation: gpu, isAvailable: true),
+            thermal: ThermalUsage(cpu: celsius, isAvailable: celsius != nil)
+        )
+    }
+
     @Test("The coarse snapshot is held back between publications")
     @MainActor
     func coarseSnapshotIsThrottled() async {
-        let monitor = SystemMonitor(interval: 0.1)
+        let monitor = SystemMonitor()
         #expect(monitor.coarseSnapshot == .empty)
 
         // The first sample publishes straight away, so the menu bar is not blank
         // for the length of the coarse interval at launch.
-        await monitor.refreshNow()
+        await monitor.ingest(reading(at: 0, cpu: 0.2))
         let first = monitor.coarseSnapshot
         #expect(first != .empty)
         #expect(first == monitor.snapshot)
 
-        // A second sample well inside the interval moves the fine snapshot but
-        // not the coarse one — which is what keeps the status item still.
-        await monitor.refreshNow()
+        // A second sample inside the interval moves the fine snapshot but not
+        // the coarse one — which is what keeps the status item still.
+        await monitor.ingest(reading(at: 1.5, cpu: 0.25))
         #expect(monitor.snapshot != first)
         #expect(monitor.coarseSnapshot == first)
+
+        // Once the interval is up both samples are published, averaged.
+        await monitor.ingest(reading(at: 3, cpu: 0.3))
+        #expect(abs(monitor.coarseSnapshot.cpu.user - 0.275) < 1e-9)
+    }
+
+    @Test("A jump in the load is published without waiting for the interval")
+    @MainActor
+    func coarseSnapshotFollowsAJump() async {
+        let monitor = SystemMonitor()
+        await monitor.ingest(reading(at: 0, cpu: 0.05))
+
+        // A build starting: one tick later the menu bar already says so.
+        let burst = reading(at: 1.5, cpu: 0.9)
+        await monitor.ingest(burst)
+        #expect(monitor.coarseSnapshot == burst)
+
+        // The same is true of the GPU, and of a load falling away.
+        await monitor.ingest(reading(at: 3, cpu: 0.9, gpu: 0.8))
+        #expect(monitor.coarseSnapshot.gpu.utilisation == 0.8)
+        await monitor.ingest(reading(at: 4.5, cpu: 0.1, gpu: 0.8))
+        #expect(monitor.coarseSnapshot.cpu.user == 0.1)
+    }
+
+    @Test("Only the loads jump the throttle, and only by enough to see")
+    @MainActor
+    func coarseJumpThreshold() {
+        let published = reading(at: 0, cpu: 0.2, gpu: 0.2, celsius: 40)
+        #expect(SystemMonitor.isCoarseJump(from: published, to: reading(at: 1.5, cpu: 0.4, gpu: 0.2, celsius: 40)))
+        #expect(SystemMonitor.isCoarseJump(from: published, to: reading(at: 1.5, cpu: 0.2, gpu: 0.05, celsius: 40)))
+        // An idle machine wandering by a few points stays throttled.
+        #expect(!SystemMonitor.isCoarseJump(from: published, to: reading(at: 1.5, cpu: 0.28, gpu: 0.25, celsius: 40)))
+        // Temperature moves with the machine's thermal mass and does not count.
+        #expect(!SystemMonitor.isCoarseJump(from: published, to: reading(at: 1.5, cpu: 0.2, gpu: 0.2, celsius: 95)))
     }
 
     @Test("A power-source change reaches both snapshots at once, without a history sample")

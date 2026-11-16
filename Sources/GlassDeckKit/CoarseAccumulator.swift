@@ -70,11 +70,16 @@ struct CoarseAccumulator {
     }
 
     /// The snapshot to publish, and a fresh window for the next one.
+    mutating func drain() -> MetricsSnapshot {
+        defer { reset() }
+        return pending
+    }
+
+    /// What `drain()` would publish now, without closing the window.
     ///
     /// A window of one sample is returned untouched, so nothing changes for a
     /// cadence slower than the throttle.
-    mutating func drain() -> MetricsSnapshot {
-        defer { reset() }
+    var pending: MetricsSnapshot {
         guard var result = latest else { return .empty }
         guard count > 1, weight > 0 else { return result }
 
