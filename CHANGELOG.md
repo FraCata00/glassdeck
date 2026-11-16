@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2026-11-16
+
+### Fixed
+
+- **The menu bar counts every sample.** It is redrawn at most every two
+  seconds, and at the default cadence that meant it showed every other
+  sample: for three seconds it held a reading of the last one and a half, so
+  half of what the machine did never reached it and a short burst could vanish
+  altogether. It now shows the average of everything sampled since it was last
+  redrawn — CPU, GPU, disk and network — which is how Activity Monitor arrives
+  at its own figure. It is redrawn no more often than before.
+- **The performance and efficiency cores are no longer swapped.** Apple silicon
+  numbers its efficiency cores first, and GlassDeck had assumed the opposite,
+  so the P-cores and E-cores figures and the core grid each showed the other
+  cluster's load. Each core's cluster is now read from the system.
+- **Disk space agrees with Finder.** Capacities were counted in powers of 1024
+  but labelled GB, so a 494 GB disk with 228 GB available read as 460 GB with
+  213 GB free. Storage and disk and network speeds are now counted in powers of
+  1000, as Finder and Activity Monitor count them. Memory is still counted in
+  powers of 1024, which is how macOS reports it.
+
 ## [2.1.0] - 2026-11-14
 
 ### Changed
@@ -554,6 +575,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[2.1.1]: https://github.com/FraCata00/glassdeck/releases/tag/v2.1.1
 [2.1.0]: https://github.com/FraCata00/glassdeck/releases/tag/v2.1.0
 [2.0.0]: https://github.com/FraCata00/glassdeck/releases/tag/v2.0.0
 [1.11.0]: https://github.com/FraCata00/glassdeck/releases/tag/v1.11.0
