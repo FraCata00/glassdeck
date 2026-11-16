@@ -22,6 +22,10 @@ jobs:
       # the job below instead.
       - name: Build GlassDeckKit
         run: swift build --target GlassDeckKit
+      # Here rather than in the app job: it needs nothing but the sources, and
+      # the macOS 15 runners are the ones that come free sooner.
+      - name: Check the string tables
+        run: Scripts/check-strings.sh
 
   app:
     name: App and tests (macOS 26)
