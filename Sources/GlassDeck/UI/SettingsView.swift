@@ -78,7 +78,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     var keywords: [String] {
         switch self {
         case .general: [String(localized: "Refresh interval"), String(localized: "Open at login")]
-        case .menuBar: [String(localized: "Menu bar metric")]
+        case .menuBar: [String(localized: "Menu bar metric"), String(localized: "Real-time menu bar")]
         case .touchBar: [String(localized: "Style"), String(localized: "Placement"), String(localized: "Hand-over shortcut")]
         case .panel: [String(localized: "Metrics"), String(localized: "Show top processes")]
         case .alerts: [String(localized: "Warn when the Mac runs hot"), String(localized: "Warn when memory runs short")]
@@ -284,6 +284,14 @@ struct SettingsView: View {
                 }
             }
             .disabled(preferences.menuBarStyle == .graph)
+        }
+
+        Section {
+            Toggle(isOn: $preferences.isMenuBarRealTime) {
+                Text("Real-time menu bar")
+                Text("Follows every sample, the same figure as the panel. Off, it is redrawn every few seconds with the average since the last one, which costs about half as much.")
+            }
+            .disabled(preferences.menuBarStyle == .icon)
         }
     }
 

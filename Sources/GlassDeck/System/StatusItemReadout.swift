@@ -14,6 +14,10 @@ import Observation
 /// This sits between the two. It reads the coarse snapshot, reduces it to
 /// exactly what the label draws, and assigns that only when it differs from
 /// what is already up — and `@Observable` then has nothing to tell the label.
+///
+/// With the real-time setting on it reads the fine snapshot instead, so the
+/// label shows exactly what the panel shows, sample for sample. The gate
+/// still stands: a label that would look the same is not reassigned.
 @MainActor
 @Observable
 final class StatusItemReadout {
@@ -45,12 +49,18 @@ final class StatusItemReadout {
     @ObservationIgnored private let monitor: SystemMonitor
     @ObservationIgnored private let preferences: Preferences
     @ObservationIgnored private lazy var changes = ObservationLoop(self) { readout in
-        _ = readout.monitor.coarseSnapshot
+        _ = readout.source
         _ = readout.preferences.menuBarStyle
         _ = readout.preferences.menuBarMetric
         _ = readout.preferences.dashboardMetrics
     } onChange: { readout in
         readout.update()
+    }
+
+    /// The snapshot the label is drawn from. Read inside the observation loop,
+    /// so switching the setting moves the tracking from one to the other.
+    private var source: MetricsSnapshot {
+        preferences.isMenuBarRealTime ? monitor.snapshot : monitor.coarseSnapshot
     }
 
     init(monitor: SystemMonitor, preferences: Preferences) {
@@ -64,7 +74,7 @@ final class StatusItemReadout {
     }
 
     private func update() {
-        let fresh = Self.content(for: monitor.coarseSnapshot, preferences: preferences)
+        let fresh = Self.content(for: source, preferences: preferences)
         if fresh != content { content = fresh }
     }
 

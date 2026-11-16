@@ -101,3 +101,5 @@
 "Detail, when a panel is tapped" = "Detail, when a panel is tapped";
 "%@ Applies to the full and compact bar, and to a metric's detail." = "%@ Applies to the full and compact bar, and to a metric's detail.";
 "Their order is the one set in Panel and dashboard." = "Their order is the one set in Panel and dashboard.";
+"Real-time menu bar" = "Real-time menu bar";
+"Follows every sample, the same figure as the panel. Off, it is redrawn every few seconds with the average since the last one, which costs about half as much." = "Follows every sample, the same figure as the panel. Off, it is redrawn every few seconds with the average since the last one, which costs about half as much.";

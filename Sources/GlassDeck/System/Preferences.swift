@@ -12,6 +12,7 @@ final class Preferences {
         static let touchBarMetrics = "touchBarMetrics"
         static let menuBarMetric = "menuBarMetric"
         static let menuBarStyle = "menuBarStyle"
+        static let menuBarRealTime = "menuBarRealTime"
         static let touchBarEnabled = "touchBarEnabled"
         static let touchBarPresentation = "touchBarPresentation"
         static let touchBarAlignment = "touchBarAlignment"
@@ -79,6 +80,12 @@ final class Preferences {
     var touchBarMetrics: [MetricKind] { didSet { defaults.store(touchBarMetrics, forKey: Key.touchBarMetrics) } }
     var menuBarMetric: MetricKind { didSet { defaults.store(menuBarMetric, forKey: Key.menuBarMetric) } }
     var menuBarStyle: MenuBarStyle { didSet { defaults.store(menuBarStyle, forKey: Key.menuBarStyle) } }
+    /// Whether the status item follows every sample instead of the throttled,
+    /// averaged coarse snapshot. Off by default: redrawing the status item is
+    /// the app's largest single cost, and this roughly doubles how often it
+    /// happens at the default cadence. It is for the person who would rather
+    /// pay that than watch the menu bar trail the panel.
+    var isMenuBarRealTime: Bool { didSet { defaults.set(isMenuBarRealTime, forKey: Key.menuBarRealTime) } }
     var isTouchBarEnabled: Bool { didSet { defaults.set(isTouchBarEnabled, forKey: Key.touchBarEnabled) } }
     var touchBarPresentation: TouchBarPresentation {
         didSet { defaults.store(touchBarPresentation, forKey: Key.touchBarPresentation) }
@@ -139,6 +146,7 @@ final class Preferences {
         touchBarMetrics = defaults.nonEmpty(Key.touchBarMetrics) ?? MetricKind.defaultSelection
         menuBarMetric = defaults.value(Key.menuBarMetric) ?? .cpu
         menuBarStyle = defaults.value(Key.menuBarStyle) ?? .graph
+        isMenuBarRealTime = defaults.object(forKey: Key.menuBarRealTime) as? Bool ?? false
         isTouchBarEnabled = defaults.object(forKey: Key.touchBarEnabled) as? Bool ?? true
         touchBarPresentation = defaults.value(Key.touchBarPresentation) ?? .controlStrip
         touchBarAlignment = defaults.value(Key.touchBarAlignment) ?? .trailing
