@@ -7,30 +7,49 @@ public enum ValueFormatter {
         "\(Int((fraction.clamped01 * 100).rounded()))%"
     }
 
-    /// Byte counts in binary units with adaptive precision: `"9.1 GB"`, `"512 MB"`.
+    /// Memory in binary units with adaptive precision: `"9.1 GB"`, `"512 MB"`.
+    ///
+    /// Binary because that is how macOS counts memory — Activity Monitor calls
+    /// 8 GiB of RAM "8 GB" — and the number has to match the one it shows.
     public static func bytes(_ value: UInt64) -> String {
-        let units = ["B", "KB", "MB", "GB", "TB", "PB"]
-        var amount = Double(value)
-        var index = 0
-        while amount >= 1024, index < units.count - 1 {
-            amount /= 1024
-            index += 1
-        }
-        if index == 0 { return "\(value) B" }
-        return amount < 10
-            ? String(format: "%.1f %@", amount, units[index])
-            : String(format: "%.0f %@", amount, units[index])
+        scaled(value, base: 1024)
     }
 
-    /// Throughput with a `/s` suffix: `"1.4 MB/s"`.
+    /// Storage capacity in decimal units: `"494 GB"`.
+    ///
+    /// Decimal because that is how Finder, System Settings and the drive's
+    /// own box count it. In binary units a 494 GB volume read as 460 GB, and
+    /// the free space disagreed with Finder by the same seven per cent.
+    public static func storage(_ value: UInt64) -> String {
+        scaled(value, base: 1000)
+    }
+
+    /// Throughput with a `/s` suffix, in decimal units: `"1.4 MB/s"` — what
+    /// Activity Monitor's Disk and Network tabs show.
     ///
     /// Converting a `Double` at or above `UInt64.max` is a hard trap, not a
     /// rounding error, so the value saturates instead: a rate that large can only
     /// be a bad reading, and a wrong label beats a crashed menu bar.
     public static func rate(_ bytesPerSecond: Double) -> String {
-        guard bytesPerSecond.isFinite, bytesPerSecond > 0 else { return "\(bytes(0))/s" }
+        guard bytesPerSecond.isFinite, bytesPerSecond > 0 else { return "\(storage(0))/s" }
         let value = bytesPerSecond >= Double(UInt64.max) ? UInt64.max : UInt64(bytesPerSecond)
-        return "\(bytes(value))/s"
+        return "\(storage(value))/s"
+    }
+
+    private static func scaled(_ value: UInt64, base: Double) -> String {
+        let units = ["B", "KB", "MB", "GB", "TB", "PB"]
+        var amount = Double(value)
+        var index = 0
+        while amount >= base, index < units.count - 1 {
+            amount /= base
+            index += 1
+        }
+        if index == 0 { return "\(value) B" }
+        // Rounded first, so 9.96 becomes "10" rather than "10.0".
+        let rounded = (amount * 10).rounded() / 10
+        return rounded < 10
+            ? String(format: "%.1f %@", rounded, units[index])
+            : String(format: "%.0f %@", amount, units[index])
     }
 
     /// Two decimal places, matching how `uptime` prints load averages.
