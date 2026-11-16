@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.2] - 2026-11-16
+
+### Fixed
+
+- **The menu bar keeps up when the load changes.** It is redrawn every three
+  seconds at the default cadence, and since 2.1.1 it shows the average of
+  those three seconds, so a build starting or a game loading took up to four
+  and a half seconds to show. When the CPU or GPU load moves by fifteen points
+  or more from what is on screen, the menu bar now follows on the next
+  sample, a second and a half later. A steady load is still redrawn every three
+  seconds, so an idle machine pays nothing for it; a load swinging back and
+  forth costs about a quarter of a percent of CPU more while it lasts.
+
 ## [2.1.1] - 2026-11-16
 
 ### Fixed
@@ -575,6 +588,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[2.1.2]: https://github.com/FraCata00/glassdeck/releases/tag/v2.1.2
 [2.1.1]: https://github.com/FraCata00/glassdeck/releases/tag/v2.1.1
 [2.1.0]: https://github.com/FraCata00/glassdeck/releases/tag/v2.1.0
 [2.0.0]: https://github.com/FraCata00/glassdeck/releases/tag/v2.0.0
