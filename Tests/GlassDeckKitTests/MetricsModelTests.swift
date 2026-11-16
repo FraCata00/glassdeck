@@ -29,11 +29,16 @@ struct MetricsModelTests {
 
     @Test("CPU clusters are only reported when the core counts add up")
     func cpuClusters() {
+        // An M1 numbers its efficiency cores first: cpu0–3 are E, cpu4–7 are P.
         let apple = CPUUsage(
-            perCore: [0.8, 0.6, 0.4, 0.2, 0.1, 0.1, 0.1, 0.1],
-            performanceCoreCount: 4,
-            efficiencyCoreCount: 4
+            perCore: [0.1, 0.1, 0.1, 0.1, 0.8, 0.6, 0.4, 0.2],
+            coreKinds: [.efficiency, .efficiency, .efficiency, .efficiency,
+                        .performance, .performance, .performance, .performance]
         )
+        #expect(apple.performanceCoreCount == 4)
+        #expect(apple.efficiencyCoreCount == 4)
+        #expect(apple.performanceCoreLoads == [0.8, 0.6, 0.4, 0.2])
+        #expect(apple.efficiencyCoreLoads == [0.1, 0.1, 0.1, 0.1])
         // Means of binary fractions do not land on exact decimals.
         #expect(abs((apple.performanceClusterLoad ?? 0) - 0.5) < 0.000_001)
         #expect(abs((apple.efficiencyClusterLoad ?? 0) - 0.1) < 0.000_001)
@@ -42,6 +47,32 @@ struct MetricsModelTests {
         let intel = CPUUsage(perCore: [0.5, 0.5])
         #expect(intel.performanceClusterLoad == nil)
         #expect(intel.efficiencyClusterLoad == nil)
+
+        // A topology that does not cover every core is not trusted.
+        let partial = CPUUsage(perCore: [0.5, 0.5, 0.5], coreKinds: [.efficiency, .performance])
+        #expect(partial.performanceCoreLoads == nil)
+        #expect(partial.efficiencyClusterLoad == nil)
+    }
+
+    @Test("Core kinds come from the device tree, or efficiency-first counts without it")
+    func coreKindsFallback() {
+        let fromTree = CPUSampler.coreKinds(
+            fromDeviceTree: [3: .performance, 0: .efficiency, 2: .performance, 1: .efficiency],
+            performanceCount: 2,
+            efficiencyCount: 2
+        )
+        #expect(fromTree == [.efficiency, .efficiency, .performance, .performance])
+
+        // No device tree: Apple silicon numbers the efficiency cluster first.
+        let fallback = CPUSampler.coreKinds(fromDeviceTree: [:], performanceCount: 2, efficiencyCount: 1)
+        #expect(fallback == [.efficiency, .performance, .performance])
+
+        // A tree with a gap in the numbering is no better than none.
+        let gappy = CPUSampler.coreKinds(fromDeviceTree: [0: .efficiency, 2: .performance], performanceCount: 1, efficiencyCount: 1)
+        #expect(gappy == [.efficiency, .performance])
+
+        // Intel: no clusters at all.
+        #expect(CPUSampler.coreKinds(fromDeviceTree: [:], performanceCount: 0, efficiencyCount: 0).isEmpty)
     }
 
     @Test("Busy fraction is everything that is not idle")

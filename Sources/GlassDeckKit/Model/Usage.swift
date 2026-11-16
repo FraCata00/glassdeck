@@ -1,5 +1,11 @@
 import Foundation
 
+/// Which cluster a logical CPU belongs to on Apple silicon.
+public enum CoreKind: Sendable, Equatable {
+    case performance
+    case efficiency
+}
+
 /// Aggregate and per-core processor load, expressed as fractions in `0...1`.
 public struct CPUUsage: Sendable, Equatable {
     public var user: Double
@@ -7,8 +13,14 @@ public struct CPUUsage: Sendable, Equatable {
     public var nice: Double
     public var idle: Double
     public var perCore: [Double]
-    public var performanceCoreCount: Int
-    public var efficiencyCoreCount: Int
+    /// The cluster of each entry in `perCore`, in the same order; empty where
+    /// the machine has no clusters (Intel) or the topology is unknown.
+    ///
+    /// Kept per core rather than as two counts because the order is not the
+    /// one a count implies: an M1 numbers its efficiency cores first, so
+    /// taking the first four cores as the performance cluster swapped the two
+    /// clusters' readings.
+    public var coreKinds: [CoreKind]
     public var loadAverage: [Double]
 
     public init(
@@ -17,8 +29,7 @@ public struct CPUUsage: Sendable, Equatable {
         nice: Double = 0,
         idle: Double = 1,
         perCore: [Double] = [],
-        performanceCoreCount: Int = 0,
-        efficiencyCoreCount: Int = 0,
+        coreKinds: [CoreKind] = [],
         loadAverage: [Double] = []
     ) {
         self.user = user
@@ -26,8 +37,7 @@ public struct CPUUsage: Sendable, Equatable {
         self.nice = nice
         self.idle = idle
         self.perCore = perCore
-        self.performanceCoreCount = performanceCoreCount
-        self.efficiencyCoreCount = efficiencyCoreCount
+        self.coreKinds = coreKinds
         self.loadAverage = loadAverage
     }
 
@@ -36,16 +46,26 @@ public struct CPUUsage: Sendable, Equatable {
     /// Busy fraction of the machine: everything that is not idle.
     public var total: Double { (user + system + nice).clamped01 }
 
+    public var performanceCoreCount: Int { coreKinds.count { $0 == .performance } }
+    public var efficiencyCoreCount: Int { coreKinds.count { $0 == .efficiency } }
+
+    /// Per-core loads of the performance cluster, or `nil` when the topology is
+    /// unknown or does not describe every core.
+    public var performanceCoreLoads: [Double]? { loads(of: .performance) }
+
+    /// Per-core loads of the efficiency cluster; `nil` as above.
+    public var efficiencyCoreLoads: [Double]? { loads(of: .efficiency) }
+
     /// Mean load of the performance cluster, or `nil` on machines without one.
-    public var performanceClusterLoad: Double? {
-        guard performanceCoreCount > 0, perCore.count >= performanceCoreCount else { return nil }
-        return perCore.prefix(performanceCoreCount).mean
-    }
+    public var performanceClusterLoad: Double? { performanceCoreLoads?.mean }
 
     /// Mean load of the efficiency cluster, or `nil` when the topology is unknown.
-    public var efficiencyClusterLoad: Double? {
-        guard efficiencyCoreCount > 0, perCore.count == performanceCoreCount + efficiencyCoreCount else { return nil }
-        return perCore.suffix(efficiencyCoreCount).mean
+    public var efficiencyClusterLoad: Double? { efficiencyCoreLoads?.mean }
+
+    private func loads(of kind: CoreKind) -> [Double]? {
+        guard !perCore.isEmpty, coreKinds.count == perCore.count else { return nil }
+        let loads = zip(perCore, coreKinds).filter { $0.1 == kind }.map(\.0)
+        return loads.isEmpty ? nil : loads
     }
 }
 
