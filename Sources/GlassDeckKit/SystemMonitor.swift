@@ -22,7 +22,9 @@ public final class SystemMonitor {
     public private(set) var coarseSnapshot: MetricsSnapshot = .empty
 
     /// Shortest gap between two `coarseSnapshot` publications. At the default
-    /// cadence this halves how often the status item is redrawn.
+    /// cadence this halves how often the status item is redrawn; the samples
+    /// in between are folded into the published one (see `CoarseAccumulator`)
+    /// rather than dropped.
     public static let coarseInterval: TimeInterval = 2
     public private(set) var topProcesses: [ProcessSample] = []
     public private(set) var isRunning = false
@@ -87,6 +89,7 @@ public final class SystemMonitor {
     @ObservationIgnored private var processObservers = 0
 
     @ObservationIgnored private var lastCoarsePublish: Date?
+    @ObservationIgnored private var coarseWindow = CoarseAccumulator()
     /// Left out of observation on purpose: it changes in the same breath as
     /// `snapshot`, which every surface that draws a history already reads, so
     /// tracking it too only bought nine more notifications per sample.
@@ -156,6 +159,9 @@ public final class SystemMonitor {
         isSuspended = true
         task?.cancel()
         task = nil
+        // Whatever was pending describes the machine before the screen went
+        // dark; the first reading after the wake should not be averaged with it.
+        coarseWindow = CoarseAccumulator()
     }
 
     /// Undoes `suspend()`. The loop takes a leading sample straight away, so the
@@ -244,12 +250,14 @@ public final class SystemMonitor {
 
         // Held back until enough time has passed, so the expensive surfaces are
         // not redrawn at the sampling cadence. Sampling faster than the coarse
-        // interval speeds up the graphs without speeding up the status item.
+        // interval speeds up the graphs without speeding up the status item,
+        // and every sample still counts towards what it shows.
+        coarseWindow.add(snapshot)
         if let lastCoarsePublish,
            snapshot.timestamp.timeIntervalSince(lastCoarsePublish) < Self.coarseInterval {
             return
         }
         lastCoarsePublish = snapshot.timestamp
-        coarseSnapshot = snapshot
+        coarseSnapshot = coarseWindow.drain()
     }
 }

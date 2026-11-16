@@ -24,11 +24,25 @@ struct FormattingTests {
         #expect(ValueFormatter.bytes(9 * 1024 * 1024 * 1024) == "9.0 GB")
         // Ten and above drops the decimal so the label stays narrow.
         #expect(ValueFormatter.bytes(16 * 1024 * 1024 * 1024) == "16 GB")
+        // Just under ten rounds up to ten, and then drops its decimal too.
+        #expect(ValueFormatter.bytes(10_695_475_200) == "10 GB")
     }
 
-    @Test("Rates carry a per-second suffix and never go negative")
+    @Test("Storage is counted in decimal units, the way Finder counts it")
+    func storageFormatting() {
+        // The boot volume of the machine this was measured on: Finder says
+        // 494 GB with 228 GB available; binary units made it 460 and 213.
+        #expect(ValueFormatter.storage(494_353_338_368) == "494 GB")
+        #expect(ValueFormatter.storage(228_220_635_775) == "228 GB")
+        #expect(ValueFormatter.storage(1_500_000_000_000) == "1.5 TB")
+        #expect(ValueFormatter.storage(999) == "999 B")
+    }
+
+    @Test("Rates are decimal, carry a per-second suffix and never go negative")
     func rateFormatting() {
-        #expect(ValueFormatter.rate(1_048_576) == "1.0 MB/s")
+        // Activity Monitor's Disk and Network tabs count in powers of 1000.
+        #expect(ValueFormatter.rate(1_000_000) == "1.0 MB/s")
+        #expect(ValueFormatter.rate(40_988_672) == "41 MB/s")
         #expect(ValueFormatter.rate(-5) == "0 B/s")
         #expect(ValueFormatter.rate(.infinity) == "0 B/s")
     }

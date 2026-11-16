@@ -52,8 +52,8 @@ extension MetricsSnapshot {
 
         case .disk:
             return [
-                MetricDetail(label: L.t("detail.used", "used"), value: ValueFormatter.bytes(disk.used)),
-                MetricDetail(label: L.t("detail.free", "free"), value: ValueFormatter.bytes(disk.free)),
+                MetricDetail(label: L.t("detail.used", "used"), value: ValueFormatter.storage(disk.used)),
+                MetricDetail(label: L.t("detail.free", "free"), value: ValueFormatter.storage(disk.free)),
                 MetricDetail(label: L.t("detail.read", "read"), value: ValueFormatter.rate(disk.readBytesPerSecond)),
                 MetricDetail(label: L.t("detail.write", "write"), value: ValueFormatter.rate(disk.writeBytesPerSecond)),
             ]
@@ -162,7 +162,7 @@ extension MetricsSnapshot {
                 ValueFormatter.bytes(memory.swapUsed)
             )
         case .disk:
-            L.t("disk.caption", "%1$@ free of %2$@", ValueFormatter.bytes(disk.free), ValueFormatter.bytes(disk.total))
+            L.t("disk.caption", "%1$@ free of %2$@", ValueFormatter.storage(disk.free), ValueFormatter.storage(disk.total))
         case .network:
             "↓ \(ValueFormatter.rate(network.downloadBytesPerSecond)) ↑ \(ValueFormatter.rate(network.uploadBytesPerSecond))"
         case .fans:

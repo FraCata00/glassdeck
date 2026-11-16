@@ -20,11 +20,11 @@ struct CoreGridView: View {
         }
     }
 
+    /// Taken from the kit rather than sliced here: the cores are not numbered
+    /// performance first, so a prefix/suffix split put the clusters' bars
+    /// under each other's labels.
     private var clusters: (performance: [Double]?, efficiency: [Double]?) {
-        let p = cpu.performanceCoreCount
-        let e = cpu.efficiencyCoreCount
-        guard p > 0, e > 0, cpu.perCore.count == p + e else { return (nil, nil) }
-        return (Array(cpu.perCore.prefix(p)), Array(cpu.perCore.suffix(e)))
+        (cpu.performanceCoreLoads, cpu.efficiencyCoreLoads)
     }
 
     private func cluster(title: String, loads: [Double]) -> some View {
