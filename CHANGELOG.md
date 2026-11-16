@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2026-11-16
+
+### Fixed
+
+- **Switching the Touch Bar off really switches it off.** Turned off in
+  Settings, GlassDeck took the bar down but kept redrawing its meters in the
+  background for as long as it stayed open: a copy that had been running for
+  half an hour was using about 30% more CPU than a fresh one. It now stops
+  following the readings the moment the bar goes away, and picks them up again
+  when it is switched back on.
+- **Alerts cost nothing while they are off.** With both the temperature and the
+  memory alerts switched off, which is how GlassDeck starts, it no longer checks
+  the readings on their behalf.
+
 ## [2.2.0] - 2026-11-16
 
 ### Added
@@ -602,6 +616,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[2.2.1]: https://github.com/FraCata00/glassdeck/releases/tag/v2.2.1
 [2.2.0]: https://github.com/FraCata00/glassdeck/releases/tag/v2.2.0
 [2.1.2]: https://github.com/FraCata00/glassdeck/releases/tag/v2.1.2
 [2.1.1]: https://github.com/FraCata00/glassdeck/releases/tag/v2.1.1
