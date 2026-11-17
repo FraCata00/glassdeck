@@ -76,6 +76,13 @@ final class TouchBarDetailView: NSView {
 
     private var fraction: Double { snapshot.fraction(for: kind).clamped01 }
 
+    /// Where a pet sits when it turns up in the detail: in the headline
+    /// column, after its text. The title and the figure take well under
+    /// 120 pt even in the longest language, and the column runs to 156.
+    var petSlot: NSPoint {
+        NSPoint(x: (style == .rings ? 40 : 12) + 124, y: 5)
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         context.clear(dirtyRect)

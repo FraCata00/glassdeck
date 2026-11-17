@@ -141,6 +141,7 @@ final class AppModel {
     /// clicks, so two environment variables let a build come up in a given state
     /// for screenshots and manual testing:
     /// `GLASSDECK_TOUCHBAR_MODE=fullscreen|expanded|mini|detail:<metric>`,
+    /// `GLASSDECK_PET_VISIT=1` (the pet sets off on the first sample),
     /// `GLASSDECK_OPEN_DASHBOARD=1`, `GLASSDECK_OPEN_SETTINGS=1` and
     /// `GLASSDECK_OPEN_PANEL=1`, which puts the
     /// menu bar panel in an ordinary window: a `MenuBarExtra` cannot be opened
@@ -161,6 +162,16 @@ final class AppModel {
                 kind.map(self.touchBar.expand)
             }
         default: break
+        }
+
+        if environment["GLASSDECK_PET_VISIT"] == "1" {
+            Task { @MainActor in
+                // The bar is rebuilt once the first samples say which hardware
+                // there is, and a rebuild ends any visit: summoned straight
+                // away, the pet would be sent off before it was ever seen.
+                try? await Task.sleep(for: .seconds(4))
+                self.touchBar.summonPet()
+            }
         }
 
         if environment["GLASSDECK_OPEN_DASHBOARD"] == "1" {

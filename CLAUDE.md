@@ -100,7 +100,8 @@ The Touch Bar and a menu bar extra cannot be scripted, so a build can be brought
 up in a given state with environment variables (see
 `AppModel.applyDevelopmentOverrides`): `GLASSDECK_OPEN_DASHBOARD=1`,
 `GLASSDECK_OPEN_PANEL=1`, `GLASSDECK_OPEN_SETTINGS=1|<page>` (e.g. `touchBar`),
-`GLASSDECK_TOUCHBAR_MODE=fullscreen|expanded|mini|detail:<metric>`.
+`GLASSDECK_TOUCHBAR_MODE=fullscreen|expanded|mini|detail:<metric>`,
+`GLASSDECK_PET_VISIT=1` (the Touch Bar pet sets off on the first sample).
 
 A released build is usually already running on this machine. A second instance
 presents its own system-modal Touch Bar on top of it, so ask before launching
