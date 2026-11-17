@@ -96,3 +96,7 @@
 "value.none" = "none";
 "value.rpm" = "%lld rpm";
 "value.wall" = "wall";
+"pet.off" = "None";
+"pet.octopus" = "Octopus";
+"pet.frog" = "Frog";
+"pet.coco" = "Coco";
