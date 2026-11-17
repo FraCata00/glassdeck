@@ -4,10 +4,11 @@ import Foundation
 /// what the bar should do; it never keeps time of its own, so a parked bar
 /// simply stops asking.
 ///
-/// Visits are rare by design — a gap drawn afresh after each one, so they are
-/// not predictable — but a reading that jumps into a notable mood brings the
-/// pet at once, at most once per cooldown so a busy machine does not turn it
-/// into an alarm.
+/// Visits come every few minutes — often enough that the pet feels like it
+/// lives on the bar, not so often that it becomes a fixture — with the gap
+/// drawn afresh after each one so they are not predictable. A reading that
+/// jumps into a notable mood brings the pet at once, at most once per
+/// cooldown so a busy machine does not turn it into an alarm.
 public struct PetDirector: Sendable {
     public struct Configuration: Sendable, Equatable {
         /// Seconds between the end of one visit and the next random one.
@@ -18,7 +19,7 @@ public struct PetDirector: Sendable {
         public var detailChance: Double
 
         public init(
-            visitGap: ClosedRange<TimeInterval> = 480...1500,
+            visitGap: ClosedRange<TimeInterval> = 180...480,
             spikeCooldown: TimeInterval = 300,
             detailChance: Double = 0.25
         ) {
