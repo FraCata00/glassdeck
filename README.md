@@ -71,6 +71,10 @@ The panels can be drawn in nine styles — Glass, Instrument, Capsule, Ambient,
 Rings, Terminal, Histogram, Signal and Tinted glass — chosen in
 *Settings → Touch Bar*, with a live preview of each.
 
+Every so often a pixel-art pet — an octopus, a frog or Coco the toy poodle —
+crosses the bar and acts out what the Mac is doing, and it always turns up
+when the load spikes. Pick one, or none, in the same settings page.
+
 The Control Strip item relies on private DFRFoundation and `NSTouchBar` entry
 points, resolved at runtime; on a Mac without a Touch Bar they do nothing.
 
