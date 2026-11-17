@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1] - 2026-11-17
+
+### Changed
+
+- **The Touch Bar pet comes by more often.** It used to visit every eight to
+  twenty-five minutes, which made it easy to miss altogether; it now turns up
+  every three to eight, often enough to feel like it lives on the bar. It
+  still always comes when the load spikes, and no more than once every five
+  minutes for that.
+
 ## [2.3.0] - 2026-11-17
 
 ### Added
@@ -633,6 +643,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[2.3.1]: https://github.com/FraCata00/glassdeck/releases/tag/v2.3.1
 [2.3.0]: https://github.com/FraCata00/glassdeck/releases/tag/v2.3.0
 [2.2.1]: https://github.com/FraCata00/glassdeck/releases/tag/v2.2.1
 [2.2.0]: https://github.com/FraCata00/glassdeck/releases/tag/v2.2.0
