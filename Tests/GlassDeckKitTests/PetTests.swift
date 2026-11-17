@@ -137,7 +137,7 @@ struct PetDirectorTests {
         for seed in 0..<50 as Range<UInt64> {
             var rng = SeededGenerator(state: seed)
             let gap = director(&rng).nextVisit.timeIntervalSince(start)
-            #expect((480...1500).contains(gap))
+            #expect((180...480).contains(gap))
         }
     }
 
@@ -152,7 +152,7 @@ struct PetDirectorTests {
         #expect(director.step(mood: .calm, at: due.addingTimeInterval(24), random: &rng) == .leave)
         #expect(director.phase == .away)
         let gap = director.nextVisit.timeIntervalSince(due.addingTimeInterval(24))
-        #expect((480...1500).contains(gap))
+        #expect((180...480).contains(gap))
     }
 
     @Test("A spike brings the pet at once, running")
@@ -176,7 +176,8 @@ struct PetDirectorTests {
     @Test("A busy machine brings the pet once per spike, and no sooner than the cooldown")
     func cooldown() {
         var rng = SeededGenerator(state: 4)
-        var director = director(&rng)
+        // Random visits pushed out of the way, so only spikes are in play.
+        var director = PetDirector(now: start, configuration: .init(visitGap: 3600...3600), random: &rng)
         #expect(director.step(mood: .busy, at: start, random: &rng) == .enter(duration: 14))
         #expect(director.step(mood: .calm, at: start.addingTimeInterval(14), random: &rng) == .leave)
         // A new spike two minutes later is inside the cooldown.
@@ -194,7 +195,7 @@ struct PetDirectorTests {
         _ = director.step(mood: .busy, at: start, random: &rng)
         director.interrupt(at: start.addingTimeInterval(5), random: &rng)
         #expect(director.phase == .away)
-        #expect(director.nextVisit.timeIntervalSince(start.addingTimeInterval(5)) >= 480)
+        #expect(director.nextVisit.timeIntervalSince(start.addingTimeInterval(5)) >= 180)
     }
 
     @Test("Summoning brings the pet on the next sample")
