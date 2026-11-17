@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-11-17
+
+### Added
+
+- **A pet on the Touch Bar.** Now and then a small pixel-art animal walks
+  across the full or compact bar, stopping to blink and hop on the way, and it
+  always turns up when the Mac starts working hard, heats up, runs short of
+  memory or is about to run out of battery. It acts out what the machine is
+  doing: it runs when the CPU is busy, sweats when it is hot, carries a parcel
+  under heavy network traffic and dozes off when nothing is happening. If the
+  load is still high when it reaches the end of the meters, it waits there,
+  pacing, until it passes. Sometimes it is also sitting in a metric's detail,
+  wandering about, napping and waking up; tap it to say hello. Pick an octopus,
+  a frog or Coco, a red toy poodle, in Settings → Touch Bar, or none at all. It
+  costs next to nothing: every move is a single animation handed to the system,
+  with no timer and nothing on the bar redrawn because of it.
+
 ## [2.2.1] - 2026-11-16
 
 ### Fixed
@@ -616,6 +633,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[2.3.0]: https://github.com/FraCata00/glassdeck/releases/tag/v2.3.0
 [2.2.1]: https://github.com/FraCata00/glassdeck/releases/tag/v2.2.1
 [2.2.0]: https://github.com/FraCata00/glassdeck/releases/tag/v2.2.0
 [2.1.2]: https://github.com/FraCata00/glassdeck/releases/tag/v2.1.2
