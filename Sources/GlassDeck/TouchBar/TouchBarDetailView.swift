@@ -76,6 +76,24 @@ final class TouchBarDetailView: NSView {
 
     private var fraction: Double { snapshot.fraction(for: kind).clamped01 }
 
+    /// Where the headline starts: the ring sits ahead of it in that style.
+    private var headlineX: CGFloat { style == .rings ? 40 : 12 }
+    /// Where the columns of numbers start, after the headline's.
+    private var columnsStart: CGFloat { headlineX + 156 }
+
+    /// Where a pet's leading edge sits when it turns up in the detail: at the
+    /// end of the headline column, after its text, with 10 pt to spare before
+    /// the numbers. The title and the figure take well under 110 pt even in
+    /// the longest language.
+    var petSlot: NSPoint {
+        NSPoint(x: columnsStart - 40, y: 0)
+    }
+
+    /// How far the pet may wander from its slot: back towards the headline
+    /// as far as the figure's usual end, and a few points on before the first
+    /// column of numbers.
+    static let petRange: ClosedRange<Double> = -36...6
+
     override func draw(_ dirtyRect: NSRect) {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         context.clear(dirtyRect)
@@ -86,10 +104,8 @@ final class TouchBarDetailView: NSView {
         drawBackground(accent: accent, context: context, ink: &ink)
 
         // The ring sits ahead of the headline; every other style starts with it.
-        var headlineX: CGFloat = 12
         if style == .rings {
             TouchBarPaint.ring(fraction, centre: NSPoint(x: 12 + 10, y: bounds.midY), radius: 9.5, color: accent)
-            headlineX = 40
         }
         drawText(kind.title.uppercased(), in: NSRect(x: headlineX, y: bounds.height - 14, width: 150, height: 11), ink.title, kern: ink.kern)
         drawText(snapshot.headline(for: kind), in: NSRect(x: headlineX, y: 3, width: 150, height: 16), ink.headline)
@@ -97,7 +113,6 @@ final class TouchBarDetailView: NSView {
         // The ambient style's history is the backdrop, which leaves the right
         // of the bar to the numbers.
         let graphWidth: CGFloat = style == .ambient ? 0 : 210
-        let columnsStart = headlineX + 156
         let columnsWidth = bounds.width - columnsStart - graphWidth - 24
         drawDetails(from: columnsStart, width: columnsWidth, ink: ink)
 

@@ -17,6 +17,7 @@ final class Preferences {
         static let touchBarPresentation = "touchBarPresentation"
         static let touchBarAlignment = "touchBarAlignment"
         static let touchBarStyle = "touchBarStyle"
+        static let touchBarPet = "touchBarPet"
         static let showsProcesses = "showsProcesses"
         static let metricOrder = "metricOrder"
         static let temperatureAlert = "temperatureAlert"
@@ -94,6 +95,9 @@ final class Preferences {
     /// How the metric panels on the bar are drawn. Glass by default: it is the
     /// look everyone had before there was a choice.
     var touchBarStyle: TouchBarStyle { didSet { defaults.store(touchBarStyle, forKey: Key.touchBarStyle) } }
+    /// The animal that now and then crosses the bar. On by default — it is an
+    /// easter egg, and one has to be found — with the octopus as the first pet.
+    var touchBarPet: TouchBarPet { didSet { defaults.store(touchBarPet, forKey: Key.touchBarPet) } }
     var showsProcesses: Bool { didSet { defaults.set(showsProcesses, forKey: Key.showsProcesses) } }
 
     /// The shortcut that hands the Touch Bar to the frontmost app, or `nil` when
@@ -151,6 +155,7 @@ final class Preferences {
         touchBarPresentation = defaults.value(Key.touchBarPresentation) ?? .controlStrip
         touchBarAlignment = defaults.value(Key.touchBarAlignment) ?? .trailing
         touchBarStyle = defaults.value(Key.touchBarStyle) ?? .glass
+        touchBarPet = defaults.value(Key.touchBarPet) ?? .octopus
         showsProcesses = defaults.object(forKey: Key.showsProcesses) as? Bool ?? true
         panelModules = defaults.values(Key.panelModules) ?? ModuleKind.defaultSelection
         clockZones = Self.readClockZones(from: defaults)

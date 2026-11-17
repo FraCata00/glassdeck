@@ -96,3 +96,7 @@
 "value.none" = "nessuna";
 "value.rpm" = "%lld rpm";
 "value.wall" = "rete elettrica";
+"pet.off" = "Nessuno";
+"pet.octopus" = "Polipo";
+"pet.frog" = "Rana";
+"pet.coco" = "Coco";

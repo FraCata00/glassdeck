@@ -365,6 +365,17 @@ struct SettingsView: View {
         } footer: {
             Text("Their order is the one set in Panel and dashboard.")
         }
+
+        Section {
+            Picker("Pet", selection: $preferences.touchBarPet) {
+                ForEach(TouchBarPet.allCases) { pet in
+                    Text(pet.title).tag(pet)
+                }
+            }
+            .disabled(!isEnabled)
+        } footer: {
+            Text("Now and then it walks across the full and compact bar, and it always turns up when the Mac starts working hard or heating up. Its mood follows the readings; tap it to say hello.")
+        }
     }
 
     /// One style as System Settings shows a choice of appearance: a picture
