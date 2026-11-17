@@ -14,52 +14,59 @@ public struct PetBitmap: Sendable, Equatable {
 
 /// The pets' pixel art and how a mood is dressed onto it.
 ///
-/// Each animal has three poses drawn by hand — two walking frames and one
-/// asleep — on a 16 × 14 grid, placed low on a 20 × 20 canvas so the props a
+/// Each animal has five poses drawn by hand — two walking frames, a blink, a
+/// jump and asleep — on a 16 × 14 grid, placed low on a 20 × 20 canvas so the props a
 /// mood adds (a sweat drop, a spark, a parcel) have room above and beside it.
 /// The moods are props and recolourings rather than separate drawings: three
 /// animals times eight moods would be fifty drawings to keep consistent, and
 /// at this size a prop reads as clearly as a new pose.
 ///
-/// On the bar one pixel here is one point, so a pet is 20 pt square — two
-/// thirds of the bar's height, small enough not to hide a reading for long.
+/// On the bar one pixel here is a point and a half, so the canvas is the bar's
+/// full 30 pt and the body about 21 pt of it: big enough to read as a
+/// character, small enough not to hide a reading for long.
 public enum PetArt {
     public static let canvasSize = 20
     static let bodyWidth = 16
     static let bodyHeight = 14
     static let bodyOrigin = (x: 2, y: 6)
 
-    public enum Pose: Sendable, Hashable {
-        /// Crossing the bar, or walking in place while it waits at the far end.
-        case moving
-        /// Sitting still: in a metric's detail, or asleep.
-        case resting
+    public enum Pose: Sendable, Hashable, CaseIterable {
+        /// Standing, and the first frame of the walk.
+        case stand
+        /// The second frame of the walk.
+        case step
+        case blink
+        /// In the air.
+        case jump
+        case asleep
+        /// Asleep, a breath later: the props drift so sleep is not a still.
+        case asleepBreath
+
+        /// Props bob between the two frames of a pair, so a sweat drop or a z
+        /// moves with the pet rather than sitting pasted on.
+        var propVariant: Int {
+            switch self {
+            case .step, .asleepBreath: 1
+            case .stand, .blink, .jump, .asleep: 0
+            }
+        }
     }
 
-    /// The frames for a pet in a mood, in the order they cycle. Empty for `off`.
-    public static func frames(
+    /// A pet in a mood and a pose; `nil` for `off`.
+    public static func frame(
         for pet: TouchBarPet,
         mood: PetMood,
         pose: Pose,
         surprised: Bool = false
-    ) -> [PetBitmap] {
-        guard let sheet = sheet(for: pet) else { return [] }
-        let palette = recoloured(sheet.palette, for: mood)
-
-        let bodies: [[String]] = if mood == .sleepy, pose == .resting {
-            [sheet.asleep, sheet.asleep]
-        } else {
-            [sheet.walkA, sheet.walkB]
+    ) -> PetBitmap? {
+        guard let sheet = sheet(for: pet) else { return nil }
+        var canvas = Canvas()
+        canvas.stamp(sheet.body(for: pose), at: bodyOrigin, palette: recoloured(sheet.palette, for: mood))
+        let asleep = pose == .asleep || pose == .asleepBreath
+        for prop in props(for: pet, mood: mood, asleep: asleep, variant: pose.propVariant, surprised: surprised) {
+            canvas.stamp(prop.grid, at: prop.origin, palette: Self.propPalette)
         }
-
-        return bodies.enumerated().map { index, body in
-            var canvas = Canvas()
-            canvas.stamp(body, at: bodyOrigin, palette: palette)
-            for prop in props(for: pet, mood: mood, frame: index, surprised: surprised) {
-                canvas.stamp(prop.grid, at: prop.origin, palette: Self.propPalette)
-            }
-            return canvas.bitmap
-        }
+        return canvas.bitmap
     }
 
     // MARK: - Sheets
@@ -67,10 +74,24 @@ public enum PetArt {
     struct Sheet {
         var walkA: [String]
         var walkB: [String]
+        var blink: [String]
+        var jump: [String]
         var asleep: [String]
         /// Index → 0xRRGGBB. `1` outline, `2` body, `3` highlight, `4` eyes and
         /// nose, `5` eye shine, `6` accent (mouth, ears).
         var palette: [Character: UInt32]
+
+        func body(for pose: Pose) -> [String] {
+            switch pose {
+            case .stand: walkA
+            case .step: walkB
+            case .blink: blink
+            case .jump: jump
+            case .asleep, .asleepBreath: asleep
+            }
+        }
+
+        var grids: [[String]] { [walkA, walkB, blink, jump, asleep] }
     }
 
     static func sheet(for pet: TouchBarPet) -> Sheet? {
@@ -113,6 +134,38 @@ public enum PetArt {
             "..21.21..12.12..",
             "..21..21.12..12.",
             "...1...1.1...1..",
+            "................",
+        ],
+        blink: [
+            ".....111111.....",
+            "...1122222211...",
+            "..122222222221..",
+            "..123322222221..",
+            ".12332222222221.",
+            ".12222222222221.",
+            ".12222222222221.",
+            ".12112222221121.",
+            ".12222266222221.",
+            "..122222222221..",
+            "..12.12..21.21..",
+            ".12..12..21..21.",
+            ".1...12..21...1.",
+            "......1..1......",
+        ],
+        jump: [
+            ".....111111.....",
+            "...1122222211...",
+            "..122222222221..",
+            "..123322222221..",
+            ".12332222222221.",
+            ".12222222222221.",
+            ".12254222254221.",
+            ".12244222244221.",
+            ".12222266222221.",
+            "..122222222221..",
+            "..12.12..21.21..",
+            "..12.12..21.21..",
+            "..1..1....1..1..",
             "................",
         ],
         asleep: [
@@ -165,6 +218,38 @@ public enum PetArt {
             "..12.1....1.21..",
             ".12..1....1..21.",
             ".1............1.",
+            "................",
+            "................",
+        ],
+        blink: [
+            "................",
+            "................",
+            "................",
+            "................",
+            "...111....111...",
+            "..12221..12221..",
+            "..111111111111..",
+            ".12222222222221.",
+            ".12666666666621.",
+            ".12333333333321.",
+            ".12233333333221.",
+            "1222122222212221",
+            "1221.111111.1221",
+            ".11..........11.",
+        ],
+        jump: [
+            "...111....111...",
+            "..15541..15541..",
+            "..122222222221..",
+            ".12222222222221.",
+            ".12666666666621.",
+            ".12333333333321.",
+            ".12233333333221.",
+            "..122222222221..",
+            "..12.1....1.21..",
+            ".12..1....1..21.",
+            ".1...1....1...1.",
+            "1....1....1....1",
             "................",
             "................",
         ],
@@ -223,6 +308,38 @@ public enum PetArt {
             "....121..121....",
             ".....11..11.....",
         ],
+        blink: [
+            "..........1111..",
+            ".........132331.",
+            "........13232321",
+            "..11....12322121",
+            ".1331...16622224",
+            ".1321...16632221",
+            "...1111111661211",
+            "..1323232326611.",
+            ".13232323232321.",
+            ".12323232323221.",
+            "..122222222221..",
+            "..121......121..",
+            "..121......121..",
+            "..11.......11...",
+        ],
+        jump: [
+            "..........1111..",
+            ".........132331.",
+            "........13232321",
+            "..11....12322421",
+            ".1331...16622224",
+            ".1321...16632221",
+            "...1111111661211",
+            "..1323232326611.",
+            ".13232323232321.",
+            ".12323232323221.",
+            "..122222222221..",
+            ".121........121.",
+            "121..........121",
+            "11............11",
+        ],
         asleep: [
             "................",
             "................",
@@ -277,17 +394,20 @@ public enum PetArt {
         "p": 0xE8708A, // tongue
     ]
 
-    static func props(for pet: TouchBarPet, mood: PetMood, frame: Int, surprised: Bool) -> [Prop] {
+    static func props(for pet: TouchBarPet, mood: PetMood, asleep: Bool, variant frame: Int, surprised: Bool) -> [Prop] {
         var props: [Prop] = []
+        // Asleep, whatever the mood, the z is the one prop that reads. It
+        // drifts up a pixel between breaths, which is all the movement a
+        // sleeping pet needs.
+        if asleep {
+            props.append(Prop(grid: ["www", "..w", ".w.", "www"], origin: (x: 15, y: frame == 0 ? 2 : 1)))
+            return props
+        }
         switch mood {
         case .hot:
             props.append(Prop(grid: [".a.", "aaa", "aaa", ".a."], origin: (x: 15, y: frame == 0 ? 2 : 3)))
         case .charging:
             props.append(Prop(grid: ["..y", ".y.", "yyy", ".y.", "y.."], origin: (x: 9, y: 0)))
-        case .sleepy:
-            // The z drifts up a pixel between frames, which is all the
-            // breathing a sleeping pet needs.
-            props.append(Prop(grid: ["www", "..w", ".w.", "www"], origin: (x: 15, y: frame == 0 ? 2 : 1)))
         case .carrying:
             props.append(Prop(grid: ["btbb", "tttt", "btbb", "btbb"], origin: (x: 3, y: 2)))
         case .busy:
@@ -295,7 +415,7 @@ public enum PetArt {
         case .squeezed:
             props.append(Prop(grid: ["r.", ".r", ".r", "r."], origin: (x: 0, y: 10)))
             props.append(Prop(grid: [".r", "r.", "r.", ".r"], origin: (x: 18, y: 10)))
-        case .drained, .calm:
+        case .drained, .calm, .sleepy:
             break
         }
         // Coco pants when working hard or hot: a tongue under the nose.

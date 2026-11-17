@@ -220,7 +220,7 @@ struct PetArtTests {
     func sheetsAreWellFormed() {
         for pet in TouchBarPet.allCases {
             guard let sheet = PetArt.sheet(for: pet) else { continue }
-            for grid in [sheet.walkA, sheet.walkB, sheet.asleep] {
+            for grid in sheet.grids {
                 #expect(grid.count == PetArt.bodyHeight, "\(pet)")
                 for row in grid {
                     #expect(row.count == PetArt.bodyWidth, "\(pet): \(row)")
@@ -232,48 +232,181 @@ struct PetArtTests {
         }
     }
 
-    @Test("Every pet has two frames for every mood and pose, and none for off")
+    @Test("Every pet has a frame for every mood and pose, and none for off")
     func everyMood() {
         for pet in TouchBarPet.allCases where pet != .off {
             for mood in PetMood.allCases {
-                for pose in [PetArt.Pose.moving, .resting] {
-                    let frames = PetArt.frames(for: pet, mood: mood, pose: pose)
-                    #expect(frames.count == 2)
-                    for frame in frames {
-                        #expect(frame.width == PetArt.canvasSize && frame.height == PetArt.canvasSize)
-                        #expect(frame.rgba.count == PetArt.canvasSize * PetArt.canvasSize * 4)
-                        #expect(frame.opaquePixelCount > 60)
-                    }
+                for pose in PetArt.Pose.allCases {
+                    let frame = PetArt.frame(for: pet, mood: mood, pose: pose)
+                    #expect(frame?.width == PetArt.canvasSize && frame?.height == PetArt.canvasSize)
+                    #expect(frame?.rgba.count == PetArt.canvasSize * PetArt.canvasSize * 4)
+                    #expect((frame?.opaquePixelCount ?? 0) > 60, "\(pet) \(mood) \(pose)")
                 }
             }
         }
-        #expect(PetArt.frames(for: .off, mood: .calm, pose: .moving).isEmpty)
+        #expect(PetArt.frame(for: .off, mood: .calm, pose: .stand) == nil)
     }
 
-    @Test("The walk frames differ, so the pet visibly walks")
-    func walkAnimates() {
+    @Test("The poses differ from one another, so every change shows")
+    func posesDiffer() {
         for pet in TouchBarPet.allCases where pet != .off {
-            let frames = PetArt.frames(for: pet, mood: .calm, pose: .moving)
-            #expect(frames[0] != frames[1], "\(pet)")
+            let poses: [PetArt.Pose] = [.stand, .step, .blink, .jump, .asleep]
+            let frames = poses.compactMap { PetArt.frame(for: pet, mood: .calm, pose: $0) }
+            #expect(Set(frames.map(\.rgba)).count == poses.count, "\(pet)")
+            // The z breathes between the two sleeping frames.
+            #expect(PetArt.frame(for: pet, mood: .calm, pose: .asleep) != PetArt.frame(for: pet, mood: .calm, pose: .asleepBreath))
         }
     }
 
     @Test("A mood shows: heat recolours, a surprise adds a mark")
-    func moodsShow() {
-        let calm = PetArt.frames(for: .coco, mood: .calm, pose: .moving)[0]
-        let hot = PetArt.frames(for: .coco, mood: .hot, pose: .moving)[0]
+    func moodsShow() throws {
+        let calm = try #require(PetArt.frame(for: .coco, mood: .calm, pose: .stand))
+        let hot = try #require(PetArt.frame(for: .coco, mood: .hot, pose: .stand))
         #expect(calm != hot)
-        let surprised = PetArt.frames(for: .coco, mood: .calm, pose: .moving, surprised: true)[0]
+        let surprised = try #require(PetArt.frame(for: .coco, mood: .calm, pose: .stand, surprised: true))
         #expect(surprised.opaquePixelCount > calm.opaquePixelCount)
         // Props sit above the body, so the canvas's top rows are free otherwise.
         #expect((0..<PetArt.canvasSize).allSatisfy { calm.alpha(x: $0, y: 0) == 0 })
     }
 
     @Test("Pixels are either opaque or fully clear")
-    func binaryAlpha() {
-        let frame = PetArt.frames(for: .frog, mood: .drained, pose: .moving)[1]
+    func binaryAlpha() throws {
+        let frame = try #require(PetArt.frame(for: .frog, mood: .drained, pose: .step))
         for index in stride(from: 3, to: frame.rgba.count, by: 4) {
             #expect(frame.rgba[index] == 0 || frame.rgba[index] == 0xFF)
         }
+    }
+}
+
+@Suite("Pet routes")
+struct PetRouteTests {
+    @Test("A crossing starts and ends where asked, on time, without gaps")
+    func wellFormed() {
+        for seed in 0..<40 as Range<UInt64> {
+            for mood in PetMood.allCases {
+                var rng = SeededGenerator(state: seed)
+                let route = PetRoute.crossing(from: -10, to: 300, duration: 24, mood: mood, random: &rng)
+                #expect(route.segments.first?.start == 0)
+                #expect(abs(route.duration - 24) < 1e-9)
+                #expect(route.segments.first?.fromX == -10)
+                #expect(route.segments.last?.toX == 300)
+                for (a, b) in zip(route.segments, route.segments.dropFirst()) {
+                    #expect(abs(a.end - b.start) < 1e-9)
+                    #expect(a.toX == b.fromX)
+                }
+                // Never backwards: the pet only ever heads for the far end.
+                #expect(route.segments.allSatisfy { $0.toX >= $0.fromX })
+            }
+        }
+    }
+
+    @Test("A busy pet hops but never stops; a sleepy one stops twice")
+    func stopsFollowTheMood() {
+        var rng = SeededGenerator(state: 9)
+        let busy = PetRoute.crossing(from: 0, to: 300, duration: 14, mood: .busy, random: &rng)
+        #expect(busy.segments.filter { $0.move == .hop }.count == 2)
+        #expect(!busy.segments.contains { $0.move == .pause })
+        let sleepy = PetRoute.crossing(from: 0, to: 300, duration: 30, mood: .sleepy, random: &rng)
+        #expect(sleepy.segments.filter { $0.move == .pause }.count == 2)
+    }
+
+    @Test("Stops shrink rather than eat a short crossing")
+    func shortCrossing() {
+        var rng = SeededGenerator(state: 10)
+        let route = PetRoute.crossing(from: 0, to: 100, duration: 3, mood: .sleepy, random: &rng)
+        let walking = route.segments.filter { $0.move == .walk }.reduce(0) { $0 + $1.end - $1.start }
+        #expect(walking >= 1.5 - 1e-9)
+    }
+
+    @Test("The pose walks, blinks in a pause and jumps in a hop")
+    func poses() {
+        let route = PetRoute(segments: [
+            .init(move: .walk, start: 0, end: 1, fromX: 0, toX: 10),
+            .init(move: .pause, start: 1, end: 3, fromX: 10, toX: 10),
+            .init(move: .hop, start: 3, end: 3.45, fromX: 10, toX: 10),
+        ])
+        #expect(route.pose(at: 0.1, stepInterval: 0.3) == .stand)
+        #expect(route.pose(at: 0.4, stepInterval: 0.3) == .step)
+        #expect(route.pose(at: 1.5, stepInterval: 0.3) == .stand)
+        #expect(route.pose(at: 2.05, stepInterval: 0.3) == .blink)
+        #expect(route.pose(at: 3.2, stepInterval: 0.3) == .jump)
+        #expect(route.x(at: 0.5) == 5)
+        #expect(route.x(at: 2) == 10)
+    }
+
+    @Test("Pose changes start at the asked time and never repeat a pose")
+    func poseChanges() {
+        var rng = SeededGenerator(state: 11)
+        let route = PetRoute.crossing(from: 0, to: 300, duration: 24, mood: .calm, random: &rng)
+        let changes = route.poseChanges(from: 5, stepInterval: 0.3)
+        #expect(changes.first?.time == 0)
+        for (a, b) in zip(changes, changes.dropFirst()) {
+            #expect(a.time < b.time)
+            #expect(a.pose != b.pose)
+        }
+        #expect(changes.contains { $0.pose == .blink } || changes.contains { $0.pose == .jump })
+    }
+}
+
+@Suite("Pet behaviour")
+struct PetBehaviourTests {
+    @Test("A wandering pet never leaves its range")
+    func staysInRange() {
+        var rng = SeededGenerator(state: 12)
+        var behaviour = PetBehaviour(range: -40...10)
+        for _ in 0..<2000 {
+            _ = behaviour.next(mood: .busy, random: &rng)
+            #expect((-40...10).contains(behaviour.offset))
+        }
+    }
+
+    @Test("Walking faces the way it goes")
+    func facesItsWay() {
+        var rng = SeededGenerator(state: 13)
+        var behaviour = PetBehaviour(range: -40...40)
+        for _ in 0..<500 {
+            if case let .walk(distance) = behaviour.next(mood: .calm, random: &rng) {
+                #expect(behaviour.facesLeading == (distance < 0))
+            }
+        }
+    }
+
+    @Test("A busy pet never falls asleep; a calm one does, but not straight away")
+    func sleepDependsOnMood() {
+        var rng = SeededGenerator(state: 14)
+        var busy = PetBehaviour(range: -40...10)
+        for _ in 0..<1000 { #expect(busy.next(mood: .busy, random: &rng) != .sleep) }
+
+        var calm = PetBehaviour(range: -40...10)
+        var activities: [PetBehaviour.Activity] = []
+        for _ in 0..<400 { activities.append(calm.next(mood: .calm, random: &rng)) }
+        #expect(!activities.prefix(PetBehaviour.wakefulness - 1).contains(.sleep))
+        #expect(activities.contains(.sleep))
+        #expect(activities.contains(.hop))
+        #expect(activities.contains { if case .walk = $0 { true } else { false } })
+    }
+
+    @Test("A nap ends on its own, and at once when the machine gets busy")
+    func waking() {
+        var rng = SeededGenerator(state: 15)
+        var behaviour = PetBehaviour(range: -40...10)
+        while !behaviour.isAsleep { _ = behaviour.next(mood: .calm, random: &rng) }
+        #expect(behaviour.next(mood: .busy, random: &rng) == .hop)
+        #expect(!behaviour.isAsleep)
+
+        while !behaviour.isAsleep { _ = behaviour.next(mood: .calm, random: &rng) }
+        var naps = 0
+        while behaviour.isAsleep, naps < 20 {
+            _ = behaviour.next(mood: .calm, random: &rng)
+            naps += 1
+        }
+        #expect((6...14).contains(naps))
+    }
+
+    @Test("A sleepy machine has a sleeping pet")
+    func sleepyMachine() {
+        var rng = SeededGenerator(state: 16)
+        var behaviour = PetBehaviour(range: -40...10)
+        for _ in 0..<20 { #expect(behaviour.next(mood: .sleepy, random: &rng) == .sleep) }
     }
 }
