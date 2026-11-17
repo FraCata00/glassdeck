@@ -76,12 +76,18 @@ final class TouchBarDetailView: NSView {
 
     private var fraction: Double { snapshot.fraction(for: kind).clamped01 }
 
-    /// Where a pet sits when it turns up in the detail: in the headline
-    /// column, after its text. The title and the figure take well under
-    /// 120 pt even in the longest language, and the column runs to 156.
+    /// Where a pet's leading edge sits when it turns up in the detail: in the
+    /// headline column, after its text. The title and the figure take well
+    /// under 110 pt even in the longest language, and the column runs to
+    /// 156, which leaves room for the pet's 30 pt.
     var petSlot: NSPoint {
-        NSPoint(x: (style == .rings ? 40 : 12) + 124, y: 5)
+        NSPoint(x: (style == .rings ? 40 : 12) + 116, y: 0)
     }
+
+    /// How far the pet may wander from its slot: back towards the headline
+    /// as far as the figure's usual end, and a few points on before the first
+    /// column of numbers.
+    static let petRange: ClosedRange<Double> = -36...6
 
     override func draw(_ dirtyRect: NSRect) {
         guard let context = NSGraphicsContext.current?.cgContext else { return }

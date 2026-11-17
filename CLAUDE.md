@@ -101,7 +101,9 @@ up in a given state with environment variables (see
 `AppModel.applyDevelopmentOverrides`): `GLASSDECK_OPEN_DASHBOARD=1`,
 `GLASSDECK_OPEN_PANEL=1`, `GLASSDECK_OPEN_SETTINGS=1|<page>` (e.g. `touchBar`),
 `GLASSDECK_TOUCHBAR_MODE=fullscreen|expanded|mini|detail:<metric>`,
-`GLASSDECK_PET_VISIT=1` (the Touch Bar pet sets off on the first sample).
+`GLASSDECK_PET=octopus|frog|coco` (for the session, settings untouched),
+`GLASSDECK_PET_VISIT=1` (the Touch Bar pet sets off a few seconds in, and is
+always in a metric's detail).
 
 A released build is usually already running on this machine. A second instance
 presents its own system-modal Touch Bar on top of it, so ask before launching

@@ -7,11 +7,13 @@ import QuartzCore
 /// The bar is a row of separate items with no view spanning it, so this view is
 /// added on top of them in the window that hosts them and covers it whole. It
 /// draws nothing itself: the pet is one layer whose contents are swapped
-/// between prerendered frames, and a crossing is a single finite Core
-/// Animation run by the render server. Nothing underneath is invalidated when
-/// the pet moves, and no timer runs in this process while it walks — the
-/// metric panels' `draw(_:)` is where the bar's cost lives, and the pet must
-/// never add to it.
+/// between prerendered frames, and everything it does is a finite Core
+/// Animation run by the render server — a whole crossing, stops and hops
+/// included, is one. Nothing underneath is invalidated when the pet moves, and
+/// no timer runs in this process: the panels' `draw(_:)` is where the bar's
+/// cost lives, and the pet must never add to it. When it is not crossing, the
+/// next little thing it does is chosen on the next sample, which is the only
+/// clock it has.
 ///
 /// Touches pass straight through everywhere except on the pet itself.
 final class TouchBarPetOverlay: NSView {
@@ -23,24 +25,30 @@ final class TouchBarPetOverlay: NSView {
         }
     }
 
-    private enum State: Equatable {
+    private enum State {
         case hidden
-        /// Walking across; the crossing began at `start` (media time).
-        case crossing(start: CFTimeInterval, duration: TimeInterval)
-        case lingering
-        case resting
+        /// Following `route`, which began at `start` (media time).
+        case crossing(route: PetRoute, start: CFTimeInterval)
+        /// Pottering about `home`, a centre x in this view.
+        case wandering(home: CGFloat, behaviour: PetBehaviour)
         case leaving
     }
 
     private let sprite = CALayer()
     private var state: State = .hidden
     private var mood: PetMood = .calm
-    private var restingFrame = 0
+    private var random = SystemRandomNumberGenerator()
+    private var breath = false
 
-    /// The pet stands on the bar's lower edge, a point up so its feet are not
-    /// clipped by the bar's rounded corners.
-    private static let baseline: CGFloat = 1
-    private static let size = CGFloat(PetArt.canvasSize)
+    /// Points per art pixel. One and a half makes every pixel an exact 3 × 3
+    /// block on the bar's 2× panel — a fractional size such as 1.25 would
+    /// draw uneven rows — and puts the 20-pixel canvas at the bar's full
+    /// 30 pt, the body about 21 pt of it and the props in the band above.
+    private static let scale: CGFloat = 1.5
+    private static let size = CGFloat(PetArt.canvasSize) * scale
+    /// The canvas fills the bar's height, so it stands right on the edge; its
+    /// lowest rows are feet, well clear of the bar's rounded ends.
+    private static let baseline: CGFloat = 0
     /// How long walking off the far edge takes.
     private static let exitDuration: TimeInterval = 2.5
 
@@ -50,21 +58,26 @@ final class TouchBarPetOverlay: NSView {
         var surprised: Bool
     }
 
-    /// Rasterised once per mood and pose: a dozen 20-pixel images at most.
-    private var images: [ImageKey: [CGImage]] = [:]
+    /// Rasterised on first use: a handful of 20-pixel images per mood.
+    private var images: [ImageKey: CGImage] = [:]
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-        sprite.anchorPoint = .zero
+        // Anchored at the feet, in the middle, so turning round is a flip on
+        // the spot rather than a jump sideways.
+        sprite.anchorPoint = CGPoint(x: 0.5, y: 0)
         sprite.bounds = CGRect(x: 0, y: 0, width: Self.size, height: Self.size)
-        // Nearest-neighbour keeps every art pixel a crisp 2 × 2 block on the
-        // bar's 2× panel instead of a blur.
+        // Nearest-neighbour keeps every art pixel a crisp block instead of a
+        // blur.
         sprite.magnificationFilter = .nearest
         sprite.isHidden = true
         // Every change here is either instant or an explicit animation; the
         // layer's implicit quarter-second fades would smear the pixel art.
-        sprite.actions = ["position": NSNull(), "contents": NSNull(), "hidden": NSNull(), "bounds": NSNull()]
+        sprite.actions = [
+            "position": NSNull(), "contents": NSNull(), "hidden": NSNull(),
+            "bounds": NSNull(), "transform": NSNull(),
+        ]
         layer?.addSublayer(sprite)
     }
 
@@ -94,77 +107,166 @@ final class TouchBarPetOverlay: NSView {
         removeFromSuperview()
     }
 
-    // MARK: - What the pet does
+    /// Centre x positions just off either edge.
+    var offscreenLeading: CGFloat { -Self.size / 2 }
+    var offscreenTrailing: CGFloat { bounds.width + Self.size / 2 }
+    static var spriteWidth: CGFloat { size }
 
-    /// Sets off from `startX` to `endX`, in this view's coordinates.
-    func cross(from startX: CGFloat, to endX: CGFloat, duration: TimeInterval, mood: PetMood) {
+    // MARK: - Crossing
+
+    func cross(_ route: PetRoute, mood: PetMood) {
         self.mood = mood
-        state = .crossing(start: CACurrentMediaTime(), duration: duration)
+        state = .crossing(route: route, start: CACurrentMediaTime())
         sprite.removeAllAnimations()
         sprite.isHidden = false
-        sprite.position = CGPoint(x: endX, y: Self.baseline)
+        face(leading: false)
+        sprite.position = CGPoint(x: route.segments.last?.toX ?? 0, y: Self.baseline)
+        sprite.contents = image(.stand)
 
-        let move = CABasicAnimation(keyPath: "position.x")
-        move.fromValue = startX
-        move.toValue = endX
+        let duration = route.duration
+        guard duration > 0 else { return }
+        var xs: [Double] = [route.segments.first?.fromX ?? 0]
+        var xTimes: [Double] = [0]
+        var hopTimes: [Double] = [0]
+        var hops: [Double] = [0]
+        for segment in route.segments {
+            xs.append(segment.toX)
+            xTimes.append(segment.end / duration)
+            if segment.move == .hop {
+                hopTimes += [segment.start, (segment.start + segment.end) / 2, segment.end].map { $0 / duration }
+                hops += [0, PetRoute.hopHeight, 0]
+            }
+        }
+        hopTimes.append(1)
+        hops.append(0)
+
+        let move = CAKeyframeAnimation(keyPath: "position.x")
+        move.values = xs
+        move.keyTimes = xTimes.map { NSNumber(value: $0) }
         move.duration = duration
-        move.timingFunction = CAMediaTimingFunction(name: .linear)
         sprite.add(move, forKey: "cross")
-        walk(for: duration)
+
+        if hops.count > 2 {
+            let jump = CAKeyframeAnimation(keyPath: "position.y")
+            jump.values = hops
+            jump.keyTimes = hopTimes.map { NSNumber(value: $0) }
+            jump.isAdditive = true
+            jump.duration = duration
+            sprite.add(jump, forKey: "hops")
+        }
+        animatePoses(of: route, from: 0)
     }
 
-    /// Stops where the crossing ended and walks in place, one frame a sample.
-    func linger(mood: PetMood) {
-        self.mood = mood
-        state = .lingering
-        sprite.removeAnimation(forKey: "walk")
-        advanceRestingFrame()
+    /// The frames of a crossing as one discrete keyframe animation from
+    /// `elapsed` to the end. Replaced, from where the pet is, when the mood
+    /// changes on the way.
+    private func animatePoses(of route: PetRoute, from elapsed: TimeInterval) {
+        let remaining = route.duration - elapsed
+        guard remaining > 0 else { return }
+        let changes = route.poseChanges(from: elapsed, stepInterval: mood.stepInterval)
+        let frames = changes.compactMap { image($0.pose) }
+        guard frames.count == changes.count, !frames.isEmpty else { return }
+        let poses = CAKeyframeAnimation(keyPath: "contents")
+        poses.values = frames
+        poses.keyTimes = changes.map { NSNumber(value: $0.time / remaining) }
+        poses.calculationMode = .discrete
+        poses.duration = remaining
+        sprite.add(poses, forKey: "poses")
     }
 
-    /// Walks off past `endX`.
+    /// Walks off past `endX` from wherever the pet is.
     func leave(to endX: CGFloat) {
-        guard state != .hidden else { return }
+        if case .hidden = state { return }
         let startX = (sprite.presentation() ?? sprite).position.x
         state = .leaving
         sprite.removeAllAnimations()
+        face(leading: false)
         sprite.position = CGPoint(x: endX, y: Self.baseline)
-
         let move = CABasicAnimation(keyPath: "position.x")
         move.fromValue = startX
         move.toValue = endX
         move.duration = Self.exitDuration
         sprite.add(move, forKey: "cross")
-        walk(for: Self.exitDuration)
+        walkCycle(for: Self.exitDuration)
     }
 
-    /// Sits at `origin` — in a metric's detail — acting out `mood`.
-    func rest(at origin: CGPoint, mood: PetMood) {
-        if state != .resting || sprite.position != origin {
-            sprite.removeAllAnimations()
-            sprite.position = origin
-            sprite.isHidden = false
-            state = .resting
-        }
+    // MARK: - Pottering about
+
+    /// Called once a sample while the pet stays around `home` — in a metric's
+    /// detail, or at the end of the bar while a spike lasts — and does the next
+    /// little thing: stand, blink, a few steps, a hop, turn round, or doze.
+    func wander(home: CGFloat, range: ClosedRange<Double>, mood: PetMood) {
         self.mood = mood
-        advanceRestingFrame()
+        var behaviour: PetBehaviour
+        if case let .wandering(currentHome, current) = state, currentHome == home, current.range == range {
+            behaviour = current
+        } else {
+            // Arriving: from wherever the crossing left it, or straight onto
+            // the spot when it appears in a detail.
+            behaviour = PetBehaviour(range: range)
+            sprite.removeAllAnimations()
+            sprite.isHidden = false
+            sprite.position = CGPoint(x: home, y: Self.baseline)
+            face(leading: false)
+        }
+        let activity = behaviour.next(mood: mood, random: &random)
+        state = .wandering(home: home, behaviour: behaviour)
+        perform(activity, home: home, behaviour: behaviour)
     }
 
-    /// Called on every sample while the pet is about: keeps its frames in step
-    /// with the mood and, standing still, moves it on by one frame.
+    private func perform(_ activity: PetBehaviour.Activity, home: CGFloat, behaviour: PetBehaviour) {
+        switch activity {
+        case .stand:
+            sprite.contents = image(.stand)
+        case .blink:
+            sprite.contents = image(.stand)
+            flash(.blink, for: 0.18)
+        case .walk:
+            let startX = (sprite.presentation() ?? sprite).position.x
+            let endX = home + behaviour.offset
+            // About three art pixels a step: the walk cycle sets the pace.
+            let duration = abs(endX - startX) / (3 * Self.scale / mood.stepInterval)
+            sprite.removeAnimation(forKey: "cross")
+            face(leading: behaviour.facesLeading)
+            sprite.position = CGPoint(x: endX, y: Self.baseline)
+            sprite.contents = image(.stand)
+            guard duration > 0 else { return }
+            let move = CABasicAnimation(keyPath: "position.x")
+            move.fromValue = startX
+            move.toValue = endX
+            move.duration = duration
+            sprite.add(move, forKey: "cross")
+            walkCycle(for: duration)
+        case .hop:
+            sprite.contents = image(.stand)
+            hop()
+        case .turn:
+            face(leading: behaviour.facesLeading)
+            sprite.contents = image(.stand)
+        case .sleep:
+            breath.toggle()
+            sprite.contents = image(breath ? .asleepBreath : .asleep)
+        }
+    }
+
+    // MARK: - While it is about
+
+    /// Called on every sample while the pet is crossing or leaving: keeps the
+    /// frames in step with the mood.
     func show(mood: PetMood) {
         let changed = mood != self.mood
         self.mood = mood
         switch state {
-        case let .crossing(start, duration):
+        case let .crossing(route, start):
             guard changed else { return }
-            let remaining = start + duration - CACurrentMediaTime()
-            if remaining > 0 { walk(for: remaining) } else { sprite.contents = frames(.moving).first }
-        case .lingering, .resting:
-            advanceRestingFrame()
+            sprite.removeAnimation(forKey: "poses")
+            let elapsed = CACurrentMediaTime() - start
+            sprite.contents = image(route.pose(at: min(elapsed, route.duration), stepInterval: mood.stepInterval))
+            animatePoses(of: route, from: elapsed)
         case .leaving:
             // Off the bar, or about to be: nothing left to show.
             if sprite.animation(forKey: "cross") == nil { hide() }
-        case .hidden:
+        case .wandering, .hidden:
             break
         }
     }
@@ -175,40 +277,53 @@ final class TouchBarPetOverlay: NSView {
         state = .hidden
     }
 
-    /// Where a crossing starts and ends: just off the leading edge, and past
-    /// the trailing one.
-    var offscreenLeading: CGFloat { -Self.size }
-    var offscreenTrailing: CGFloat { bounds.width + Self.size }
-    static var spriteWidth: CGFloat { size }
-
     // MARK: - Animation
 
-    /// Cycles the walk frames for `duration` seconds: a finite repeat, so the
-    /// animation ends with the crossing and nothing keeps running after it.
-    private func walk(for duration: TimeInterval) {
-        let frames = frames(.moving)
-        sprite.contents = frames.first
-        guard frames.count > 1, duration > 0 else { return }
-        let cycle = mood.stepInterval * Double(frames.count)
+    /// Cycles the two walk frames for `duration` seconds: a finite repeat, so
+    /// the animation ends with the walk and nothing keeps running after it.
+    private func walkCycle(for duration: TimeInterval) {
+        guard let stand = image(.stand), let step = image(.step), duration > 0 else { return }
+        let cycle = mood.stepInterval * 2
         let walk = CAKeyframeAnimation(keyPath: "contents")
-        walk.values = frames
+        walk.values = [stand, step]
         walk.calculationMode = .discrete
         walk.duration = cycle
         walk.repeatCount = Float((duration / cycle).rounded(.up))
-        sprite.add(walk, forKey: "walk")
+        sprite.add(walk, forKey: "poses")
     }
 
-    private func advanceRestingFrame() {
-        let frames = frames(state == .lingering ? .moving : .resting)
-        guard !frames.isEmpty else { return }
-        restingFrame = (restingFrame + 1) % frames.count
-        sprite.contents = frames[restingFrame]
+    private func hop(surprised: Bool = false) {
+        let jump = CAKeyframeAnimation(keyPath: "position.y")
+        jump.values = [0, PetRoute.hopHeight, 0]
+        jump.keyTimes = [0, 0.45, 1]
+        jump.isAdditive = true
+        jump.duration = PetRoute.hopDuration
+        sprite.add(jump, forKey: "hop")
+        flash(.jump, for: PetRoute.hopDuration, surprised: surprised)
     }
 
-    private func frames(_ pose: PetArt.Pose, surprised: Bool = false) -> [CGImage] {
+    /// Shows a pose for a moment over whatever the pet is doing, which
+    /// carries on underneath when it ends.
+    private func flash(_ pose: PetArt.Pose, for duration: TimeInterval, surprised: Bool = false) {
+        guard let frame = image(pose, surprised: surprised) else { return }
+        let flash = CAKeyframeAnimation(keyPath: "contents")
+        flash.values = [frame]
+        flash.calculationMode = .discrete
+        flash.duration = duration
+        sprite.add(flash, forKey: "flash")
+    }
+
+    /// The art faces the trailing edge; facing the other way is a mirror.
+    private func face(leading: Bool) {
+        sprite.transform = leading ? CATransform3DMakeScale(-1, 1, 1) : CATransform3DIdentity
+    }
+
+    private func image(_ pose: PetArt.Pose, surprised: Bool = false) -> CGImage? {
         let key = ImageKey(mood: mood, pose: pose, surprised: surprised)
         if let cached = images[key] { return cached }
-        let rendered = PetArt.frames(for: pet, mood: mood, pose: pose, surprised: surprised).compactMap(Self.image)
+        guard let bitmap = PetArt.frame(for: pet, mood: mood, pose: pose, surprised: surprised),
+              let rendered = Self.image(from: bitmap)
+        else { return nil }
         images[key] = rendered
         return rendered
     }
@@ -243,29 +358,21 @@ final class TouchBarPetOverlay: NSView {
     }
 
     override func touchesBegan(with event: NSEvent) {
-        hop()
+        greet()
     }
 
     override func mouseDown(with event: NSEvent) {
-        hop()
+        greet()
     }
 
-    /// A tap makes the pet jump and pull a face. Both are one-shot animations
-    /// laid over whatever it is doing, which carries on underneath.
-    private func hop() {
-        let jump = CAKeyframeAnimation(keyPath: "position.y")
-        jump.values = [0, 6, 0]
-        jump.keyTimes = [0, 0.4, 1]
-        jump.isAdditive = true
-        jump.duration = 0.35
-        sprite.add(jump, forKey: "hop")
-
-        guard let face = frames(state == .resting ? .resting : .moving, surprised: true).first else { return }
-        let surprise = CAKeyframeAnimation(keyPath: "contents")
-        surprise.values = [face]
-        surprise.calculationMode = .discrete
-        surprise.duration = 0.8
-        sprite.add(surprise, forKey: "surprise")
+    /// A tap wakes the pet if it was asleep and makes it jump, surprised.
+    private func greet() {
+        if case .wandering(let home, var behaviour) = state, behaviour.isAsleep {
+            behaviour.wake()
+            state = .wandering(home: home, behaviour: behaviour)
+            sprite.contents = image(.stand)
+        }
+        hop(surprised: true)
     }
 
     // MARK: - Accessibility
