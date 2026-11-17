@@ -36,6 +36,10 @@ public enum PetMood: Int, Sendable, CaseIterable, Comparable {
         }
     }
 
+    /// How fast the pet walks when it is not crossing, in art pixels a
+    /// second: about three pixels a step, so the walk cycle sets the pace.
+    public var walkSpeed: Double { 3 / stepInterval }
+
     /// How long a crossing takes when the pet sets off in this mood. Fixed for
     /// the whole crossing: changing speed halfway would mean replacing the
     /// movement, and the walk cycle already says how it feels.
@@ -52,10 +56,8 @@ public enum PetMood: Int, Sendable, CaseIterable, Comparable {
     /// saying, so in the temperature detail it is hot or calm, never busy.
     public static func forDetail(_ kind: MetricKind, in snapshot: MetricsSnapshot) -> PetMood {
         switch kind {
-        case .cpu:
-            snapshot.cpu.total >= PetMoodResolver.busyEnter ? .busy : .calm
-        case .gpu, .disk, .power:
-            snapshot.fraction(for: kind) >= PetMoodResolver.busyEnter ? .busy : .calm
+        case .cpu, .gpu, .disk, .power:
+            StrainBand(strain: snapshot.strain(for: kind)) == .high ? .busy : .calm
         case .memory:
             snapshot.memory.pressureLevel == .critical ? .squeezed : .calm
         case .network:
@@ -74,12 +76,14 @@ public enum PetMood: Int, Sendable, CaseIterable, Comparable {
 /// on a threshold does not make the pet flicker between two moods.
 ///
 /// Each condition has a level to enter at and a lower one to leave at; once
-/// active it stays so until the reading falls past the second.
+/// active it stays so until the reading falls past the second. Load uses the
+/// status colours' bands — busy from high, back from calm — so the pet and the
+/// bar's signal style never disagree about a reading.
 public struct PetMoodResolver: Sendable {
-    static let busyEnter = 0.85
-    static let busyExit = 0.70
     /// Degrees Celsius: past 90 a Mac is close to throttling, and the hottest
-    /// sensor is what the temperature gauge already shows.
+    /// sensor is what the temperature gauge already shows. Deliberately not
+    /// the alert threshold in settings: that one is the owner's to lower for
+    /// an early warning, and a pet sweating at 70 °C would be crying wolf.
     static let hotEnter = 90.0
     static let hotExit = 85.0
     static let fansEnter = 0.9
@@ -109,7 +113,8 @@ public struct PetMoodResolver: Sendable {
         if snapshot.memory.pressureLevel == .critical { next.insert(.squeezed) }
 
         let cpu = snapshot.cpu.total
-        if cpu >= (active.contains(.busy) ? Self.busyExit : Self.busyEnter) { next.insert(.busy) }
+        let load = StrainBand(strain: snapshot.strain(for: .cpu))
+        if active.contains(.busy) ? load != .calm : load == .high { next.insert(.busy) }
 
         let traffic = snapshot.network.loadFraction
         if traffic >= (active.contains(.carrying) ? Self.carryingExit : Self.carryingEnter) { next.insert(.carrying) }

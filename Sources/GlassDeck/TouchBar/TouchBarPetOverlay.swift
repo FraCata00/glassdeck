@@ -45,7 +45,7 @@ final class TouchBarPetOverlay: NSView {
     /// draw uneven rows — and puts the 20-pixel canvas at the bar's full
     /// 30 pt, the body about 21 pt of it and the props in the band above.
     private static let scale: CGFloat = 1.5
-    private static let size = CGFloat(PetArt.canvasSize) * scale
+    static let size = CGFloat(PetArt.canvasSize) * scale
     /// The canvas fills the bar's height, so it stands right on the edge; its
     /// lowest rows are feet, well clear of the bar's rounded ends.
     private static let baseline: CGFloat = 0
@@ -110,7 +110,6 @@ final class TouchBarPetOverlay: NSView {
     /// Centre x positions just off either edge.
     var offscreenLeading: CGFloat { -Self.size / 2 }
     var offscreenTrailing: CGFloat { bounds.width + Self.size / 2 }
-    static var spriteWidth: CGFloat { size }
 
     // MARK: - Crossing
 
@@ -121,37 +120,15 @@ final class TouchBarPetOverlay: NSView {
         sprite.isHidden = false
         face(leading: false)
         sprite.position = CGPoint(x: route.segments.last?.toX ?? 0, y: Self.baseline)
-        sprite.contents = image(.stand)
+        setContents(.stand)
 
         let duration = route.duration
         guard duration > 0 else { return }
-        var xs: [Double] = [route.segments.first?.fromX ?? 0]
-        var xTimes: [Double] = [0]
-        var hopTimes: [Double] = [0]
-        var hops: [Double] = [0]
-        for segment in route.segments {
-            xs.append(segment.toX)
-            xTimes.append(segment.end / duration)
-            if segment.move == .hop {
-                hopTimes += [segment.start, (segment.start + segment.end) / 2, segment.end].map { $0 / duration }
-                hops += [0, PetRoute.hopHeight, 0]
-            }
-        }
-        hopTimes.append(1)
-        hops.append(0)
-
-        let move = CAKeyframeAnimation(keyPath: "position.x")
-        move.values = xs
-        move.keyTimes = xTimes.map { NSNumber(value: $0) }
-        move.duration = duration
-        sprite.add(move, forKey: "cross")
-
-        if hops.count > 2 {
-            let jump = CAKeyframeAnimation(keyPath: "position.y")
-            jump.values = hops
-            jump.keyTimes = hopTimes.map { NSNumber(value: $0) }
+        let path = route.positionKeyframes
+        sprite.add(keyframes("position.x", values: path.values, keyTimes: path.keyTimes, duration: duration), forKey: "cross")
+        if let hops = route.hopKeyframes {
+            let jump = keyframes("position.y", values: hops.values, keyTimes: hops.keyTimes, duration: duration)
             jump.isAdditive = true
-            jump.duration = duration
             sprite.add(jump, forKey: "hops")
         }
         animatePoses(of: route, from: 0)
@@ -166,28 +143,15 @@ final class TouchBarPetOverlay: NSView {
         let changes = route.poseChanges(from: elapsed, stepInterval: mood.stepInterval)
         let frames = changes.compactMap { image($0.pose) }
         guard frames.count == changes.count, !frames.isEmpty else { return }
-        let poses = CAKeyframeAnimation(keyPath: "contents")
-        poses.values = frames
-        poses.keyTimes = changes.map { NSNumber(value: $0.time / remaining) }
-        poses.calculationMode = .discrete
-        poses.duration = remaining
-        sprite.add(poses, forKey: "poses")
+        animateContents(frames, keyTimes: changes.map { $0.time / remaining }, duration: remaining, key: "poses")
     }
 
     /// Walks off past `endX` from wherever the pet is.
     func leave(to endX: CGFloat) {
         if case .hidden = state { return }
-        let startX = (sprite.presentation() ?? sprite).position.x
         state = .leaving
         sprite.removeAllAnimations()
-        face(leading: false)
-        sprite.position = CGPoint(x: endX, y: Self.baseline)
-        let move = CABasicAnimation(keyPath: "position.x")
-        move.fromValue = startX
-        move.toValue = endX
-        move.duration = Self.exitDuration
-        sprite.add(move, forKey: "cross")
-        walkCycle(for: Self.exitDuration)
+        walk(to: endX, duration: Self.exitDuration, leading: false)
     }
 
     // MARK: - Pottering about
@@ -217,35 +181,23 @@ final class TouchBarPetOverlay: NSView {
     private func perform(_ activity: PetBehaviour.Activity, home: CGFloat, behaviour: PetBehaviour) {
         switch activity {
         case .stand:
-            sprite.contents = image(.stand)
+            setContents(.stand)
         case .blink:
-            sprite.contents = image(.stand)
-            flash(.blink, for: 0.18)
+            setContents(.stand)
+            flash(.blink, for: PetRoute.blinkDuration)
         case .walk:
-            let startX = (sprite.presentation() ?? sprite).position.x
             let endX = home + behaviour.offset
-            // About three art pixels a step: the walk cycle sets the pace.
-            let duration = abs(endX - startX) / (3 * Self.scale / mood.stepInterval)
-            sprite.removeAnimation(forKey: "cross")
-            face(leading: behaviour.facesLeading)
-            sprite.position = CGPoint(x: endX, y: Self.baseline)
-            sprite.contents = image(.stand)
-            guard duration > 0 else { return }
-            let move = CABasicAnimation(keyPath: "position.x")
-            move.fromValue = startX
-            move.toValue = endX
-            move.duration = duration
-            sprite.add(move, forKey: "cross")
-            walkCycle(for: duration)
+            let distance = abs(endX - (sprite.presentation() ?? sprite).position.x)
+            walk(to: endX, duration: distance / (mood.walkSpeed * Self.scale), leading: behaviour.facesLeading)
         case .hop:
-            sprite.contents = image(.stand)
+            setContents(.stand)
             hop()
         case .turn:
             face(leading: behaviour.facesLeading)
-            sprite.contents = image(.stand)
+            setContents(.stand)
         case .sleep:
             breath.toggle()
-            sprite.contents = image(breath ? .asleepBreath : .asleep)
+            setContents(breath ? .asleepBreath : .asleep)
         }
     }
 
@@ -261,7 +213,7 @@ final class TouchBarPetOverlay: NSView {
             guard changed else { return }
             sprite.removeAnimation(forKey: "poses")
             let elapsed = CACurrentMediaTime() - start
-            sprite.contents = image(route.pose(at: min(elapsed, route.duration), stepInterval: mood.stepInterval))
+            setContents(route.pose(at: min(elapsed, route.duration), stepInterval: mood.stepInterval))
             animatePoses(of: route, from: elapsed)
         case .leaving:
             // Off the bar, or about to be: nothing left to show.
@@ -272,6 +224,9 @@ final class TouchBarPetOverlay: NSView {
     }
 
     func hide() {
+        // Called on every sample while there is no pet to show: nothing to
+        // commit when it is already hidden.
+        if case .hidden = state { return }
         sprite.removeAllAnimations()
         sprite.isHidden = true
         state = .hidden
@@ -279,25 +234,32 @@ final class TouchBarPetOverlay: NSView {
 
     // MARK: - Animation
 
-    /// Cycles the two walk frames for `duration` seconds: a finite repeat, so
-    /// the animation ends with the walk and nothing keeps running after it.
-    private func walkCycle(for duration: TimeInterval) {
-        guard let stand = image(.stand), let step = image(.step), duration > 0 else { return }
+    /// Walks from wherever the pet is to `endX`, facing the way it goes.
+    private func walk(to endX: CGFloat, duration: TimeInterval, leading: Bool) {
+        let startX = (sprite.presentation() ?? sprite).position.x
+        sprite.removeAnimation(forKey: "cross")
+        face(leading: leading)
+        sprite.position = CGPoint(x: endX, y: Self.baseline)
+        setContents(.stand)
+        guard duration > 0 else { return }
+        sprite.add(keyframes("position.x", values: [startX, endX], keyTimes: [0, 1], duration: duration), forKey: "cross")
+        // The two walk frames for as long as the walk: a finite repeat, so the
+        // animation ends with it and nothing keeps running after.
+        guard let stand = image(.stand), let step = image(.step) else { return }
         let cycle = mood.stepInterval * 2
-        let walk = CAKeyframeAnimation(keyPath: "contents")
-        walk.values = [stand, step]
-        walk.calculationMode = .discrete
-        walk.duration = cycle
-        walk.repeatCount = Float((duration / cycle).rounded(.up))
-        sprite.add(walk, forKey: "poses")
+        let frames = animateContents([stand, step], keyTimes: [0, 0.5], duration: cycle, key: "poses")
+        frames.repeatCount = Float((duration / cycle).rounded(.up))
     }
 
     private func hop(surprised: Bool = false) {
-        let jump = CAKeyframeAnimation(keyPath: "position.y")
-        jump.values = [0, PetRoute.hopHeight, 0]
-        jump.keyTimes = [0, 0.45, 1]
+        let shape = PetRoute.hopShape
+        let jump = keyframes(
+            "position.y",
+            values: shape.map(\.height),
+            keyTimes: shape.map(\.time),
+            duration: PetRoute.hopDuration
+        )
         jump.isAdditive = true
-        jump.duration = PetRoute.hopDuration
         sprite.add(jump, forKey: "hop")
         flash(.jump, for: PetRoute.hopDuration, surprised: surprised)
     }
@@ -306,11 +268,36 @@ final class TouchBarPetOverlay: NSView {
     /// carries on underneath when it ends.
     private func flash(_ pose: PetArt.Pose, for duration: TimeInterval, surprised: Bool = false) {
         guard let frame = image(pose, surprised: surprised) else { return }
-        let flash = CAKeyframeAnimation(keyPath: "contents")
-        flash.values = [frame]
-        flash.calculationMode = .discrete
-        flash.duration = duration
-        sprite.add(flash, forKey: "flash")
+        animateContents([frame], keyTimes: [0], duration: duration, key: "flash")
+    }
+
+    private func keyframes(_ keyPath: String, values: [Double], keyTimes: [Double], duration: TimeInterval) -> CAKeyframeAnimation {
+        let animation = CAKeyframeAnimation(keyPath: keyPath)
+        animation.values = values
+        animation.keyTimes = keyTimes.map { NSNumber(value: $0) }
+        animation.duration = duration
+        return animation
+    }
+
+    /// Steps the sprite through `frames`, each from its key time to the next.
+    /// Returned so a caller can make it repeat; it is already added.
+    @discardableResult
+    private func animateContents(_ frames: [CGImage], keyTimes: [Double], duration: TimeInterval, key: String) -> CAKeyframeAnimation {
+        let animation = CAKeyframeAnimation(keyPath: "contents")
+        animation.values = frames
+        animation.keyTimes = keyTimes.map { NSNumber(value: $0) }
+        animation.calculationMode = .discrete
+        animation.duration = duration
+        sprite.add(animation, forKey: key)
+        return animation
+    }
+
+    /// Sets the resting frame, skipping the transaction when it is already
+    /// the one showing — most samples in a detail are a pet standing still.
+    private func setContents(_ pose: PetArt.Pose) {
+        guard let frame = image(pose) else { return }
+        if let current = sprite.contents, (current as AnyObject) === frame { return }
+        sprite.contents = frame
     }
 
     /// The art faces the trailing edge; facing the other way is a mirror.
@@ -370,7 +357,7 @@ final class TouchBarPetOverlay: NSView {
         if case .wandering(let home, var behaviour) = state, behaviour.isAsleep {
             behaviour.wake()
             state = .wandering(home: home, behaviour: behaviour)
-            sprite.contents = image(.stand)
+            setContents(.stand)
         }
         hop(surprised: true)
     }

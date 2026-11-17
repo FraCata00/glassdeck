@@ -30,10 +30,13 @@ public struct PetRoute: Sendable, Equatable {
     /// How long a hop lasts, and how high it goes in points.
     public static let hopDuration: TimeInterval = 0.45
     public static let hopHeight: Double = 7
+    /// The shape of every hop, as heights at fractions of its duration: up
+    /// a little quicker than down.
+    public static let hopShape: [(time: Double, height: Double)] = [(0, 0), (0.45, hopHeight), (1, 0)]
     /// How long a blink keeps the eyes shut.
-    static let blinkDuration: TimeInterval = 0.18
+    public static let blinkDuration: TimeInterval = 0.18
 
-    public init(segments: [Segment]) {
+    init(segments: [Segment]) {
         self.segments = segments
     }
 
@@ -87,10 +90,25 @@ public struct PetRoute: Sendable, Equatable {
         return PetRoute(segments: segments.filter { $0.end > $0.start })
     }
 
-    public func x(at time: TimeInterval) -> Double {
-        guard let segment = segment(at: time) else { return segments.last?.toX ?? 0 }
-        let progress = (time - segment.start) / (segment.end - segment.start)
-        return segment.fromX + (segment.toX - segment.fromX) * progress
+    /// The x keyframes of the whole crossing, at fractions of its duration.
+    public var positionKeyframes: (values: [Double], keyTimes: [Double]) {
+        guard duration > 0, let first = segments.first else { return ([], []) }
+        return ([first.fromX] + segments.map(\.toX), [0] + segments.map { $0.end / duration })
+    }
+
+    /// The height keyframes of its hops, at fractions of the duration, or
+    /// `nil` when it has none.
+    public var hopKeyframes: (values: [Double], keyTimes: [Double])? {
+        let hops = segments.filter { $0.move == .hop }
+        guard duration > 0, !hops.isEmpty else { return nil }
+        var values: [Double] = [0], keyTimes: [Double] = [0]
+        for hop in hops {
+            for point in Self.hopShape {
+                values.append(point.height)
+                keyTimes.append((hop.start + (hop.end - hop.start) * point.time) / duration)
+            }
+        }
+        return (values + [0], keyTimes + [1])
     }
 
     /// The pose at `time`: the walk alternates its two frames every

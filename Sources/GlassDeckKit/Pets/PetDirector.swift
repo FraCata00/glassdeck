@@ -40,7 +40,8 @@ public struct PetDirector: Sendable {
         case none
         /// Set off across the bar; the crossing lasts this many seconds.
         case enter(duration: TimeInterval)
-        /// Stop at the far end and keep acting out the mood.
+        /// Stay at the far end and act out the mood: returned on every sample
+        /// for as long as the spike lasts.
         case linger
         /// Walk off the far edge.
         case leave
@@ -81,14 +82,14 @@ public struct PetDirector: Sendable {
             return enter(mood: mood, at: now)
         case let .crossing(until):
             guard now >= until else { return .none }
+            fallthrough
+        case .lingering:
             if mood.isSpike {
                 phase = .lingering
                 return .linger
             }
-            return finish(at: now, random: &random)
-        case .lingering:
-            guard !mood.isSpike else { return .none }
-            return finish(at: now, random: &random)
+            finish(at: now, random: &random)
+            return .leave
         }
     }
 
@@ -96,7 +97,7 @@ public struct PetDirector: Sendable {
     /// the next one a full gap away, as if it had ended normally.
     public mutating func interrupt(at now: Date, random: inout some RandomNumberGenerator) {
         guard phase != .away else { return }
-        _ = finish(at: now, random: &random)
+        finish(at: now, random: &random)
     }
 
     /// Brings the pet on the next sample. For testing by hand.
@@ -115,9 +116,8 @@ public struct PetDirector: Sendable {
         return .enter(duration: duration)
     }
 
-    private mutating func finish(at now: Date, random: inout some RandomNumberGenerator) -> Action {
+    private mutating func finish(at now: Date, random: inout some RandomNumberGenerator) {
         phase = .away
         nextVisit = now.addingTimeInterval(TimeInterval.random(in: configuration.visitGap, using: &random))
-        return .leave
     }
 }

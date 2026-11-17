@@ -56,11 +56,11 @@ struct PetMoodTests {
         #expect(!TouchBarMode.detail(.cpu).hostsPetCrossing)
     }
 
-    @Test("Busy enters at 85 % and leaves only below 70 %")
+    @Test("Busy enters where the status colours turn high and leaves where they turn calm")
     func busyHysteresis() {
         var resolver = PetMoodResolver()
-        #expect(resolver.update(with: snapshot(cpu: 0.84)) == .calm)
-        #expect(resolver.update(with: snapshot(cpu: 0.86)) == .busy)
+        #expect(resolver.update(with: snapshot(cpu: 0.87)) == .calm)
+        #expect(resolver.update(with: snapshot(cpu: 0.89)) == .busy)
         #expect(resolver.update(with: snapshot(cpu: 0.75)) == .busy)
         #expect(resolver.update(with: snapshot(cpu: 0.69)) == .calm)
     }
@@ -169,7 +169,7 @@ struct PetDirectorTests {
         var director = director(&rng)
         _ = director.step(mood: .hot, at: start, random: &rng)
         #expect(director.step(mood: .hot, at: start.addingTimeInterval(24), random: &rng) == .linger)
-        #expect(director.step(mood: .hot, at: start.addingTimeInterval(200), random: &rng) == .none)
+        #expect(director.step(mood: .hot, at: start.addingTimeInterval(200), random: &rng) == .linger)
         #expect(director.step(mood: .calm, at: start.addingTimeInterval(201), random: &rng) == .leave)
     }
 
@@ -330,8 +330,24 @@ struct PetRouteTests {
         #expect(route.pose(at: 1.5, stepInterval: 0.3) == .stand)
         #expect(route.pose(at: 2.05, stepInterval: 0.3) == .blink)
         #expect(route.pose(at: 3.2, stepInterval: 0.3) == .jump)
-        #expect(route.x(at: 0.5) == 5)
-        #expect(route.x(at: 2) == 10)
+    }
+
+    @Test("Keyframes run through every segment's end, and every hop goes up and back")
+    func keyframes() throws {
+        let route = PetRoute(segments: [
+            .init(move: .walk, start: 0, end: 2, fromX: 0, toX: 10),
+            .init(move: .hop, start: 2, end: 3, fromX: 10, toX: 10),
+            .init(move: .walk, start: 3, end: 4, fromX: 10, toX: 20),
+        ])
+        let path = route.positionKeyframes
+        #expect(path.values == [0, 10, 10, 20])
+        #expect(path.keyTimes == [0, 0.5, 0.75, 1])
+        let hops = try #require(route.hopKeyframes)
+        #expect(hops.values == [0, 0, PetRoute.hopHeight, 0, 0])
+        #expect(hops.keyTimes.first == 0 && hops.keyTimes.last == 1)
+        #expect(zip(hops.keyTimes, hops.keyTimes.dropFirst()).allSatisfy { $0 <= $1 })
+        // A route without hops needs no height animation at all.
+        #expect(PetRoute(segments: [route.segments[0]]).hopKeyframes == nil)
     }
 
     @Test("Pose changes start at the asked time and never repeat a pose")

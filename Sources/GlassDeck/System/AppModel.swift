@@ -142,7 +142,7 @@ final class AppModel {
     /// for screenshots and manual testing:
     /// `GLASSDECK_TOUCHBAR_MODE=fullscreen|expanded|mini|detail:<metric>`,
     /// `GLASSDECK_PET=octopus|frog|coco` (a pet for this session only),
-    /// `GLASSDECK_PET_VISIT=1` (the pet sets off a few seconds in, and is
+    /// `GLASSDECK_PET_VISIT=1` (the pet sets off on the first sample, and is
     /// always in a metric's detail),
     /// `GLASSDECK_OPEN_DASHBOARD=1`, `GLASSDECK_OPEN_SETTINGS=1` and
     /// `GLASSDECK_OPEN_PANEL=1`, which puts the
@@ -171,13 +171,7 @@ final class AppModel {
         }
 
         if environment["GLASSDECK_PET_VISIT"] == "1" {
-            Task { @MainActor in
-                // The bar is rebuilt once the first samples say which hardware
-                // there is, and a rebuild ends any visit: summoned straight
-                // away, the pet would be sent off before it was ever seen.
-                try? await Task.sleep(for: .seconds(4))
-                self.touchBar.summonPet()
-            }
+            touchBar.summonPet()
         }
 
         if environment["GLASSDECK_OPEN_DASHBOARD"] == "1" {

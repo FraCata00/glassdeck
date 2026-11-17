@@ -56,10 +56,12 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     /// Decided once per opening of a metric's detail, so the pet does not
     /// blink in and out of it from one sample to the next.
     @ObservationIgnored private var showsPetInDetail = false
+    /// Where the current crossing stops, worked out once per bar.
+    @ObservationIgnored private var petCrossingEnd: CGFloat?
     /// For testing by hand: a pet for this session that leaves the stored
-    /// setting alone, and a detail that always has the pet in it.
+    /// setting alone.
     @ObservationIgnored var petOverride: TouchBarPet?
-    @ObservationIgnored private var isPetSummoned = false
+    private var activePet: TouchBarPet { petOverride ?? preferences.touchBarPet }
     /// Shown by the system whenever GlassDeck itself is frontmost and no bar of
     /// its own is presented — without it the Touch Bar would simply go black,
     /// because a menu bar app defines no Touch Bar of its own.
@@ -194,16 +196,25 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
 
     /// Takes the presented bar down, if there is one, and records that nothing
     /// is presented any more.
-    private func dismissPresentedBar() {
+    ///
+    /// A visit does not survive the bar changing size — the pet would be
+    /// walking across items that are no longer there — but it does survive the
+    /// same bar being rebuilt, as it is once the first samples say which
+    /// hardware there is: the pet carries on, on the new bar, from the next
+    /// sample.
+    private func dismissPresentedBar(rebuilding: Bool = false) {
         guard let presentedBar else { return }
         SystemTouchBar.dismissSystemModal(presentedBar)
         self.presentedBar = nil
         presentedLayout = nil
         mode = .collapsed
-        // A visit does not survive the bar changing size: the pet would be
-        // walking across items that are no longer there.
-        petOverlay.detach()
-        petDirector.interrupt(at: Date(), random: &petRandom)
+        petCrossingEnd = nil
+        if rebuilding {
+            petOverlay.removeFromSuperview()
+        } else {
+            petOverlay.detach()
+            petDirector.interrupt(at: Date(), random: &petRandom)
+        }
     }
 
     // MARK: - Modes
@@ -225,7 +236,8 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         // Presented bars stack: leaving the previous one up means collapsing the
         // new one just reveals a stale bar underneath instead of returning the
         // Touch Bar to the system. Always take the old one down first.
-        dismissPresentedBar()
+        let isRebuild = newMode == mode
+        dismissPresentedBar(rebuilding: isRebuild)
 
         // Switching between expanded and fullscreen changes both the item list
         // and the placement, so the bar is rebuilt rather than re-presented as is.
@@ -234,9 +246,11 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         let layout = layout(for: newMode)
         presentedLayout = layout
         mode = newMode
-        showsPetInDetail = newMode.expandedMetric != nil
-            && (petOverride ?? preferences.touchBarPet) != .off
-            && (isPetSummoned || petDirector.showsInDetail(random: &petRandom))
+        if !isRebuild {
+            showsPetInDetail = newMode.expandedMetric != nil
+                && activePet != .off
+                && petDirector.showsInDetail(random: &petRandom)
+        }
         let bar = makeBar(for: layout)
         presentedBar = bar
         SystemTouchBar.presentSystemModal(bar, identifier: Self.controlStripIdentifier, placement: newMode.placement)
@@ -384,12 +398,12 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     /// every slow surface: a pet that changed its mind on every sample would
     /// fidget, and a coarse reading is what a mood is.
     private func updatePet() {
-        let pet = petOverride ?? preferences.touchBarPet
+        let pet = activePet
         petOverlay.pet = pet
         let detail = mode.expandedMetric
         let anchor: NSView? = detail != nil ? detailView : metricViews.values.first
         guard pet != .off,
-              mode.hostsPetCrossing || detail != nil,
+              mode.hostsPetCrossing || (detail != nil && showsPetInDetail),
               let host = anchor?.window?.contentView
         else {
             petOverlay.hide()
@@ -399,10 +413,9 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         let coarse = monitor.coarseSnapshot
 
         if let detail {
-            guard showsPetInDetail else { return petOverlay.hide() }
             let slot = detailView.convert(detailView.petSlot, to: host)
             petOverlay.wander(
-                home: slot.x + TouchBarPetOverlay.spriteWidth / 2,
+                home: slot.x + TouchBarPetOverlay.size / 2,
                 range: TouchBarDetailView.petRange,
                 mood: PetMood.forDetail(detail, in: coarse)
             )
@@ -414,16 +427,14 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         case let .enter(duration):
             let route = PetRoute.crossing(
                 from: petOverlay.offscreenLeading,
-                to: petCrossingEnd(in: host),
+                to: crossingEnd(in: host),
                 duration: duration,
                 mood: mood,
                 random: &petRandom
             )
             petOverlay.cross(route, mood: mood)
         case .linger:
-            petOverlay.wander(home: petCrossingEnd(in: host), range: Self.lingerRange, mood: mood)
-        case .none where petDirector.phase == .lingering:
-            petOverlay.wander(home: petCrossingEnd(in: host), range: Self.lingerRange, mood: mood)
+            petOverlay.wander(home: crossingEnd(in: host), range: Self.lingerRange, mood: mood)
         case .leave:
             petOverlay.leave(to: petOverlay.offscreenTrailing)
         case .none:
@@ -434,9 +445,12 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     /// Where a crossing stops, as the pet's centre: at the end of the metric
     /// panels rather than of the bar, so a pet that waits there for a spike to
     /// pass is not standing on the buttons.
-    private func petCrossingEnd(in host: NSView) -> CGFloat {
+    private func crossingEnd(in host: NSView) -> CGFloat {
+        if let petCrossingEnd { return petCrossingEnd }
         let panelsEnd = metricViews.values.map { $0.convert($0.bounds, to: host).maxX }.max() ?? host.bounds.width
-        return max(0, panelsEnd - TouchBarPetOverlay.spriteWidth / 2 - 4)
+        let end = max(0, panelsEnd - TouchBarPetOverlay.size / 2 - 4)
+        petCrossingEnd = end
+        return end
     }
 
     /// While it waits at the end of the bar the pet paces back over the
@@ -444,9 +458,11 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     private static let lingerRange: ClosedRange<Double> = -40...0
 
     /// Brings the pet on the next sample, for testing by hand.
+    /// From then on every opening of a detail finds it there too, through the
+    /// director's own odds rather than a flag beside them.
     func summonPet() {
+        petDirector = PetDirector(now: Date(), configuration: .init(detailChance: 1), random: &petRandom)
         petDirector.summon(at: Date())
-        isPetSummoned = true
         if mode.expandedMetric != nil { showsPetInDetail = true }
     }
 

@@ -8,8 +8,8 @@ public struct PetBitmap: Sendable, Equatable {
     public let height: Int
     public let rgba: [UInt8]
 
-    public func alpha(x: Int, y: Int) -> UInt8 { rgba[(y * width + x) * 4 + 3] }
-    public var opaquePixelCount: Int { stride(from: 3, to: rgba.count, by: 4).count { rgba[$0] != 0 } }
+    func alpha(x: Int, y: Int) -> UInt8 { rgba[(y * width + x) * 4 + 3] }
+    var opaquePixelCount: Int { stride(from: 3, to: rgba.count, by: 4).count { rgba[$0] != 0 } }
 }
 
 /// The pets' pixel art and how a mood is dressed onto it.
@@ -456,7 +456,7 @@ public enum PetArt {
     static func blend(_ a: UInt32, _ b: UInt32, _ amount: Double) -> UInt32 {
         func channel(_ shift: UInt32) -> UInt32 {
             let x = Double((a >> shift) & 0xFF), y = Double((b >> shift) & 0xFF)
-            return UInt32((x + (y - x) * amount).rounded()) << shift
+            return UInt32(x.smoothed(towards: y, factor: amount).rounded()) << shift
         }
         return channel(16) | channel(8) | channel(0)
     }
