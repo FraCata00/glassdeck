@@ -2,6 +2,22 @@ import Foundation
 
 /// Compact, allocation-light formatters shared by the window UI and the Touch Bar.
 public enum ValueFormatter {
+    /// The decimal separator every figure is printed with.
+    ///
+    /// Read from the region once, at first use, because `String(format:)`
+    /// always prints a full stop and an Italian region expects "1,5 GB". A
+    /// region changed while the app runs is picked up at the next launch, the
+    /// price of not asking `Locale` on every sample. Task-local so a test can
+    /// pin it without touching the formatting of tests running beside it.
+    @TaskLocal public static var decimalSeparator: String = Locale.current.decimalSeparator ?? "."
+
+    /// `value` with `places` decimals (one or two) and the region's separator.
+    public static func fixed(_ value: Double, places: Int) -> String {
+        let text = String(format: places == 1 ? "%.1f" : "%.2f", value.isFinite ? value : 0)
+        let separator = decimalSeparator
+        return separator == "." ? text : text.replacingOccurrences(of: ".", with: separator)
+    }
+
     /// `0.4213` → `"42%"`.
     public static func percent(_ fraction: Double) -> String {
         "\(Int((fraction.clamped01 * 100).rounded()))%"
@@ -54,13 +70,13 @@ public enum ValueFormatter {
         // which rounds a half to even: 10.5 GB printed as "10" while 11.5
         // printed as "12".
         return rounded < 10
-            ? String(format: "%.1f %@", rounded, units[index])
-            : String(format: "%.0f %@", amount.rounded(), units[index])
+            ? "\(fixed(rounded, places: 1)) \(units[index])"
+            : "\(amount.roundedInt) \(units[index])"
     }
 
     /// Two decimal places, matching how `uptime` prints load averages.
     public static func decimal(_ value: Double) -> String {
-        String(format: "%.2f", value.isFinite ? value : 0)
+        fixed(value, places: 2)
     }
 
     /// Minutes as hours and minutes: `125` → `"2h 5m"`, `45` → `"45m"`.
@@ -76,6 +92,6 @@ public enum ValueFormatter {
     /// One decimal place, for a cadence the user picked on a slider: the
     /// half-second steps read as `1.5`, not as `1.50`.
     public static func seconds(_ value: Double) -> String {
-        String(format: "%.1f", value.isFinite ? value : 0)
+        fixed(value, places: 1)
     }
 }

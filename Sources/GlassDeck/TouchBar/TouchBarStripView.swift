@@ -188,7 +188,7 @@ enum TouchBarPalette {
     static func compactRPM(_ rpm: Double, isAvailable: Bool) -> String {
         guard isAvailable else { return "–" }
         guard rpm > 0 else { return "off" }
-        return rpm >= 1_000 ? String(format: "%.1fk", rpm / 1_000) : "\(Int(rpm))"
+        return rpm >= 1_000 ? "\(ValueFormatter.fixed(rpm / 1_000, places: 1))k" : "\(Int(rpm))"
     }
 
     /// `1.4M`, `820K` — throughput squeezed into four characters.
@@ -197,7 +197,7 @@ enum TouchBarPalette {
         switch value {
         case ..<1_000: return "\(Int(value))B"
         case ..<1_000_000: return "\(Int(value / 1_000))K"
-        case ..<10_000_000: return String(format: "%.1fM", value / 1_000_000)
+        case ..<10_000_000: return "\(ValueFormatter.fixed(value / 1_000_000, places: 1))M"
         default: return "\(Int(value / 1_000_000))M"
         }
     }
