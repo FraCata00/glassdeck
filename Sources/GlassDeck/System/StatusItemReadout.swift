@@ -49,8 +49,12 @@ final class StatusItemReadout {
     @ObservationIgnored private let monitor: SystemMonitor
     @ObservationIgnored private let preferences: Preferences
     @ObservationIgnored private lazy var changes = ObservationLoop(self) { readout in
-        _ = readout.source
-        _ = readout.preferences.menuBarStyle
+        // An icon draws no reading, so it has no reason to be woken by every
+        // publication only to find that nothing changed. The style is read
+        // either way, so leaving the icon starts the watch at once.
+        if readout.preferences.menuBarStyle != .icon {
+            _ = readout.source
+        }
         _ = readout.preferences.menuBarMetric
         _ = readout.preferences.dashboardMetrics
     } onChange: { readout in
