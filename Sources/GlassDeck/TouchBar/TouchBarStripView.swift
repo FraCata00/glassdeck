@@ -6,7 +6,17 @@ import GlassDeckKit
 /// The Touch Bar is 30 pt tall, so every metric gets a small chip: a level that
 /// fills from the bottom, the metric's short name, and its current value.
 final class TouchBarStripView: NSView {
-    var metrics: [MetricKind] = MetricKind.defaultSelection { didSet { invalidateIntrinsicContentSize(); needsDisplay = true } }
+    /// Set by the controller on every observation pass, not only when the
+    /// selection moves, so an unchanged one must not count as a change: it
+    /// used to mark all three meters dirty on every sample, undoing the chip
+    /// comparison below.
+    var metrics: [MetricKind] = MetricKind.defaultSelection {
+        didSet {
+            guard metrics != oldValue else { return }
+            invalidateIntrinsicContentSize()
+            needsDisplay = true
+        }
+    }
     /// Redrawn only when a chip would come out different: a snapshot is new on
     /// every sample by its timestamp alone, while what the chips show — a whole
     /// percentage, a level a pixel tall — often has not moved at all.
