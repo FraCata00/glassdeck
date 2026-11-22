@@ -135,6 +135,13 @@ struct DurationAndTemperatureTests {
         #expect(FanUsage(fans: [fans.fans[1]], isAvailable: true).caption.contains("rpm"))
     }
 
+    @Test("Power switches to whole watts on the figure as printed")
+    func powerHeadlineRounding() {
+        #expect(PowerUsage(watts: 9.94, isAvailable: true).headline == "9.9 W")
+        #expect(PowerUsage(watts: 9.96, isAvailable: true).headline == "10 W")
+        #expect(PowerUsage(watts: 12.4, isAvailable: true).headline == "12 W")
+    }
+
     @Test("Battery state reads charging before plugged in")
     func batteryState() {
         #expect(BatteryUsage(isCharging: true, isPluggedIn: true, isAvailable: true).stateLabel == "charging")

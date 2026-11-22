@@ -258,7 +258,10 @@ extension ThermalUsage {
 extension PowerUsage {
     public var headline: String {
         guard isAvailable else { return L.t("value.na", "n/a") }
-        return watts < 10 ? String(format: "%.1f W", watts) : "\(watts.roundedInt) W"
+        // Decided on the figure as printed: 9.96 W rounds to 10.0, and testing
+        // the raw watts printed it as "10.0 W" beside every other "10 W".
+        let tenths = (watts * 10).rounded() / 10
+        return tenths < 10 ? String(format: "%.1f W", tenths) : "\(watts.roundedInt) W"
     }
 
     public var caption: String {
