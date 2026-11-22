@@ -144,10 +144,20 @@ final class Preferences {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         refreshInterval = defaults.positive(Key.interval) ?? SystemMonitor.defaultInterval
+        // Selections stored before the order was changed — or before this
+        // version — are brought into line as they are read, in the first
+        // assignment. Under `@Observable` a second assignment in this
+        // initialiser, once every property is set, goes through the setter,
+        // `didSet` and all: fixing them up afterwards wrote both lists back on
+        // every launch, freezing the defaults of anyone who had never chosen.
+        let order = Self.repairedOrder(defaults.nonEmpty(Key.metricOrder))
+        metricOrder = order
         // An empty metric list reads as none stored: an empty Touch Bar strip
         // would look broken, and nothing can be turned off below one anyway.
-        dashboardMetrics = defaults.nonEmpty(Key.dashboardMetrics) ?? MetricKind.allCases
-        touchBarMetrics = defaults.nonEmpty(Key.touchBarMetrics) ?? MetricKind.defaultSelection
+        let dashboard = defaults.nonEmpty(Key.dashboardMetrics) ?? MetricKind.allCases
+        dashboardMetrics = order.filter(dashboard.contains)
+        let touchBar = defaults.nonEmpty(Key.touchBarMetrics) ?? MetricKind.defaultSelection
+        touchBarMetrics = order.filter(touchBar.contains)
         menuBarMetric = defaults.value(Key.menuBarMetric) ?? .cpu
         menuBarStyle = defaults.value(Key.menuBarStyle) ?? .graph
         isMenuBarRealTime = defaults.object(forKey: Key.menuBarRealTime) as? Bool ?? false
@@ -161,16 +171,9 @@ final class Preferences {
         clockZones = Self.readClockZones(from: defaults)
         menuBarClockZone = defaults.string(forKey: Key.menuBarClockZone)
         yieldShortcut = Self.readYieldShortcut(from: defaults)
-        metricOrder = Self.repairedOrder(defaults.nonEmpty(Key.metricOrder))
         isTemperatureAlertEnabled = defaults.object(forKey: Key.temperatureAlert) as? Bool ?? false
         temperatureThreshold = defaults.positive(Key.temperatureThreshold) ?? 85
         isMemoryPressureAlertEnabled = defaults.object(forKey: Key.memoryPressureAlert) as? Bool ?? false
-
-        // Selections stored before the order was changed — or before this
-        // version — are brought into line. Assigned here rather than through the
-        // setters, so a launch that changes nothing writes nothing.
-        dashboardMetrics = metricOrder.filter(dashboardMetrics.contains)
-        touchBarMetrics = metricOrder.filter(touchBarMetrics.contains)
     }
 
     /// Moves metrics in the shared order and brings the selections along, so all
