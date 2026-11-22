@@ -79,6 +79,9 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     private var yieldedApplication: pid_t?
     /// The size to come back at once the yielded app is left.
     private var modeBeforeYield: Mode = .expanded
+    /// The presentation last put into effect; `nil` while the Touch Bar is
+    /// switched off, so switching it back on applies it afresh.
+    @ObservationIgnored private var appliedPresentation: Preferences.TouchBarPresentation?
     /// The shortcut set in settings: hands the Touch Bar to the frontmost app,
     /// or takes it back.
     @ObservationIgnored private lazy var yieldHotKey = GlobalHotKey { [weak self] in self?.toggleYield() }
@@ -144,10 +147,22 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         yieldHotKey.shortcut = preferences.yieldShortcut
         applyMetricsToStrips()
         rebuildBarIfNeeded()
+        applyPresentation()
+    }
 
-        switch preferences.touchBarPresentation {
+    /// Puts the bar up, or takes it down, for the presentation chosen.
+    ///
+    /// The Control Strip presentation collapses the bar only when it has just
+    /// been chosen. This runs on every settings change the app relays — the
+    /// refresh interval, a clock zone — and collapsing whenever the bar was
+    /// up closed one the user had opened from the meter a moment before.
+    private func applyPresentation() {
+        let presentation = preferences.touchBarPresentation
+        let isNew = presentation != appliedPresentation
+        appliedPresentation = presentation
+        switch presentation {
         case .controlStrip:
-            if mode != .collapsed { collapse() }
+            if isNew, mode != .collapsed { collapse() }
             stopReasserting()
         case .alwaysOn:
             if mode == .collapsed, !isReleasedForSession, yieldedApplication == nil { present(.expanded) }
@@ -189,6 +204,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         changes.stop()
         yieldHotKey.shortcut = nil
         yieldedApplication = nil
+        appliedPresentation = nil
         DFRSupport.setControlStripPresence(Self.controlStripIdentifier, visible: false)
         SystemTouchBar.removeSystemTrayItem(stripItem)
         self.stripItem = nil
