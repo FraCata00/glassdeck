@@ -9,13 +9,14 @@ struct CoreGridView: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 10) {
             if let performance = clusters.performance {
-                cluster(title: "P", loads: performance)
+                cluster(title: "P", spoken: String(localized: "Performance cores"), loads: performance)
             }
             if let efficiency = clusters.efficiency {
-                cluster(title: "E", loads: efficiency)
+                cluster(title: "E", spoken: String(localized: "Efficiency cores"), loads: efficiency)
             }
             if clusters.performance == nil, clusters.efficiency == nil {
-                cluster(title: "Cores", loads: cpu.perCore)
+                let title = String(localized: "Cores")
+                cluster(title: title, spoken: title, loads: cpu.perCore)
             }
         }
     }
@@ -27,7 +28,9 @@ struct CoreGridView: View {
         (cpu.performanceCoreLoads, cpu.efficiencyCoreLoads)
     }
 
-    private func cluster(title: String, loads: [Double]) -> some View {
+    /// `title` is drawn and `spoken` is read out: a bare "P" under the bars
+    /// is the convention on screen, and means nothing to VoiceOver.
+    private func cluster(title: String, spoken: String, loads: [Double]) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(alignment: .bottom, spacing: 3) {
                 ForEach(Array(loads.enumerated()), id: \.offset) { _, load in
@@ -42,9 +45,14 @@ struct CoreGridView: View {
                         }
                 }
             }
-            Text(title)
+            Text(verbatim: title)
                 .font(Typography.caption)
                 .foregroundStyle(.secondary)
         }
+        // The bars are shapes with nothing to read, so the cluster speaks as
+        // one element with each core's load as its value.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(spoken)
+        .accessibilityValue(loads.map(ValueFormatter.percent).joined(separator: ", "))
     }
 }
