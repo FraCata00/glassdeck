@@ -102,7 +102,14 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         _ = controller.preferences.touchBarAlignment
         _ = controller.preferences.touchBarStyle
         _ = controller.preferences.touchBarPet
+        _ = controller.preferences.touchBarPresentation
     } onChange: { controller in
+        // The app relays the settings that decide whether there is a Touch
+        // Bar at all; the presentation is the bar's own, and choosing it in
+        // settings used to do nothing until one of those others changed.
+        if controller.preferences.touchBarPresentation != controller.appliedPresentation {
+            controller.applyPresentation()
+        }
         controller.applyMetricsToStrips()
         controller.applyStyle()
         controller.rebuildBarIfNeeded()
