@@ -73,11 +73,6 @@ final class AppModel {
         applyDevelopmentOverrides()
     }
 
-    /// A presented system-modal Touch Bar outlives the process that put it there:
-    /// if GlassDeck is killed while its bar is up, the Touch Bar stays stuck on a
-    /// dead bar until the system's Touch Bar server is restarted. `applicationWillTerminate`
-    /// does not run for a signal, so SIGINT and SIGTERM are handled explicitly and
-    /// the bar is taken down before exiting.
     /// Parks sampling whenever nothing can be seen: the display asleep, the
     /// machine suspended, or another user switched in front.
     ///
@@ -128,6 +123,11 @@ final class AppModel {
         }
     }
 
+    /// A presented system-modal Touch Bar outlives the process that put it there:
+    /// if GlassDeck is killed while its bar is up, the Touch Bar stays stuck on a
+    /// dead bar until the system's Touch Bar server is restarted.
+    /// `applicationWillTerminate` does not run for a signal, so SIGINT, SIGTERM
+    /// and SIGHUP are handled explicitly and the bar is taken down before exiting.
     private func installSignalHandlers() {
         for signalNumber in [SIGINT, SIGTERM, SIGHUP] {
             signal(signalNumber, SIG_IGN)
@@ -142,13 +142,13 @@ final class AppModel {
     }
 
     /// Neither the Touch Bar nor a menu bar extra can be driven by scripted
-    /// clicks, so two environment variables let a build come up in a given state
-    /// for screenshots and manual testing:
+    /// clicks, so a handful of environment variables let a build come up in a
+    /// given state for screenshots and manual testing:
     /// `GLASSDECK_TOUCHBAR_MODE=fullscreen|expanded|mini|detail:<metric>`,
     /// `GLASSDECK_PET=octopus|frog|coco` (a pet for this session only),
     /// `GLASSDECK_PET_VISIT=1` (the pet sets off on the first sample, and is
     /// always in a metric's detail),
-    /// `GLASSDECK_OPEN_DASHBOARD=1`, `GLASSDECK_OPEN_SETTINGS=1` and
+    /// `GLASSDECK_OPEN_DASHBOARD=1`, `GLASSDECK_OPEN_SETTINGS=1|<page>` and
     /// `GLASSDECK_OPEN_PANEL=1`, which puts the
     /// menu bar panel in an ordinary window: a `MenuBarExtra` cannot be opened
     /// any other way, so without it the panel is the one surface that cannot be
@@ -191,7 +191,6 @@ final class AppModel {
         if let requested = environment["GLASSDECK_OPEN_SETTINGS"] {
             showSettings(page: SettingsPage(rawValue: requested) ?? .general)
         }
-
     }
 
     /// Tears everything down on quit *without* touching stored settings: writing
