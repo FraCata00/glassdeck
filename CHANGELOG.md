@@ -5,6 +5,50 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.2] - 2026-11-22
+
+### Fixed
+
+- **The process list shows real CPU figures on Apple silicon.** It read the
+  kernel's CPU-time counters as nanoseconds when they are clock ticks, so on
+  Apple silicon every process looked about 42 times quieter than it was: one
+  keeping a whole core busy showed 2.4%, and most never made the list at all.
+- **A sensor reporting nonsense no longer crashes the app.** A fan, a power
+  rail or a temperature key that decoded to NaN or infinity stopped GlassDeck
+  when it formatted the reading; such values are now treated as no reading.
+- **Readings keep moving when the clock is set back.** Moving the clock back,
+  by hand or by a time correction after sleep, froze temperatures, fans,
+  power, Bluetooth batteries, the menu bar label, the compact Touch Bar and
+  the pet until the clock caught up again.
+- **Closing a window really stops its work.** The process list kept being
+  sampled, and the clock preview in Settings kept ticking, for the rest of
+  the session once the panel, the dashboard or Settings had been opened; a
+  shortcut being recorded when Settings closed went on swallowing every key.
+- **The Touch Bar does less, and does what it is told.** Its meters and
+  panels were redrawn on every sample whether or not anything on them had
+  changed, the compact meters followed the fine readings instead of the
+  slower ones, and panels went on being fed after the bar was put away. Now
+  they redraw only when something visible moves. Switching between the
+  Control Strip button and taking over the whole bar takes effect at once,
+  instead of waiting for some other setting to change; changing an unrelated
+  setting no longer closes a bar you have just opened; and tapping the meter
+  beside the compact bar no longer reloads it.
+- **New metrics are picked by default after an update.** Every launch stored
+  the dashboard and Touch Bar selections even when nothing had changed, so a
+  metric added in a later version would have stayed unselected.
+- **The temperature alert waits for the Mac to cool down.** A moment with no
+  reading counted as cooling off, so a Mac that stayed hot was warned again.
+- **Ejecting a disk no longer blanks the others.** For one sample, the read
+  and write rates of the remaining disks dropped to zero or near it.
+- **Sizes and figures round the way they read.** 1023.7 MB showed as
+  "1024 MB" instead of "1 GB", halves rounded to even (10.5 GB was "10" but
+  11.5 GB "12"), and just under ten watts showed as "10.0 W".
+- **A flat graph at 100% fills the Touch Bar panel** instead of sitting at
+  half height, and a Mac without a separate GPU no longer spends one of the
+  compact bar's four panels on "n/a".
+- **VoiceOver can reach the dashboard's metric cards and the core grid**, and
+  "Cores" is translated into Italian.
+
 ## [2.3.1] - 2026-11-17
 
 ### Changed
@@ -643,6 +687,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[2.3.2]: https://github.com/FraCata00/glassdeck/releases/tag/v2.3.2
 [2.3.1]: https://github.com/FraCata00/glassdeck/releases/tag/v2.3.1
 [2.3.0]: https://github.com/FraCata00/glassdeck/releases/tag/v2.3.0
 [2.2.1]: https://github.com/FraCata00/glassdeck/releases/tag/v2.2.1
