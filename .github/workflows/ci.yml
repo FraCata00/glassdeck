@@ -5,9 +5,14 @@ on:
     branches: [main]
   pull_request:
 
+# A pull request's older runs are worthless once it is pushed again, but on
+# main every commit is one a release may be tagged from. Pushes there arrive
+# out of order (a merge and the changelog commit cut right after it), and
+# cancelling let the older commit's run cancel the newer one, which left the
+# tagged commit with no result at all.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   kit:
