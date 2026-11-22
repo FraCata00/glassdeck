@@ -224,12 +224,15 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     // MARK: - Modes
 
     /// Tapping the Control Strip meter opens the bar — and brings GlassDeck back
-    /// after it was released — while a second tap shrinks it again.
+    /// after it was released — while a second tap shrinks it again. A tap on
+    /// the meter beside the mini bar, which is as small as it goes, does
+    /// nothing: going through `present` took that bar down and put an
+    /// identical one up, and the Touch Bar visibly reloaded for it.
     private func handleStripTap() {
         if mode == .collapsed {
             isReleasedForSession = false
             present(.expanded)
-        } else {
+        } else if mode != .mini {
             present(.mini)
         }
     }
