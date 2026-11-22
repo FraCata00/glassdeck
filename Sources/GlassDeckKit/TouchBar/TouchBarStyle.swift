@@ -112,7 +112,11 @@ public enum TouchBarHistory {
         let spread = maximum - minimum
         guard spread < 0.08 else { return minimum...maximum }
         let centre = (minimum + maximum) / 2
-        let lower = max(0, centre - 0.04)
+        // Kept inside the unit interval at both ends. Clamped only at the
+        // bottom, a CPU pinned at 100 % got the window 0.96...1.04 and its
+        // curve was drawn at half height, as if the load were half of what
+        // it was.
+        let lower = min(max(0, centre - 0.04), 1 - 0.08)
         return lower...(lower + 0.08)
     }
 
