@@ -116,6 +116,14 @@ struct PetMoodTests {
         #expect(resolver.update(with: snapshot(at: 300, cpu: 0.02)) == .calm)
     }
 
+    @Test("A clock set back does not keep the pet awake until it catches up")
+    func sleepyAfterClockSetBack() {
+        var resolver = PetMoodResolver()
+        _ = resolver.update(with: snapshot(at: 3_600, cpu: 0.02))
+        #expect(resolver.update(with: snapshot(at: 0, cpu: 0.02)) == .calm)
+        #expect(resolver.update(with: snapshot(at: 180, cpu: 0.02)) == .sleepy)
+    }
+
     @Test("A detail only acts out its own metric")
     func detailMood() {
         let busyAndHot = snapshot(cpu: 0.95, hottest: 95)
@@ -196,6 +204,22 @@ struct PetDirectorTests {
         director.interrupt(at: start.addingTimeInterval(5), random: &rng)
         #expect(director.phase == .away)
         #expect(director.nextVisit.timeIntervalSince(start.addingTimeInterval(5)) >= 180)
+    }
+
+    @Test("A clock set back mid-crossing moves the visit's deadlines back with it")
+    func clockSetBack() {
+        var rng = SeededGenerator(state: 7)
+        var director = PetDirector(now: start, configuration: .init(visitGap: 3600...3600), random: &rng)
+        let crossingStart = start.addingTimeInterval(7_200)
+        #expect(director.step(mood: .calm, at: crossingStart, random: &rng) == .enter(duration: 24))
+
+        // Ten seconds in, the clock goes back an hour: the crossing still ends
+        // fourteen seconds later, not an hour and fourteen.
+        #expect(director.step(mood: .calm, at: crossingStart.addingTimeInterval(10), random: &rng) == .none)
+        let setBack = crossingStart.addingTimeInterval(10 - 3_600)
+        #expect(director.step(mood: .calm, at: setBack, random: &rng) == .none)
+        #expect(director.step(mood: .calm, at: setBack.addingTimeInterval(14), random: &rng) == .leave)
+        #expect(director.nextVisit.timeIntervalSince(setBack.addingTimeInterval(14)) == 3_600)
     }
 
     @Test("Summoning brings the pet on the next sample")

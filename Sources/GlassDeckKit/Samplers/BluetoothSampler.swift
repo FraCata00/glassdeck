@@ -65,20 +65,14 @@ public final class BluetoothSampler {
     public static let queryInterval: TimeInterval = 5
 
     private let source: any PairedDeviceSource
-    private var cached: BluetoothStatus = .unavailable
-    private var lastQuery: Date?
+    private var cache = ReadingCache<BluetoothStatus>(interval: BluetoothSampler.queryInterval)
 
     public init(source: any PairedDeviceSource = IOBluetoothPairedDeviceSource()) {
         self.source = source
     }
 
     public func sample(at now: Date) -> BluetoothStatus {
-        if let lastQuery, now.timeIntervalSince(lastQuery) < Self.queryInterval {
-            return cached
-        }
-        lastQuery = now
-        cached = Self.status(from: source.read())
-        return cached
+        cache.value(at: now) { Self.status(from: source.read()) }
     }
 
     /// Turns raw readings into what the UI shows.

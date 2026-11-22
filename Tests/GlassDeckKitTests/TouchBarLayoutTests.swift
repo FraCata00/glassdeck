@@ -54,6 +54,13 @@ struct TouchBarLayoutTests {
         #expect(!bar.items.contains(.yield))
     }
 
+    @Test("The shared bar leaves out what the machine cannot report, and fills the place")
+    func expandedSkipsUnsupported() {
+        let supported = Set(MetricKind.allCases).subtracting([.gpu])
+        let bar = layout(.expanded, selection: MetricKind.allCases, supported: supported)
+        #expect(bar.metrics == [.cpu, .memory, .disk, .network])
+    }
+
     @Test("The shared bar never runs under the Control Strip")
     func expandedFitsSharedRegion() {
         for alignment in TouchBarAlignment.allCases {

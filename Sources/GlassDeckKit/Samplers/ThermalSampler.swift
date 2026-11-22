@@ -22,31 +22,20 @@ public final class ThermalSampler {
 
     private let smc: SMCService?
     private let catalogue: SensorCatalogue
-
-    private var cached: ThermalUsage?
-    private var cachedAt: Date?
+    private var cache: ReadingCache<ThermalUsage>
 
     /// How many times the sensors have actually been read. Internal, so a test
     /// can tell a reused reading from a fresh one without any hardware.
     private(set) var readCount = 0
 
-    private let interval: TimeInterval
-
     init(smc: SMCService?, catalogue: SensorCatalogue, refreshInterval: TimeInterval = ThermalSampler.refreshInterval) {
         self.smc = smc
         self.catalogue = catalogue
-        self.interval = refreshInterval
+        self.cache = ReadingCache(interval: refreshInterval)
     }
 
     public func sample(at now: Date = Date()) -> ThermalUsage {
-        if let cached, let cachedAt, now.timeIntervalSince(cachedAt) < interval {
-            return cached
-        }
-
-        let usage = read()
-        cached = usage
-        cachedAt = now
-        return usage
+        cache.value(at: now) { read() }
     }
 
     private func read() -> ThermalUsage {

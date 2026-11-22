@@ -1,6 +1,5 @@
 import AppKit
 import GlassDeckKit
-import IOKit
 import Observation
 import SwiftUI
 
@@ -79,6 +78,9 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     private var yieldedApplication: pid_t?
     /// The size to come back at once the yielded app is left.
     private var modeBeforeYield: Mode = .expanded
+    /// The presentation last put into effect; `nil` while the Touch Bar is
+    /// switched off, so switching it back on applies it afresh.
+    @ObservationIgnored private var appliedPresentation: Preferences.TouchBarPresentation?
     /// The shortcut set in settings: hands the Touch Bar to the frontmost app,
     /// or takes it back.
     @ObservationIgnored private lazy var yieldHotKey = GlobalHotKey { [weak self] in self?.toggleYield() }
@@ -99,7 +101,14 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         _ = controller.preferences.touchBarAlignment
         _ = controller.preferences.touchBarStyle
         _ = controller.preferences.touchBarPet
+        _ = controller.preferences.touchBarPresentation
     } onChange: { controller in
+        // The app relays the settings that decide whether there is a Touch
+        // Bar at all; the presentation is the bar's own, and choosing it in
+        // settings used to do nothing until one of those others changed.
+        if controller.preferences.touchBarPresentation != controller.appliedPresentation {
+            controller.applyPresentation()
+        }
         controller.applyMetricsToStrips()
         controller.applyStyle()
         controller.rebuildBarIfNeeded()
@@ -144,10 +153,22 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         yieldHotKey.shortcut = preferences.yieldShortcut
         applyMetricsToStrips()
         rebuildBarIfNeeded()
+        applyPresentation()
+    }
 
-        switch preferences.touchBarPresentation {
+    /// Puts the bar up, or takes it down, for the presentation chosen.
+    ///
+    /// The Control Strip presentation collapses the bar only when it has just
+    /// been chosen. This runs on every settings change the app relays — the
+    /// refresh interval, a clock zone — and collapsing whenever the bar was
+    /// up closed one the user had opened from the meter a moment before.
+    private func applyPresentation() {
+        let presentation = preferences.touchBarPresentation
+        let isNew = presentation != appliedPresentation
+        appliedPresentation = presentation
+        switch presentation {
         case .controlStrip:
-            if mode != .collapsed { collapse() }
+            if isNew, mode != .collapsed { collapse() }
             stopReasserting()
         case .alwaysOn:
             if mode == .collapsed, !isReleasedForSession, yieldedApplication == nil { present(.expanded) }
@@ -189,6 +210,7 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         changes.stop()
         yieldHotKey.shortcut = nil
         yieldedApplication = nil
+        appliedPresentation = nil
         DFRSupport.setControlStripPresence(Self.controlStripIdentifier, visible: false)
         SystemTouchBar.removeSystemTrayItem(stripItem)
         self.stripItem = nil
@@ -207,6 +229,10 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         SystemTouchBar.dismissSystemModal(presentedBar)
         self.presentedBar = nil
         presentedLayout = nil
+        // The panels went with the bar. Kept, `refresh` went on handing each
+        // of them a snapshot and a copy of its history at every coarse
+        // republication for as long as the bar stayed collapsed.
+        metricViews.removeAll()
         mode = .collapsed
         petCrossingEnd = nil
         if rebuilding {
@@ -220,12 +246,15 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
     // MARK: - Modes
 
     /// Tapping the Control Strip meter opens the bar — and brings GlassDeck back
-    /// after it was released — while a second tap shrinks it again.
+    /// after it was released — while a second tap shrinks it again. A tap on
+    /// the meter beside the mini bar, which is as small as it goes, does
+    /// nothing: going through `present` took that bar down and put an
+    /// identical one up, and the Touch Bar visibly reloaded for it.
     private func handleStripTap() {
         if mode == .collapsed {
             isReleasedForSession = false
             present(.expanded)
-        } else {
+        } else if mode != .mini {
             present(.mini)
         }
     }
@@ -373,10 +402,15 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
 
     /// Re-renders whichever Touch Bar surfaces are on screen.
     private func refresh() {
+        // The three meters are slow surfaces whatever the bar's size: the
+        // Control Strip one stays up beside the expanded bar, where `refresh`
+        // runs at the sampling cadence, and fed the fine snapshot it showed
+        // the latest tick rather than the coarse reading — and redrew for it.
+        let coarse = monitor.coarseSnapshot
+        stripView.snapshot = coarse
+        miniStripView.snapshot = coarse
+        applicationStripView.snapshot = coarse
         let snapshot = monitor.snapshot
-        stripView.snapshot = snapshot
-        miniStripView.snapshot = snapshot
-        applicationStripView.snapshot = snapshot
         batteryView.battery = snapshot.battery
         if let kind = mode.expandedMetric {
             detailView.snapshot = snapshot
@@ -570,13 +604,13 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         case Self.applicationMeterItem:
             let item = NSCustomTouchBarItem(identifier: identifier)
             applicationStripView.metrics = preferences.touchBarMetrics
-            applicationStripView.snapshot = monitor.snapshot
+            applicationStripView.snapshot = monitor.coarseSnapshot
             item.view = applicationTapView
             return item
         case Self.miniMeterItem:
             let item = NSCustomTouchBarItem(identifier: identifier)
             miniStripView.metrics = preferences.touchBarMetrics
-            miniStripView.snapshot = monitor.snapshot
+            miniStripView.snapshot = monitor.coarseSnapshot
             item.view = miniStripView
             return item
         case Self.collapseItem:
@@ -665,67 +699,4 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         item.view = control
         return item
     }
-}
-
-/// An invisible view of a fixed width, used to reserve the Control Strip's area.
-private final class FixedWidthSpacer: NSView {
-    private let width: CGFloat
-
-    init(width: CGFloat) {
-        self.width = width
-        super.init(frame: NSRect(x: 0, y: 0, width: width, height: 30))
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
-
-    override var intrinsicContentSize: NSSize { NSSize(width: width, height: 30) }
-}
-
-/// A Touch Bar view that reports taps, used to make the whole strip a button
-/// without the chrome an `NSButton` would draw around it.
-private final class TouchBarTapView: NSView {
-    var onTap: (() -> Void)?
-
-    init() {
-        super.init(frame: NSRect(x: 0, y: 0, width: 186, height: 30))
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
-
-    override func touchesBegan(with event: NSEvent) {
-        super.touchesBegan(with: event)
-        onTap?()
-    }
-
-    override func mouseDown(with event: NSEvent) {
-        super.mouseDown(with: event)
-        onTap?()
-    }
-}
-
-/// Detects the Touch Bar panel in the IO registry.
-///
-/// The Touch Bar's own display publishes a `dfr` property; matching on it is
-/// stable across Intel and Apple silicon MacBook Pros and reports `false` on
-/// every Mac that never shipped one.
-enum TouchBarHardware {
-    static let isPresent: Bool = {
-        guard let matching = IOServiceMatching("IOService") as NSMutableDictionary? else { return false }
-        matching[kIOPropertyMatchKey] = ["dfr": true] as NSDictionary
-
-        var iterator = io_iterator_t()
-        guard IOServiceGetMatchingServices(
-            kIOMainPortDefault,
-            matching as CFDictionary,
-            &iterator
-        ) == KERN_SUCCESS else { return false }
-        defer { IOObjectRelease(iterator) }
-
-        let entry = IOIteratorNext(iterator)
-        guard entry != 0 else { return false }
-        IOObjectRelease(entry)
-        return true
-    }()
 }

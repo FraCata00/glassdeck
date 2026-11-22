@@ -15,14 +15,7 @@ struct ModuleCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Theme.iconChip(module))
-                    .frame(width: 22, height: 22)
-                    .overlay {
-                        Image(systemName: module.symbolName)
-                            .font(Typography.chipIcon)
-                            .foregroundStyle(Theme.accent(module))
-                    }
+                IconChip(kind: module)
                 Text(module.title)
                     .font(Typography.heading)
                     .foregroundStyle(.secondary)
@@ -40,6 +33,24 @@ struct ModuleCard<Content: View>: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassSurface(cornerRadius: Theme.tileCornerRadius)
+    }
+}
+
+/// The small rounded square with the symbol in it that heads every metric
+/// and module card.
+struct IconChip<Kind: Accented>: View {
+    let kind: Kind
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .fill(Theme.iconChip(kind))
+            .frame(width: 22, height: 22)
+            .overlay {
+                Image(systemName: kind.symbolName)
+                    .font(Typography.chipIcon)
+                    .foregroundStyle(Theme.accent(kind))
+            }
+            .accessibilityHidden(true)
     }
 }
 

@@ -11,10 +11,54 @@ import GlassDeckKit
 final class TouchBarMetricView: NSView {
     let kind: MetricKind
 
-    var snapshot: MetricsSnapshot = .empty { didSet { needsDisplay = true } }
+    /// Redrawn only when the panel would come out different, as the Control
+    /// Strip meter is: a snapshot is new on every sample by its timestamp
+    /// alone, while memory, temperature, fans and power — and every panel of
+    /// a style without a history — often read the same from one sample to
+    /// the next.
+    var snapshot: MetricsSnapshot = .empty {
+        didSet {
+            let look = Look(snapshot, kind: kind, width: width)
+            guard look != self.look else { return }
+            self.look = look
+            needsDisplay = true
+        }
+    }
     /// Only set for styles that draw it: the controller does not copy the ring
-    /// buffer into a panel that would not look at it.
-    var history: [Double] = [] { didSet { needsDisplay = true } }
+    /// buffer into a panel that would not look at it. A metric that holds
+    /// still, such as a disk at rest, hands over the same buffer every sample.
+    var history: [Double] = [] {
+        didSet { if history != oldValue { needsDisplay = true } }
+    }
+
+    /// Everything a panel takes from the snapshot, down to the pixel and no
+    /// further. The candidates are also what `draw` sets, so the value is
+    /// formatted once a sample however many times it is drawn.
+    private struct Look: Equatable {
+        var candidates: [String]
+        /// The fraction in device pixels across the panel: finer than any
+        /// gauge draws it, the capsule's fill included.
+        var level: Int
+        var band: StrainBand
+        var pressure: MemoryPressure?
+
+        init(_ snapshot: MetricsSnapshot, kind: MetricKind, width: CGFloat) {
+            let headline = snapshot.headline(for: kind)
+            switch kind {
+            // Byte- and rate-valued metrics fall back to a percentage, which
+            // always fits.
+            case .memory, .disk, .network:
+                candidates = [headline, ValueFormatter.percent(snapshot.fraction(for: kind))]
+            default:
+                candidates = [headline]
+            }
+            level = Int((snapshot.fraction(for: kind).clamped01 * Double(width) * 2).rounded())
+            band = StrainBand(strain: snapshot.strain(for: kind))
+            pressure = kind == .memory ? snapshot.memory.pressureLevel : nil
+        }
+    }
+
+    private var look: Look
     /// Panels are narrower on the shorter bar that leaves the Control Strip in place.
     var width: CGFloat = 168 {
         didSet {
@@ -51,6 +95,7 @@ final class TouchBarMetricView: NSView {
 
     init(kind: MetricKind) {
         self.kind = kind
+        look = Look(.empty, kind: kind, width: 168)
         super.init(frame: NSRect(x: 0, y: 0, width: 168, height: 30))
     }
 
@@ -311,17 +356,9 @@ final class TouchBarMetricView: NSView {
         NSBezierPath(ovalIn: dot).fill()
     }
 
-    /// What the value could say, best first. Byte- and rate-valued metrics fall
-    /// back to a percentage, which always fits.
-    private var headlineCandidates: [String] {
-        let headline = snapshot.headline(for: kind)
-        switch kind {
-        case .memory, .disk, .network:
-            return [headline, ValueFormatter.percent(snapshot.fraction(for: kind))]
-        default:
-            return [headline]
-        }
-    }
+    /// What the value could say, best first, as worked out when the snapshot
+    /// was set.
+    private var headlineCandidates: [String] { look.candidates }
 
     /// The first candidate that fits the space, or the last as a fallback.
     ///

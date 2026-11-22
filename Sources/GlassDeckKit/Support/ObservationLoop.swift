@@ -67,6 +67,10 @@ public final class ObservationLoop<Owner: AnyObject> {
             Task { @MainActor [weak self] in
                 guard let self, self.generation == armedGeneration, let owner = self.owner else { return }
                 self.onChange(owner)
+                // `onChange` may itself have stopped the loop, the Touch Bar
+                // switching itself off; arming again then would leave one more
+                // registration behind that can only fire to be ignored.
+                guard self.generation == armedGeneration else { return }
                 self.arm(armedGeneration)
             }
         }

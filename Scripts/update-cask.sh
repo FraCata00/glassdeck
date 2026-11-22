@@ -34,6 +34,13 @@ SHA="$(curl -fsSL "$CHECKSUM_URL" | awk '{print $1}')"
     -e "s/^  sha256 \".*\"$/  sha256 \"$SHA\"/" \
     "$CASK"
 
+# `sed` succeeds whether or not a line matched, so a cask laid out differently
+# would otherwise be reported below as already up to date.
+if ! grep -qx "  version \"$VERSION\"" "$CASK" || ! grep -qx "  sha256 \"$SHA\"" "$CASK"; then
+    echo "could not rewrite the version and sha256 lines in $CASK" >&2
+    exit 1
+fi
+
 # Re-running for a version already pointed at is a no-op, not a failed commit.
 if git -C "$TAP" diff --quiet -- Casks/glassdeck.rb; then
     echo "▸ Cask already at $VERSION ($SHA)"

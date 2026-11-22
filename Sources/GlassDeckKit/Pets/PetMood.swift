@@ -122,7 +122,10 @@ public struct PetMoodResolver: Sendable {
         if snapshot.battery.isAvailable, snapshot.battery.isCharging { next.insert(.charging) }
 
         if cpu < (idleSince == nil ? Self.idleEnter : Self.idleExit) {
-            let since = idleSince ?? snapshot.timestamp
+            // A start later than this sample means the clock was set back;
+            // counted from it, the pet could not doze off until the clock had
+            // caught up, so the idle stretch starts again from here.
+            let since = idleSince.map { min($0, snapshot.timestamp) } ?? snapshot.timestamp
             idleSince = since
             if snapshot.timestamp.timeIntervalSince(since) >= Self.sleepAfter { next.insert(.sleepy) }
         } else {

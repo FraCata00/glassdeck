@@ -40,16 +40,22 @@ public enum ValueFormatter {
         let units = ["B", "KB", "MB", "GB", "TB", "PB"]
         var amount = Double(value)
         var index = 0
-        while amount >= base, index < units.count - 1 {
+        // Promoted on the figure as it will be printed, not as it is: 1023.7 MB
+        // only reaches 1024 when rounded, and a test on the raw amount let it
+        // through as "1024 MB" where the next unit reads "1.0 GB".
+        while index < units.count - 1, amount.rounded() >= base {
             amount /= base
             index += 1
         }
         if index == 0 { return "\(value) B" }
         // Rounded first, so 9.96 becomes "10" rather than "10.0".
         let rounded = (amount * 10).rounded() / 10
+        // The whole figure is rounded here too rather than left to `%.0f`,
+        // which rounds a half to even: 10.5 GB printed as "10" while 11.5
+        // printed as "12".
         return rounded < 10
             ? String(format: "%.1f %@", rounded, units[index])
-            : String(format: "%.0f %@", amount, units[index])
+            : String(format: "%.0f %@", amount.rounded(), units[index])
     }
 
     /// Two decimal places, matching how `uptime` prints load averages.
@@ -64,7 +70,7 @@ public enum ValueFormatter {
 
     /// A temperature to the nearest degree: `54.4` → `"54°C"`.
     public static func celsius(_ degrees: Double) -> String {
-        "\(Int(degrees.rounded()))°C"
+        "\(degrees.roundedInt)°C"
     }
 
     /// One decimal place, for a cadence the user picked on a slider: the

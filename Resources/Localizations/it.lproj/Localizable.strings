@@ -105,3 +105,8 @@
 "Follows every sample, the same figure as the panel. Off, it is redrawn every few seconds with the average since the last one, which costs about half as much." = "Segue ogni campione, con lo stesso valore del pannello. Disattivata, si aggiorna ogni pochi secondi con la media dall'ultimo aggiornamento, e costa circa la metà.";
 "Pet" = "Animaletto";
 "Now and then it walks across the full and compact bar, and it always turns up when the Mac starts working hard or heating up. Its mood follows the readings; tap it to say hello." = "Ogni tanto attraversa la barra intera e quella compatta, e arriva sempre quando il Mac inizia a lavorare sodo o a scaldarsi. Il suo umore segue le letture; toccalo per salutarlo.";
+
+/* Griglia dei core */
+"Cores" = "Core";
+"Performance cores" = "Core ad alte prestazioni";
+"Efficiency cores" = "Core ad alta efficienza";

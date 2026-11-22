@@ -87,10 +87,15 @@ final class ThresholdAlerts {
     }
 
     private func checkTemperature(_ snapshot: MetricsSnapshot) {
-        guard preferences.isTemperatureAlertEnabled, let hottest = snapshot.thermal.hottest else {
+        guard preferences.isTemperatureAlertEnabled else {
             isAlerting = false
             return
         }
+        // A reading that went missing is not one that cooled down: every SMC
+        // read that came back implausible would otherwise rearm the alert, and
+        // a machine sitting above the threshold would be told about it again
+        // on the next good one.
+        guard let hottest = snapshot.thermal.hottest else { return }
 
         let threshold = preferences.temperatureThreshold
         if !isAlerting, hottest >= threshold {
@@ -106,8 +111,8 @@ final class ThresholdAlerts {
             identifier: "dev.fracata00.glassdeck.temperature",
             body: String(
                 format: String(localized: "Running hot: %1$lld°C, above the %2$lld°C you asked about."),
-                Int(hottest.rounded()),
-                Int(threshold.rounded())
+                hottest.roundedInt,
+                threshold.roundedInt
             )
         )
     }

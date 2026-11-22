@@ -16,6 +16,7 @@ struct ShortcutRecorder: View {
 
     @State private var isRecording = false
     @State private var monitor: Any?
+    @Environment(\.appearsActive) private var appearsActive
 
     var body: some View {
         HStack(spacing: 6) {
@@ -38,6 +39,14 @@ struct ShortcutRecorder: View {
             }
         }
         .onDisappear(perform: stop)
+        // The settings window is only ordered out when it closes, so
+        // `onDisappear` never comes: recording on into a closed window kept
+        // the hand-over shortcut suspended and swallowed every key the app
+        // was sent. Stopping once the window is no longer key is also what
+        // the system's own shortcut fields do.
+        .onChange(of: appearsActive) { _, active in
+            if !active { stop() }
+        }
     }
 
     private var title: String {

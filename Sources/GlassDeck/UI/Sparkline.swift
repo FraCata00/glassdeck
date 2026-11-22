@@ -1,3 +1,4 @@
+import GlassDeckKit
 import SwiftUI
 
 /// A filled history curve. Values are fractions in `0...1`, oldest first.
@@ -81,8 +82,4 @@ struct Sparkline: View {
         path.closeSubpath()
         return path
     }
-}
-
-private extension Double {
-    var clamped01: Double { isFinite ? Swift.min(1, Swift.max(0, self)) : 0 }
 }

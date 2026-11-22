@@ -46,6 +46,24 @@ struct FormattingTests {
         #expect(ValueFormatter.rate(-5) == "0 B/s")
         #expect(ValueFormatter.rate(.infinity) == "0 B/s")
     }
+
+    @Test("A figure that rounds up to the next unit is printed in that unit")
+    func roundingCrossesUnits() {
+        // 1023.7 MB: under 1024 as measured, 1024 as printed.
+        #expect(ValueFormatter.bytes(1_073_427_000) == "1.0 GB")
+        // 999.96 KB in decimal units.
+        #expect(ValueFormatter.storage(999_960) == "1.0 MB")
+        #expect(ValueFormatter.rate(999_600) == "1.0 MB/s")
+        // Just short of rounding up stays where it is.
+        #expect(ValueFormatter.storage(999_400) == "999 KB")
+        #expect(ValueFormatter.bytes(1023) == "1023 B")
+    }
+
+    @Test("Whole figures round a half up, as the decimals do")
+    func wholeFiguresRoundHalfUp() {
+        #expect(ValueFormatter.storage(10_500_000_000) == "11 GB")
+        #expect(ValueFormatter.storage(12_500_000_000) == "13 GB")
+    }
 }
 
 @Suite("Math helpers")
@@ -57,6 +75,16 @@ struct MathTests {
         #expect(7.0.clamped01 == 1)
         #expect(Double.nan.clamped01 == 0)
         #expect(Double.infinity.clamped01 == 1)
+    }
+
+    @Test("roundedInt never traps, whatever the reading")
+    func roundedIntSaturates() {
+        #expect(2.5.roundedInt == 3)
+        #expect((-2.5).roundedInt == -3)
+        #expect(Double.nan.roundedInt == 0)
+        #expect(Double.infinity.roundedInt == .max)
+        #expect((-Double.infinity).roundedInt == .min)
+        #expect(1e300.roundedInt == .max)
     }
 
     @Test("mean of an empty collection is zero, not a crash")
@@ -81,6 +109,37 @@ struct DurationAndTemperatureTests {
         #expect(ValueFormatter.celsius(54.4) == "54°C")
         #expect(ValueFormatter.celsius(54.5) == "55°C")
         #expect(ValueFormatter.celsius(-3.6) == "-4°C")
+        #expect(ValueFormatter.celsius(.nan) == "0°C")
+    }
+
+    @Test("Readings the SMC decoded as NaN or infinity format instead of trapping")
+    func nonFiniteReadingsFormat() {
+        let fans = FanUsage(
+            fans: [
+                Fan(index: 0, rpm: .nan, minimumRPM: 1200, maximumRPM: 6000),
+                Fan(index: 1, rpm: .infinity, minimumRPM: .nan, maximumRPM: .infinity),
+            ],
+            isAvailable: true
+        )
+        let snapshot = MetricsSnapshot(
+            fans: fans,
+            battery: BatteryUsage(fraction: .nan, isAvailable: true),
+            power: PowerUsage(watts: .infinity, adapterWatts: .infinity, isAvailable: true)
+        )
+        for kind in MetricKind.allCases {
+            _ = snapshot.headline(for: kind)
+            _ = snapshot.caption(for: kind)
+            _ = snapshot.details(for: kind)
+        }
+        #expect(snapshot.battery.percentage == 0)
+        #expect(FanUsage(fans: [fans.fans[1]], isAvailable: true).caption.contains("rpm"))
+    }
+
+    @Test("Power switches to whole watts on the figure as printed")
+    func powerHeadlineRounding() {
+        #expect(PowerUsage(watts: 9.94, isAvailable: true).headline == "9.9 W")
+        #expect(PowerUsage(watts: 9.96, isAvailable: true).headline == "10 W")
+        #expect(PowerUsage(watts: 12.4, isAvailable: true).headline == "12 W")
     }
 
     @Test("Battery state reads charging before plugged in")

@@ -33,9 +33,12 @@ struct DashboardView: View {
                                     isFocused: focusedMetric == kind
                                 )
                                 .glassMorph(id: kind, in: glass)
-                                .onTapGesture {
-                                    withAnimation(.smooth(duration: 0.4)) { focus = kind }
-                                }
+                                .onTapGesture { focus(on: kind) }
+                                // A tap gesture is invisible to VoiceOver, so
+                                // the card says it is a button and how to press it.
+                                .accessibilityElement(children: .combine)
+                                .accessibilityAddTraits(focusedMetric == kind ? [.isButton, .isSelected] : .isButton)
+                                .accessibilityAction { focus(on: kind) }
                             }
                         }
                         if !modules.isEmpty {
@@ -64,7 +67,7 @@ struct DashboardView: View {
         .background(WindowChrome())
         .frame(minWidth: 560, minHeight: 480)
         .task { await monitor.refreshNow() }
-        .samplesProcesses(with: monitor, while: preferences.showsProcesses)
+        .samplesProcesses(with: monitor, while: preferences.showsProcesses && live.isOnScreen)
         // The window is kept rather than released when it closes, so the same
         // gate the panel needs applies here — over a drifting mesh gradient.
         .tracksVisibility($live, monitor: monitor, clock: clock)
@@ -91,6 +94,10 @@ struct DashboardView: View {
     /// describing a card that is no longer in the grid.
     private var focusedMetric: MetricKind {
         metrics.contains(focus) ? focus : (metrics.first ?? .cpu)
+    }
+
+    private func focus(on kind: MetricKind) {
+        withAnimation(.smooth(duration: 0.4)) { focus = kind }
     }
 
     private var header: some View {
@@ -184,7 +191,7 @@ private struct MetricCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                iconChip
+                IconChip(kind: kind)
                 Text(kind.title)
                     .font(Typography.heading)
                     .foregroundStyle(.secondary)
@@ -229,17 +236,6 @@ private struct MetricCard: View {
             interactive: true,
             tint: isFocused ? Theme.selectionTint(kind) : nil
         )
-    }
-
-    private var iconChip: some View {
-        RoundedRectangle(cornerRadius: 6, style: .continuous)
-            .fill(Theme.iconChip(kind))
-            .frame(width: 22, height: 22)
-            .overlay {
-                Image(systemName: kind.symbolName)
-                    .font(Typography.chipIcon)
-                    .foregroundStyle(Theme.accent(kind))
-            }
     }
 
     /// Follows the strain rather than the fill: for memory, a full bar is

@@ -156,12 +156,18 @@ final class SMCService {
 
     /// SMC values are typed by a four-character code; these are the numeric types
     /// fan and temperature keys use across Intel and Apple silicon Macs.
-    private static func decode(type: String, bytes: [UInt8]) -> Double? {
+    /// Internal so the decoding can be tested without an SMC.
+    static func decode(type: String, bytes: [UInt8]) -> Double? {
         switch type.trimmingCharacters(in: .whitespaces) {
         case "flt":
             guard bytes.count >= 4 else { return nil }
             let bits = UInt32(bytes[0]) | UInt32(bytes[1]) << 8 | UInt32(bytes[2]) << 16 | UInt32(bytes[3]) << 24
-            return Double(Float(bitPattern: bits))
+            // A key that is not really a measurement can hold any bit pattern,
+            // NaN and infinity among them. Neither is a reading, and both got
+            // through every `> 0` test downstream: an infinite wattage passed
+            // as available, and `Int(_:)` on an infinite fan count traps.
+            let value = Double(Float(bitPattern: bits))
+            return value.isFinite ? value : nil
         case "fpe2":
             guard bytes.count >= 2 else { return nil }
             return Double(UInt16(bytes[0]) << 8 | UInt16(bytes[1])) / 4

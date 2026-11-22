@@ -10,10 +10,28 @@ import GlassDeckKit
 /// style whose panel has none draws it here in its own manner.
 final class TouchBarDetailView: NSView {
     var kind: MetricKind = .cpu {
-        didSet { cachedInk = nil; needsDisplay = true }
+        didSet {
+            cachedInk = nil
+            look = Look(snapshot, kind: kind, width: width)
+            needsDisplay = true
+        }
     }
-    var snapshot: MetricsSnapshot = .empty { didSet { needsDisplay = true } }
-    var history: [Double] = [] { didSet { needsDisplay = true } }
+    /// Redrawn only when the bar would come out different: a snapshot is new
+    /// on every sample by its timestamp alone, while a battery, a fan or a
+    /// disk at rest reads the same for minutes.
+    var snapshot: MetricsSnapshot = .empty {
+        didSet {
+            let look = Look(snapshot, kind: kind, width: width)
+            guard look != self.look else { return }
+            self.look = look
+            needsDisplay = true
+        }
+    }
+    /// Handed over on every sample, and the same buffer as last time
+    /// whenever the metric held still.
+    var history: [Double] = [] {
+        didSet { if history != oldValue { needsDisplay = true } }
+    }
     var style: TouchBarStyle = .glass {
         didSet {
             guard style != oldValue else { return }
@@ -29,8 +47,30 @@ final class TouchBarDetailView: NSView {
 
     private let width: CGFloat
 
+    /// Everything the bar takes from the snapshot, down to the pixel and no
+    /// further. The text is also what `draw` sets, so it is formatted once a
+    /// sample however many times it is drawn.
+    private struct Look: Equatable {
+        var headline: String
+        var details: [MetricDetail]
+        /// The fraction in device pixels across the bar: finer than any gauge
+        /// draws it.
+        var level: Int
+        var band: StrainBand
+
+        init(_ snapshot: MetricsSnapshot, kind: MetricKind, width: CGFloat) {
+            headline = snapshot.headline(for: kind)
+            details = Array(snapshot.details(for: kind).prefix(5))
+            level = Int((snapshot.fraction(for: kind).clamped01 * Double(width) * 2).rounded())
+            band = StrainBand(strain: snapshot.strain(for: kind))
+        }
+    }
+
+    private var look: Look
+
     init(width: CGFloat = TouchBarDetailView.barWidth) {
         self.width = width
+        look = Look(.empty, kind: .cpu, width: width)
         super.init(frame: NSRect(x: 0, y: 0, width: width, height: 30))
     }
 
@@ -108,7 +148,7 @@ final class TouchBarDetailView: NSView {
             TouchBarPaint.ring(fraction, centre: NSPoint(x: 12 + 10, y: bounds.midY), radius: 9.5, color: accent)
         }
         drawText(kind.title.uppercased(), in: NSRect(x: headlineX, y: bounds.height - 14, width: 150, height: 11), ink.title, kern: ink.kern)
-        drawText(snapshot.headline(for: kind), in: NSRect(x: headlineX, y: 3, width: 150, height: 16), ink.headline)
+        drawText(look.headline, in: NSRect(x: headlineX, y: 3, width: 150, height: 16), ink.headline)
 
         // The ambient style's history is the backdrop, which leaves the right
         // of the bar to the numbers.
@@ -194,7 +234,7 @@ final class TouchBarDetailView: NSView {
     }
 
     private func drawDetails(from start: CGFloat, width: CGFloat, ink: Ink) {
-        let details = Array(snapshot.details(for: kind).prefix(5))
+        let details = look.details
         guard !details.isEmpty else { return }
         let columnWidth = width / CGFloat(details.count)
 

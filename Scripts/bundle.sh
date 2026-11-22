@@ -18,7 +18,11 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --debug) CONFIGURATION="debug"; shift ;;
         --universal) ARCH_FLAGS=(--arch arm64 --arch x86_64); shift ;;
-        --version) VERSION="$2"; shift 2 ;;
+        # Named rather than left to `set -u`, whose "unbound variable" says
+        # nothing about which option wanted a value.
+        --version)
+            [[ $# -ge 2 && -n "$2" ]] || { echo "--version needs a value" >&2; exit 2; }
+            VERSION="$2"; shift 2 ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
 done

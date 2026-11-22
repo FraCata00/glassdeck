@@ -43,6 +43,17 @@ struct TouchBarStyleTests {
         #expect(window.contains(0.70) && window.contains(0.71))
     }
 
+    @Test("A history flat at either end of the scale is drawn at that end")
+    func flatHistoryAtTheEdges() {
+        let full = TouchBarHistory.window(for: [1, 1, 1])
+        #expect(full.upperBound <= 1)
+        #expect(TouchBarHistory.normalised(1, in: full) == 1)
+
+        let empty = TouchBarHistory.window(for: [0, 0, 0])
+        #expect(empty.lowerBound >= 0)
+        #expect(TouchBarHistory.normalised(0, in: empty) == 0)
+    }
+
     @Test("Columns keep only the latest samples and never draw an empty one")
     func columns() {
         let history = (0..<40).map { Double($0) / 39 }

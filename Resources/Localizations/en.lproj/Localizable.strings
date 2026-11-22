@@ -105,3 +105,8 @@
 "Follows every sample, the same figure as the panel. Off, it is redrawn every few seconds with the average since the last one, which costs about half as much." = "Follows every sample, the same figure as the panel. Off, it is redrawn every few seconds with the average since the last one, which costs about half as much.";
 "Pet" = "Pet";
 "Now and then it walks across the full and compact bar, and it always turns up when the Mac starts working hard or heating up. Its mood follows the readings; tap it to say hello." = "Now and then it walks across the full and compact bar, and it always turns up when the Mac starts working hard or heating up. Its mood follows the readings; tap it to say hello.";
+
+/* Core grid */
+"Cores" = "Cores";
+"Performance cores" = "Performance cores";
+"Efficiency cores" = "Efficiency cores";

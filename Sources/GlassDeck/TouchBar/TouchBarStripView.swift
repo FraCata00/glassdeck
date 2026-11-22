@@ -6,7 +6,17 @@ import GlassDeckKit
 /// The Touch Bar is 30 pt tall, so every metric gets a small chip: a level that
 /// fills from the bottom, the metric's short name, and its current value.
 final class TouchBarStripView: NSView {
-    var metrics: [MetricKind] = MetricKind.defaultSelection { didSet { invalidateIntrinsicContentSize(); needsDisplay = true } }
+    /// Set by the controller on every observation pass, not only when the
+    /// selection moves, so an unchanged one must not count as a change: it
+    /// used to mark all three meters dirty on every sample, undoing the chip
+    /// comparison below.
+    var metrics: [MetricKind] = MetricKind.defaultSelection {
+        didSet {
+            guard metrics != oldValue else { return }
+            invalidateIntrinsicContentSize()
+            needsDisplay = true
+        }
+    }
     /// Redrawn only when a chip would come out different: a snapshot is new on
     /// every sample by its timestamp alone, while what the chips show — a whole
     /// percentage, a level a pixel tall — often has not moved at all.
@@ -25,7 +35,7 @@ final class TouchBarStripView: NSView {
 
     private func chips() -> [Chip] {
         // The level is 28 pt tall on a 2x panel: 56 distinguishable steps.
-        metrics.map { Chip(value: shortValue(for: $0), level: Int((snapshot.fraction(for: $0).clamped01 * 56).rounded())) }
+        metrics.map { Chip(value: shortValue(for: $0), level: (snapshot.fraction(for: $0).clamped01 * 56).roundedInt) }
     }
 
     /// Width of a single metric chip, chosen so four metrics stay inside the slot
@@ -67,7 +77,7 @@ final class TouchBarStripView: NSView {
         let fraction = snapshot.fraction(for: kind).clamped01
         let path = NSBezierPath(roundedRect: frame, xRadius: 6, yRadius: 6)
 
-        NSColor.white.withAlphaComponent(0.10).setFill()
+        Self.chipFill.setFill()
         path.fill()
 
         // Level fill, clipped to the chip so the rounded corners stay clean.
@@ -75,28 +85,47 @@ final class TouchBarStripView: NSView {
         path.addClip()
         let fillHeight = max(2, frame.height * fraction)
         let fillRect = NSRect(x: frame.minX, y: frame.minY, width: frame.width, height: fillHeight)
-        let color = TouchBarPalette.color(for: kind)
-        let gradient = NSGradient(
-            colors: [color.withAlphaComponent(0.95), color.withAlphaComponent(0.45)]
-        )
-        gradient?.draw(in: fillRect, angle: 90)
+        Self.gradient(for: kind)?.draw(in: fillRect, angle: 90)
         context.restoreGState()
 
-        let title = kind.shortTitle
-        let value = shortValue(for: kind)
-
-        draw(
-            text: title,
+        (kind.shortTitle as NSString).draw(
             in: NSRect(x: frame.minX, y: frame.maxY - 12, width: frame.width, height: 10),
-            font: .systemFont(ofSize: 7.5, weight: .semibold),
-            color: .white.withAlphaComponent(0.75)
+            withAttributes: Self.titleAttributes
         )
-        draw(
-            text: value,
+        (shortValue(for: kind) as NSString).draw(
             in: NSRect(x: frame.minX, y: frame.minY + 3, width: frame.width, height: 13),
-            font: .monospacedDigitSystemFont(ofSize: 11, weight: .semibold),
-            color: .white
+            withAttributes: Self.valueAttributes
         )
+    }
+
+    // The fills, fonts and attributes are the same on every draw, so they are
+    // built once rather than per chip per redraw.
+    private static let chipFill = NSColor.white.withAlphaComponent(0.10)
+
+    private static let titleAttributes = attributes(
+        font: .systemFont(ofSize: 7.5, weight: .semibold),
+        color: .white.withAlphaComponent(0.75)
+    )
+    private static let valueAttributes = attributes(
+        font: .monospacedDigitSystemFont(ofSize: 11, weight: .semibold),
+        color: .white
+    )
+
+    private static func attributes(font: NSFont, color: NSColor) -> [NSAttributedString.Key: Any] {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        return [.font: font, .foregroundColor: color, .paragraphStyle: paragraph]
+    }
+
+    /// Each metric's level gradient, made on its first draw.
+    private static var gradients: [MetricKind: NSGradient] = [:]
+
+    private static func gradient(for kind: MetricKind) -> NSGradient? {
+        if let cached = gradients[kind] { return cached }
+        let color = TouchBarPalette.color(for: kind)
+        let gradient = NSGradient(colors: [color.withAlphaComponent(0.95), color.withAlphaComponent(0.45)])
+        gradients[kind] = gradient
+        return gradient
     }
 
     /// Values are abbreviated hard: `42%`, `9G`, `1.4M` — anything longer is unreadable at this size.
@@ -111,21 +140,10 @@ final class TouchBarStripView: NSView {
         case .battery:
             snapshot.battery.headline
         case .temperature:
-            snapshot.thermal.hottest.map { "\(Int($0.rounded()))°" } ?? "–"
+            snapshot.thermal.hottest.map { "\($0.roundedInt)°" } ?? "–"
         case .power:
-            snapshot.power.isAvailable ? "\(Int(snapshot.power.watts.rounded()))W" : "–"
+            snapshot.power.isAvailable ? "\(snapshot.power.watts.roundedInt)W" : "–"
         }
-    }
-
-    private func draw(text: String, in rect: NSRect, font: NSFont, color: NSColor) {
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = .center
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .foregroundColor: color,
-            .paragraphStyle: paragraph,
-        ]
-        NSAttributedString(string: text, attributes: attributes).draw(in: rect)
     }
 }
 

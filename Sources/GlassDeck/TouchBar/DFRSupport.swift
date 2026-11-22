@@ -48,6 +48,11 @@ enum DFRSupport {
 /// The private `NSTouchBar` / `NSTouchBarItem` class methods used to own a
 /// Control Strip slot, reached through the Objective-C runtime so that a missing
 /// selector is a silent no-op rather than a link error.
+///
+/// Bound to the main actor: these present and take down AppKit's bars, which
+/// nothing may touch off the main thread, and the compiler now says so rather
+/// than the Touch Bar server misbehaving.
+@MainActor
 enum SystemTouchBar {
     private static var itemClass: AnyObject { NSTouchBarItem.self }
     private static var barClass: AnyObject { NSTouchBar.self }
