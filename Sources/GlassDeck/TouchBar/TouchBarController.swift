@@ -207,6 +207,10 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         SystemTouchBar.dismissSystemModal(presentedBar)
         self.presentedBar = nil
         presentedLayout = nil
+        // The panels went with the bar. Kept, `refresh` went on handing each
+        // of them a snapshot and a copy of its history at every coarse
+        // republication for as long as the bar stayed collapsed.
+        metricViews.removeAll()
         mode = .collapsed
         petCrossingEnd = nil
         if rebuilding {
