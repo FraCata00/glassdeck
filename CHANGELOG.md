@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.3] - 2026-11-22
+
+### Fixed
+
+- **Decimals follow your region.** Sizes, rates, watts, the load average, the
+  process list and the Touch Bar's compact readings always used a full stop,
+  so a Mac set to an Italian region read "1.5 GB" where every other app says
+  "1,5 GB". They now use the region's separator, read when GlassDeck starts.
+- **Sampling stays paused while someone else is using the Mac.** With another
+  user switched in front, the screens waking or the Mac coming out of sleep
+  restarted sampling for a session nobody could see, and it kept running
+  until you came back. It now resumes only once your session is in front, the
+  screens are on and the Mac is awake.
+- **The clock card can say two days apart.** A zone 25 hours from yours, such
+  as Kiritimati seen from Niue, is two calendar dates away for an hour a day,
+  and the card called it "tomorrow". It now says "in 2 days" or "2 days ago".
+
 ## [2.3.2] - 2026-11-22
 
 ### Fixed
@@ -687,6 +704,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Scripts/bundle.sh` to assemble a signed `.app`, and `Scripts/make-icon.swift`
   to generate the icon artwork from code.
 
+[2.3.3]: https://github.com/FraCata00/glassdeck/releases/tag/v2.3.3
 [2.3.2]: https://github.com/FraCata00/glassdeck/releases/tag/v2.3.2
 [2.3.1]: https://github.com/FraCata00/glassdeck/releases/tag/v2.3.1
 [2.3.0]: https://github.com/FraCata00/glassdeck/releases/tag/v2.3.0
