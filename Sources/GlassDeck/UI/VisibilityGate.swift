@@ -94,6 +94,41 @@ extension View {
     }
 }
 
+/// Takes a reference-counted hold while a condition is true, and gives it back
+/// when the condition goes false or the view goes away.
+///
+/// Idempotent, so a repeated `onAppear` cannot take the same hold twice and
+/// the counts it feeds — process sampling, the clock ticker — stay balanced.
+private struct HoldLifetime: ViewModifier {
+    let isEnabled: Bool
+    let begin: @MainActor () -> Void
+    let end: @MainActor () -> Void
+
+    @State private var isHeld = false
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { hold(isEnabled) }
+            .onDisappear { hold(false) }
+            .onChange(of: isEnabled) { _, wanted in hold(wanted) }
+    }
+
+    private func hold(_ wanted: Bool) {
+        guard wanted != isHeld else { return }
+        isHeld = wanted
+        if wanted { begin() } else { end() }
+    }
+}
+
+extension View {
+    /// Balances `begin` and `end` around the time `isEnabled` is true. Pass a
+    /// window's `LiveReadings.isOnScreen` in it: `onDisappear` alone never
+    /// fires for a window that is only ordered out.
+    func holds(while isEnabled: Bool, begin: @escaping @MainActor () -> Void, end: @escaping @MainActor () -> Void) -> some View {
+        modifier(HoldLifetime(isEnabled: isEnabled, begin: begin, end: end))
+    }
+}
+
 /// Reports whether the window hosting this view is actually on screen.
 ///
 /// Two conditions, because either one alone is a way to be invisible: `isVisible`

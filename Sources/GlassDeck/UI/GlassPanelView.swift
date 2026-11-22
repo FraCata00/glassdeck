@@ -122,7 +122,7 @@ struct GlassPanelView: View {
         // it outgrows the screen, and the cap only after that.
         .frame(height: min(max(contentHeight, 1), Self.maximumPanelHeight))
         .task { await monitor.refreshNow() }
-        .samplesProcesses(with: monitor, while: preferences.showsProcesses)
+        .samplesProcesses(with: monitor, while: preferences.showsProcesses && live.isOnScreen)
         // Closing the panel does not tear this tree down, so what it reads has
         // to be switched off by hand or it animates on into a hidden window.
         .tracksVisibility($live, monitor: monitor, clock: clock)

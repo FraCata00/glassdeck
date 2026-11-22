@@ -64,7 +64,7 @@ struct DashboardView: View {
         .background(WindowChrome())
         .frame(minWidth: 560, minHeight: 480)
         .task { await monitor.refreshNow() }
-        .samplesProcesses(with: monitor, while: preferences.showsProcesses)
+        .samplesProcesses(with: monitor, while: preferences.showsProcesses && live.isOnScreen)
         // The window is kept rather than released when it closes, so the same
         // gate the panel needs applies here — over a drifting mesh gradient.
         .tracksVisibility($live, monitor: monitor, clock: clock)
