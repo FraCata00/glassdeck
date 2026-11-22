@@ -57,4 +57,22 @@ struct CounterWrapTests {
         #expect(ValueFormatter.rate(.infinity) == "0 B/s")
         #expect(ValueFormatter.rate(.nan) == "0 B/s")
     }
+
+    @Test("Ejecting a disk does not hide what the others did in that tick")
+    func diskRemovalKeepsTheOtherDisks() {
+        typealias Disk = DiskSampler.IOCounters
+        // The internal SSD reads 4 MB while an external drive with 900 GB of
+        // history goes away. A grand total fell, and the tick read as nothing.
+        let before: [UInt64: Disk] = [1: Disk(read: 10_000_000, written: 0), 2: Disk(read: 900_000_000_000, written: 5)]
+        let after: [UInt64: Disk] = [1: Disk(read: 14_000_000, written: 0)]
+        #expect(DiskSampler.bytesMoved(from: before, to: after) == Disk(read: 4_000_000, written: 0))
+
+        // A disk that has just appeared has no delta yet, whatever its history.
+        let attached: [UInt64: Disk] = [1: Disk(read: 14_000_000, written: 0), 3: Disk(read: 2_000_000_000, written: 7)]
+        #expect(DiskSampler.bytesMoved(from: after, to: attached) == Disk())
+
+        // A counter that went backwards is a reset, not a wrap into exabytes.
+        let reset: [UInt64: Disk] = [1: Disk(read: 100, written: 0)]
+        #expect(DiskSampler.bytesMoved(from: after, to: reset) == Disk())
+    }
 }
