@@ -532,9 +532,14 @@ struct SettingsView: View {
             }
         }
         // The rows preview a live time, and the ticker is otherwise asleep until
-        // the module is switched on.
-        .onAppear { clock.beginObserving() }
-        .onDisappear { clock.endObserving() }
+        // the module is switched on. Held for as long as the window is on
+        // screen rather than from `onAppear` to `onDisappear`: closing the
+        // window only orders it out, and the hold used to outlive it.
+        .holds(
+            while: live.isOnScreen,
+            begin: { clock.beginObserving() },
+            end: { clock.endObserving() }
+        )
     }
 
     private func zoneRow(_ zone: ClockZone) -> some View {
@@ -558,7 +563,7 @@ struct SettingsView: View {
             Spacer(minLength: 4)
 
             if let timeZone = zone.timeZone {
-                Text(WorldClock.time(in: timeZone, at: clock.now))
+                Text(WorldClock.time(in: timeZone, at: live.tick(from: clock)))
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             }
