@@ -70,7 +70,7 @@ public enum ValueFormatter {
 
     /// A temperature to the nearest degree: `54.4` → `"54°C"`.
     public static func celsius(_ degrees: Double) -> String {
-        "\(Int(degrees.rounded()))°C"
+        "\(degrees.roundedInt)°C"
     }
 
     /// One decimal place, for a cadence the user picked on a slider: the

@@ -71,14 +71,14 @@ extension MetricsSnapshot {
                     label: fans.fans.count > 1
                         ? L.t("detail.fanIndex", "fan %lld", fan.index + 1)
                         : L.t("detail.speed", "speed"),
-                    value: fan.rpm > 0 ? L.t("value.rpm", "%lld rpm", Int(fan.rpm.rounded())) : L.t("value.idle", "idle")
+                    value: fan.rpm > 0 ? L.t("value.rpm", "%lld rpm", fan.rpm.roundedInt) : L.t("value.idle", "idle")
                 )
             }
             let maximum = fans.fans.map(\.maximumRPM).max() ?? 0
             return speeds + [
                 MetricDetail(
                     label: L.t("detail.max", "max"),
-                    value: L.t("value.rpm", "%lld rpm", Int(maximum))
+                    value: L.t("value.rpm", "%lld rpm", maximum.roundedInt)
                 ),
             ]
 
@@ -123,7 +123,7 @@ extension MetricsSnapshot {
             guard power.isAvailable else { return [MetricDetail(label: L.t("detail.power", "power"), value: L.t("value.na", "n/a"))] }
             var items = [MetricDetail(label: L.t("detail.now", "now"), value: power.headline)]
             if let adapter = power.adapterWatts, adapter > 5 {
-                items.append(MetricDetail(label: L.t("detail.adapter", "adapter"), value: "\(Int(adapter.rounded())) W"))
+                items.append(MetricDetail(label: L.t("detail.adapter", "adapter"), value: "\(adapter.roundedInt) W"))
             }
             if battery.isAvailable {
                 items.append(MetricDetail(label: L.t("detail.source", "source"), value: battery.isPluggedIn ? L.t("value.wall", "wall") : L.t("value.battery", "battery")))
@@ -191,16 +191,16 @@ extension FanUsage {
     public var headline: String {
         guard isAvailable else { return L.t("value.na", "n/a") }
         guard topRPM > 0 else { return L.t("value.idle", "idle") }
-        return L.t("value.rpm", "%lld rpm", Int(topRPM.rounded()))
+        return L.t("value.rpm", "%lld rpm", topRPM.roundedInt)
     }
 
     public var caption: String {
         guard isAvailable else { return L.t("fans.none", "fanless Mac") }
         if fans.count > 1 {
-            return fans.map { "\(Int($0.rpm.rounded()))" }.joined(separator: " · ") + " rpm"
+            return fans.map { "\($0.rpm.roundedInt)" }.joined(separator: " · ") + " rpm"
         }
         guard let fan = fans.first else { return L.t("fans.missing", "no fan") }
-        return L.t("fans.range", "range %1$lld–%2$lld rpm", Int(fan.minimumRPM), Int(fan.maximumRPM))
+        return L.t("fans.range", "range %1$lld–%2$lld rpm", fan.minimumRPM.roundedInt, fan.maximumRPM.roundedInt)
     }
 }
 
@@ -247,10 +247,10 @@ extension ThermalUsage {
     public var caption: String {
         guard isAvailable else { return L.t("thermal.none", "no sensors") }
         var parts: [String] = []
-        if let cpu { parts.append("CPU \(Int(cpu.rounded()))°") }
-        if let gpu { parts.append("GPU \(Int(gpu.rounded()))°") }
-        if let battery { parts.append(L.t("thermal.battery", "battery %lld°", Int(battery.rounded()))) }
-        if let enclosure, parts.count < 3 { parts.append(L.t("thermal.case", "case %lld°", Int(enclosure.rounded()))) }
+        if let cpu { parts.append("CPU \(cpu.roundedInt)°") }
+        if let gpu { parts.append("GPU \(gpu.roundedInt)°") }
+        if let battery { parts.append(L.t("thermal.battery", "battery %lld°", battery.roundedInt)) }
+        if let enclosure, parts.count < 3 { parts.append(L.t("thermal.case", "case %lld°", enclosure.roundedInt)) }
         return parts.isEmpty ? L.t("thermal.none", "no sensors") : parts.joined(separator: " · ")
     }
 }
@@ -258,12 +258,12 @@ extension ThermalUsage {
 extension PowerUsage {
     public var headline: String {
         guard isAvailable else { return L.t("value.na", "n/a") }
-        return watts < 10 ? String(format: "%.1f W", watts) : "\(Int(watts.rounded())) W"
+        return watts < 10 ? String(format: "%.1f W", watts) : "\(watts.roundedInt) W"
     }
 
     public var caption: String {
         guard isAvailable else { return L.t("power.none", "not reported") }
         guard let adapterWatts, adapterWatts > 5 else { return L.t("power.total", "system total") }
-        return L.t("power.adapter", "of a %lld W adapter", Int(adapterWatts.rounded()))
+        return L.t("power.adapter", "of a %lld W adapter", adapterWatts.roundedInt)
     }
 }

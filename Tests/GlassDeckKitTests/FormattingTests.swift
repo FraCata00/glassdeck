@@ -77,6 +77,16 @@ struct MathTests {
         #expect(Double.infinity.clamped01 == 1)
     }
 
+    @Test("roundedInt never traps, whatever the reading")
+    func roundedIntSaturates() {
+        #expect(2.5.roundedInt == 3)
+        #expect((-2.5).roundedInt == -3)
+        #expect(Double.nan.roundedInt == 0)
+        #expect(Double.infinity.roundedInt == .max)
+        #expect((-Double.infinity).roundedInt == .min)
+        #expect(1e300.roundedInt == .max)
+    }
+
     @Test("mean of an empty collection is zero, not a crash")
     func meanOfEmpty() {
         #expect([Double]().mean == 0)
@@ -99,6 +109,30 @@ struct DurationAndTemperatureTests {
         #expect(ValueFormatter.celsius(54.4) == "54°C")
         #expect(ValueFormatter.celsius(54.5) == "55°C")
         #expect(ValueFormatter.celsius(-3.6) == "-4°C")
+        #expect(ValueFormatter.celsius(.nan) == "0°C")
+    }
+
+    @Test("Readings the SMC decoded as NaN or infinity format instead of trapping")
+    func nonFiniteReadingsFormat() {
+        let fans = FanUsage(
+            fans: [
+                Fan(index: 0, rpm: .nan, minimumRPM: 1200, maximumRPM: 6000),
+                Fan(index: 1, rpm: .infinity, minimumRPM: .nan, maximumRPM: .infinity),
+            ],
+            isAvailable: true
+        )
+        let snapshot = MetricsSnapshot(
+            fans: fans,
+            battery: BatteryUsage(fraction: .nan, isAvailable: true),
+            power: PowerUsage(watts: .infinity, adapterWatts: .infinity, isAvailable: true)
+        )
+        for kind in MetricKind.allCases {
+            _ = snapshot.headline(for: kind)
+            _ = snapshot.caption(for: kind)
+            _ = snapshot.details(for: kind)
+        }
+        #expect(snapshot.battery.percentage == 0)
+        #expect(FanUsage(fans: [fans.fans[1]], isAvailable: true).caption.contains("rpm"))
     }
 
     @Test("Battery state reads charging before plugged in")

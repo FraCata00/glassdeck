@@ -358,7 +358,7 @@ public struct BatteryUsage: Sendable, Equatable {
 
     public static let unavailable = BatteryUsage()
 
-    public var percentage: Int { Int((fraction * 100).rounded()) }
+    public var percentage: Int { (fraction * 100).roundedInt }
 }
 
 /// What the machine's thermometers report, in degrees Celsius.

@@ -10,6 +10,21 @@ extension Double {
         return Swift.min(1, Swift.max(0, self))
     }
 
+    /// The value rounded to the nearest whole number, as an `Int` for a label.
+    ///
+    /// `Int(_:)` traps on NaN, on an infinity and on anything past `Int.max`,
+    /// and an SMC key decoded as a float can hold any bit pattern at all: a
+    /// fan reporting NaN took the whole app down while formatting its caption.
+    /// NaN reads as `0`, like a missing reading anywhere else, and the rest
+    /// saturates, since a wrong label beats a crashed menu bar.
+    public var roundedInt: Int {
+        if isNaN { return 0 }
+        let rounded = rounded()
+        if rounded >= Double(Int.max) { return .max }
+        if rounded <= Double(Int.min) { return .min }
+        return Int(rounded)
+    }
+
     /// Moves the value a fraction of the way towards `target`; used to damp gauge jitter.
     public func smoothed(towards target: Double, factor: Double) -> Double {
         let f = factor.clamped01
