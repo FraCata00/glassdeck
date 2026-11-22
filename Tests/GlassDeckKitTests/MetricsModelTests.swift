@@ -1,7 +1,7 @@
 import Testing
 @testable import GlassDeckKit
 
-@Suite("Metric models")
+@Suite("Metric models", .decimalPoint)
 struct MetricsModelTests {
     @Test("Memory used is app memory plus wired plus compressed, as Activity Monitor counts it")
     func memoryUsed() {

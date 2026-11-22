@@ -15,6 +15,8 @@
 "clock.same" = "same time";
 "clock.tomorrow" = "tomorrow";
 "clock.yesterday" = "yesterday";
+"clock.twoDaysAfter" = "in 2 days";
+"clock.twoDaysBefore" = "2 days ago";
 "cpu.caption" = "%1$@ user · %2$@ sys";
 "detail.adapter" = "adapter";
 "detail.battery" = "battery";

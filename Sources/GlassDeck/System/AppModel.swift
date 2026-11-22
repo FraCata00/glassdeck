@@ -43,6 +43,7 @@ final class AppModel {
     @ObservationIgnored private var settingsWindow: NSWindow?
     @ObservationIgnored private var signalSources: [any DispatchSourceSignal] = []
     @ObservationIgnored private var powerObservers: [any NSObjectProtocol] = []
+    @ObservationIgnored private var parkingReasons: ParkingReasons = []
 
     private init() {
         let preferences = Preferences()
@@ -80,29 +81,33 @@ final class AppModel {
     /// the screen went dark.
     private func observePowerEvents() {
         let center = NSWorkspace.shared.notificationCenter
-        let park = [
-            NSWorkspace.screensDidSleepNotification,
-            NSWorkspace.willSleepNotification,
-            NSWorkspace.sessionDidResignActiveNotification
+        let events: [(NSNotification.Name, @MainActor (inout ParkingReasons) -> Void)] = [
+            (NSWorkspace.screensDidSleepNotification, { $0.insert(.screensAsleep) }),
+            (NSWorkspace.screensDidWakeNotification, { $0.remove(.screensAsleep) }),
+            (NSWorkspace.willSleepNotification, { $0.insert(.systemAsleep) }),
+            (NSWorkspace.didWakeNotification, { $0.systemDidWake() }),
+            (NSWorkspace.sessionDidResignActiveNotification, { $0.insert(.sessionInactive) }),
+            (NSWorkspace.sessionDidBecomeActiveNotification, { $0.remove(.sessionInactive) })
         ]
-        let wake = [
-            NSWorkspace.screensDidWakeNotification,
-            NSWorkspace.didWakeNotification,
-            NSWorkspace.sessionDidBecomeActiveNotification
-        ]
-
-        // Both halves are idempotent, which matters because the events overlap:
-        // putting the machine to sleep sends the screens to sleep as well.
-        for name in park {
-            powerObservers.append(observe(name, on: center) { $0.monitor.suspend() })
-        }
-        for name in wake {
-            powerObservers.append(observe(name, on: center) {
-                $0.monitor.resume()
-                // The minute the machine slept through has passed: the ticker's
-                // own sleep fires on its own, but not before the first glance.
-                $0.clock.refresh()
+        for (name, change) in events {
+            powerObservers.append(observe(name, on: center) { model in
+                change(&model.parkingReasons)
+                model.applyParking()
             })
+        }
+    }
+
+    /// Runs on every event, and the events overlap (putting the machine to
+    /// sleep sends the screens to sleep as well), so both halves are
+    /// idempotent: only the last reason to clear resumes the loop.
+    private func applyParking() {
+        if parkingReasons.isParked {
+            monitor.suspend()
+        } else if monitor.isSuspended {
+            monitor.resume()
+            // The minute the machine slept through has passed: the ticker's
+            // own sleep fires on its own, but not before the first glance.
+            clock.refresh()
         }
     }
 

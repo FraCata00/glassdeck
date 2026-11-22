@@ -55,6 +55,16 @@ struct WorldClockTests {
         #expect(WorldClock.dayShift(of: tokyo, from: losAngeles, at: pastMidnightInRome) == .tomorrow)
     }
 
+    @Test("Zones 25 hours apart can be two dates apart, across a month end")
+    func twoDayShifts() throws {
+        let kiritimati = try #require(TimeZone(identifier: "Pacific/Kiritimati"))
+        let niue = try #require(TimeZone(identifier: "Pacific/Niue"))
+        // 31 Dec 23:30 in Niue (-11) is 2 Jan 00:30 in Kiritimati (+14).
+        let lateInNiue = Date(timeIntervalSince1970: 1_767_263_400)
+        #expect(WorldClock.dayShift(of: kiritimati, from: niue, at: lateInNiue) == .twoDaysAfter)
+        #expect(WorldClock.dayShift(of: niue, from: kiritimati, at: lateInNiue) == .twoDaysBefore)
+    }
+
     @Test("A reading pairs the time with how far away it is")
     func readings() {
         let zone = ClockZone(identifier: "Asia/Tokyo")

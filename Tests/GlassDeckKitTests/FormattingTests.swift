@@ -1,7 +1,7 @@
 import Testing
 @testable import GlassDeckKit
 
-@Suite("Value formatting")
+@Suite("Value formatting", .decimalPoint)
 struct FormattingTests {
     @Test("Percentages round to the nearest whole number")
     func percentRounds() {
@@ -45,6 +45,17 @@ struct FormattingTests {
         #expect(ValueFormatter.rate(40_988_672) == "41 MB/s")
         #expect(ValueFormatter.rate(-5) == "0 B/s")
         #expect(ValueFormatter.rate(.infinity) == "0 B/s")
+    }
+
+    @Test("Decimals use the region's separator")
+    func regionalSeparator() {
+        ValueFormatter.$decimalSeparator.withValue(",") {
+            #expect(ValueFormatter.bytes(1536) == "1,5 KB")
+            #expect(ValueFormatter.storage(16_000_000_000) == "16 GB")
+            #expect(ValueFormatter.decimal(1.234) == "1,23")
+            #expect(ValueFormatter.seconds(1.5) == "1,5")
+            #expect(PowerUsage(watts: 6, isAvailable: true).headline == "6,0 W")
+        }
     }
 
     @Test("A figure that rounds up to the next unit is printed in that unit")
@@ -94,7 +105,7 @@ struct MathTests {
     }
 }
 
-@Suite("Durations and temperatures")
+@Suite("Durations and temperatures", .decimalPoint)
 struct DurationAndTemperatureTests {
     @Test("Durations drop the hours below one")
     func durations() {

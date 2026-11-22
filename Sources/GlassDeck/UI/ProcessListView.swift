@@ -31,7 +31,7 @@ struct ProcessListView: View {
                             .font(Typography.caption)
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
-                        Text(String(format: "%.1f%%", process.cpuPercent))
+                        Text(verbatim: "\(ValueFormatter.fixed(process.cpuPercent, places: 1))%")
                             .font(Typography.label)
                             .monospacedDigit()
                             .frame(width: 46, alignment: .trailing)

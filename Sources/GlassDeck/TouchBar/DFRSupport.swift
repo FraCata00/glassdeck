@@ -80,18 +80,15 @@ enum SystemTouchBar {
         )
     }
 
-    /// Collapses the expanded bar back into the tray item, handing the Touch Bar
-    /// back to the system and the frontmost app.
+    /// Takes the expanded bar down and hands the Touch Bar back to the system
+    /// and the frontmost app: on collapse, on a rebuild, and when GlassDeck is
+    /// switched off or quits.
     ///
-    /// This is *not* interchangeable with `dismissSystemModal`: calling both, or
-    /// dismissing while a tray item is installed, leaves the Control Strip hidden
-    /// until the next app switch.
-    static func minimizeSystemModal(_ touchBar: NSTouchBar) {
-        perform(barClass, "minimizeSystemModalTouchBar:", touchBar)
-    }
-
-    /// Tears the expanded bar down completely. Used when GlassDeck is switched
-    /// off or quits, where there is no tray item left to collapse into.
+    /// Safe with the tray item still installed. A comment here once warned that
+    /// dismissing then left the Control Strip hidden until the next app switch,
+    /// and pointed at `minimizeSystemModalTouchBar:` instead; that was never
+    /// called, and checked on a Touch Bar Mac with 2.3.2, collapsing this way
+    /// brings the Control Strip and the meter straight back.
     static func dismissSystemModal(_ touchBar: NSTouchBar) {
         perform(barClass, "dismissSystemModalTouchBar:", touchBar)
     }
