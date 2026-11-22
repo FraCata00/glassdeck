@@ -35,7 +35,7 @@ final class TouchBarStripView: NSView {
 
     private func chips() -> [Chip] {
         // The level is 28 pt tall on a 2x panel: 56 distinguishable steps.
-        metrics.map { Chip(value: shortValue(for: $0), level: Int((snapshot.fraction(for: $0).clamped01 * 56).rounded())) }
+        metrics.map { Chip(value: shortValue(for: $0), level: (snapshot.fraction(for: $0).clamped01 * 56).roundedInt) }
     }
 
     /// Width of a single metric chip, chosen so four metrics stay inside the slot
@@ -140,9 +140,9 @@ final class TouchBarStripView: NSView {
         case .battery:
             snapshot.battery.headline
         case .temperature:
-            snapshot.thermal.hottest.map { "\(Int($0.rounded()))°" } ?? "–"
+            snapshot.thermal.hottest.map { "\($0.roundedInt)°" } ?? "–"
         case .power:
-            snapshot.power.isAvailable ? "\(Int(snapshot.power.watts.rounded()))W" : "–"
+            snapshot.power.isAvailable ? "\(snapshot.power.watts.roundedInt)W" : "–"
         }
     }
 }

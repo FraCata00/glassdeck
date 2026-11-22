@@ -111,8 +111,8 @@ final class ThresholdAlerts {
             identifier: "dev.fracata00.glassdeck.temperature",
             body: String(
                 format: String(localized: "Running hot: %1$lld°C, above the %2$lld°C you asked about."),
-                Int(hottest.rounded()),
-                Int(threshold.rounded())
+                hottest.roundedInt,
+                threshold.roundedInt
             )
         )
     }

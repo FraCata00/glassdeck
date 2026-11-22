@@ -38,7 +38,7 @@ final class StatusItemReadout {
 
         init(kind: MetricKind, fraction: Double) {
             self.kind = kind
-            level = Int((fraction.clamped01 * Double(Self.levels)).rounded())
+            level = (fraction.clamped01 * Double(Self.levels)).roundedInt
         }
 
         var fraction: Double { Double(level) / Double(Self.levels) }
