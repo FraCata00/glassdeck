@@ -102,7 +102,7 @@ final class Preferences {
 
     /// The shortcut that hands the Touch Bar to the frontmost app, or `nil` when
     /// the user has turned it off.
-    var yieldShortcut: KeyShortcut? { didSet { storeYieldShortcut() } }
+    var yieldShortcut: KeyShortcut? { didSet { defaults.storeJSON(yieldShortcut, forKey: Key.yieldShortcut) } }
 
     /// The non-scalar cards shown under the gauges, in the panel and the
     /// dashboard. Unlike the metric selections this one may be empty: both
@@ -110,7 +110,7 @@ final class Preferences {
     var panelModules: [ModuleKind] { didSet { defaults.store(panelModules, forKey: Key.panelModules) } }
 
     /// The time zones on the clock card, in the order they are shown.
-    var clockZones: [ClockZone] { didSet { storeClockZones() } }
+    var clockZones: [ClockZone] { didSet { defaults.storeJSON(clockZones, forKey: Key.clockZones) } }
 
     /// The zone whose time sits in the menu bar, or `nil` for none.
     ///
@@ -160,20 +160,20 @@ final class Preferences {
         touchBarMetrics = order.filter(touchBar.contains)
         menuBarMetric = defaults.value(Key.menuBarMetric) ?? .cpu
         menuBarStyle = defaults.value(Key.menuBarStyle) ?? .graph
-        isMenuBarRealTime = defaults.object(forKey: Key.menuBarRealTime) as? Bool ?? false
-        isTouchBarEnabled = defaults.object(forKey: Key.touchBarEnabled) as? Bool ?? true
+        isMenuBarRealTime = defaults.flag(Key.menuBarRealTime) ?? false
+        isTouchBarEnabled = defaults.flag(Key.touchBarEnabled) ?? true
         touchBarPresentation = defaults.value(Key.touchBarPresentation) ?? .controlStrip
         touchBarAlignment = defaults.value(Key.touchBarAlignment) ?? .trailing
         touchBarStyle = defaults.value(Key.touchBarStyle) ?? .glass
         touchBarPet = defaults.value(Key.touchBarPet) ?? .octopus
-        showsProcesses = defaults.object(forKey: Key.showsProcesses) as? Bool ?? true
+        showsProcesses = defaults.flag(Key.showsProcesses) ?? true
         panelModules = defaults.values(Key.panelModules) ?? ModuleKind.defaultSelection
         clockZones = Self.readClockZones(from: defaults)
         menuBarClockZone = defaults.string(forKey: Key.menuBarClockZone)
         yieldShortcut = Self.readYieldShortcut(from: defaults)
-        isTemperatureAlertEnabled = defaults.object(forKey: Key.temperatureAlert) as? Bool ?? false
+        isTemperatureAlertEnabled = defaults.flag(Key.temperatureAlert) ?? false
         temperatureThreshold = defaults.positive(Key.temperatureThreshold) ?? 85
-        isMemoryPressureAlertEnabled = defaults.object(forKey: Key.memoryPressureAlert) as? Bool ?? false
+        isMemoryPressureAlertEnabled = defaults.flag(Key.memoryPressureAlert) ?? false
     }
 
     /// Moves metrics in the shared order and brings the selections along, so all
@@ -241,19 +241,9 @@ final class Preferences {
 
     /// Stored as JSON including when it is `nil`, so a shortcut turned off is
     /// told apart from one never set, which gets the default.
-    private func storeYieldShortcut() {
-        guard let data = try? JSONEncoder().encode(yieldShortcut) else { return }
-        defaults.set(data, forKey: Key.yieldShortcut)
-    }
-
     private static func readYieldShortcut(from defaults: UserDefaults) -> KeyShortcut? {
         guard let data = defaults.data(forKey: Key.yieldShortcut) else { return .defaultYield }
         return (try? JSONDecoder().decode(KeyShortcut?.self, from: data)) ?? .defaultYield
-    }
-
-    private func storeClockZones() {
-        guard let data = try? JSONEncoder().encode(clockZones) else { return }
-        defaults.set(data, forKey: Key.clockZones)
     }
 
     private static func readClockZones(from defaults: UserDefaults) -> [ClockZone] {
@@ -306,6 +296,18 @@ private extension UserDefaults {
     /// As `values(_:)`, but a list with nothing left in it reads as none stored.
     func nonEmpty<Value: RawRepresentable<String>>(_ key: String) -> [Value]? {
         values(key).flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// The stored switch, or `nil` when there is none — `bool(forKey:)` reads
+    /// a missing key as `false`, which would turn every default-on setting off.
+    func flag(_ key: String) -> Bool? {
+        object(forKey: key) as? Bool
+    }
+
+    /// For the settings that are not a property list of their own.
+    func storeJSON(_ value: some Encodable, forKey key: String) {
+        guard let data = try? JSONEncoder().encode(value) else { return }
+        set(data, forKey: key)
     }
 
     /// A stored number, or `nil` for none — `double(forKey:)` reads a missing
