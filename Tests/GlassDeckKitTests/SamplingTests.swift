@@ -231,6 +231,24 @@ struct SamplingTests {
         #expect(monitor.coarseSnapshot.cpu.user == 0.1)
     }
 
+    @Test("A wall clock set back does not freeze the coarse snapshot")
+    @MainActor
+    func coarseSnapshotSurvivesAClockSetBack() async {
+        let monitor = SystemMonitor()
+        await monitor.ingest(reading(at: 3_600, cpu: 0.2))
+
+        // The clock is put back an hour: the next sample must still publish
+        // once the interval is up, not an hour from now.
+        await monitor.ingest(reading(at: 0, cpu: 0.25))
+        #expect(monitor.coarseSnapshot.timestamp == Date(timeIntervalSinceReferenceDate: 0))
+
+        // From there the throttle measures from the new time.
+        await monitor.ingest(reading(at: 1.5, cpu: 0.26))
+        #expect(monitor.coarseSnapshot.timestamp == Date(timeIntervalSinceReferenceDate: 0))
+        await monitor.ingest(reading(at: 3, cpu: 0.27))
+        #expect(monitor.coarseSnapshot.timestamp == Date(timeIntervalSinceReferenceDate: 3))
+    }
+
     @Test("Only the loads jump the throttle, and only by enough to see")
     @MainActor
     func coarseJumpThreshold() {

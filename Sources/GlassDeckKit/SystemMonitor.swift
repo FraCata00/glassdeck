@@ -266,10 +266,13 @@ public final class SystemMonitor {
         // Held back until enough time has passed, so the expensive surfaces are
         // not redrawn at the sampling cadence. Sampling faster than the coarse
         // interval speeds up the graphs without speeding up the status item,
-        // and every sample still counts towards what it shows.
+        // and every sample still counts towards what it shows. A sample stamped
+        // before the last publication means the wall clock was set back; held
+        // to the plain `<`, the status item froze until the clock caught up
+        // with where it had been, an hour later or a day.
         coarseWindow.add(snapshot)
         if let lastCoarsePublish,
-           snapshot.timestamp.timeIntervalSince(lastCoarsePublish) < Self.coarseInterval,
+           (0..<Self.coarseInterval).contains(snapshot.timestamp.timeIntervalSince(lastCoarsePublish)),
            !Self.isCoarseJump(from: coarseSnapshot, to: coarseWindow.pending) {
             return
         }
