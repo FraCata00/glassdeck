@@ -46,6 +46,24 @@ struct FormattingTests {
         #expect(ValueFormatter.rate(-5) == "0 B/s")
         #expect(ValueFormatter.rate(.infinity) == "0 B/s")
     }
+
+    @Test("A figure that rounds up to the next unit is printed in that unit")
+    func roundingCrossesUnits() {
+        // 1023.7 MB: under 1024 as measured, 1024 as printed.
+        #expect(ValueFormatter.bytes(1_073_427_000) == "1.0 GB")
+        // 999.96 KB in decimal units.
+        #expect(ValueFormatter.storage(999_960) == "1.0 MB")
+        #expect(ValueFormatter.rate(999_600) == "1.0 MB/s")
+        // Just short of rounding up stays where it is.
+        #expect(ValueFormatter.storage(999_400) == "999 KB")
+        #expect(ValueFormatter.bytes(1023) == "1023 B")
+    }
+
+    @Test("Whole figures round a half up, as the decimals do")
+    func wholeFiguresRoundHalfUp() {
+        #expect(ValueFormatter.storage(10_500_000_000) == "11 GB")
+        #expect(ValueFormatter.storage(12_500_000_000) == "13 GB")
+    }
 }
 
 @Suite("Math helpers")
