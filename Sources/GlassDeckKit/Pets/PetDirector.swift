@@ -53,6 +53,8 @@ public struct PetDirector: Sendable {
     public private(set) var nextVisit: Date
     private var lastSpikeVisit: Date?
     private var previousMood: PetMood = .calm
+    /// When `step` was last asked, to notice the wall clock being set back.
+    private var lastStep: Date?
 
     public init(
         now: Date,
@@ -68,6 +70,14 @@ public struct PetDirector: Sendable {
         at now: Date,
         random: inout some RandomNumberGenerator
     ) -> Action {
+        // Every deadline here is a wall-clock date, so a clock set back an hour
+        // left a crossing that had ended on screen "still going" for that hour,
+        // with no visit of either kind until it caught up. The deadlines move
+        // back with the clock instead, as if no time had passed since the last
+        // sample: the most that is out by is one tick.
+        if let lastStep, now < lastStep { rebase(by: now.timeIntervalSince(lastStep)) }
+        lastStep = now
+
         // A rising edge only: a machine that stays busy brought the pet once.
         let spikeBegan = mood.isSpike && mood != previousMood
         previousMood = mood
@@ -109,6 +119,12 @@ public struct PetDirector: Sendable {
     /// Whether this opening of a metric's detail finds the pet in it.
     public func showsInDetail(random: inout some RandomNumberGenerator) -> Bool {
         Double.random(in: 0..<1, using: &random) < configuration.detailChance
+    }
+
+    private mutating func rebase(by shift: TimeInterval) {
+        nextVisit.addTimeInterval(shift)
+        lastSpikeVisit?.addTimeInterval(shift)
+        if case let .crossing(until) = phase { phase = .crossing(until: until.addingTimeInterval(shift)) }
     }
 
     private mutating func enter(mood: PetMood, at now: Date) -> Action {
