@@ -18,10 +18,7 @@ public final class PowerSampler {
 
     private let smc: SMCService?
     private let catalogue: SensorCatalogue
-    private let interval: TimeInterval
-
-    private var cached: PowerUsage?
-    private var cachedAt: Date?
+    private var cache: ReadingCache<PowerUsage>
 
     /// How many times the sensors have actually been read. Internal, so a test
     /// can tell a reused reading from a fresh one without any hardware.
@@ -30,18 +27,11 @@ public final class PowerSampler {
     init(smc: SMCService?, catalogue: SensorCatalogue, refreshInterval: TimeInterval = PowerSampler.refreshInterval) {
         self.smc = smc
         self.catalogue = catalogue
-        self.interval = refreshInterval
+        self.cache = ReadingCache(interval: refreshInterval)
     }
 
     public func sample(at now: Date = Date()) -> PowerUsage {
-        if let cached, let cachedAt, now.timeIntervalSince(cachedAt) < interval {
-            return cached
-        }
-
-        let usage = read()
-        cached = usage
-        cachedAt = now
-        return usage
+        cache.value(at: now) { read() }
     }
 
     private func read() -> PowerUsage {

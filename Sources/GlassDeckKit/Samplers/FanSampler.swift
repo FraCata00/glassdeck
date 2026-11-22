@@ -18,10 +18,7 @@ public final class FanSampler {
 
     private let smc: SMCService?
     private let descriptors: [(index: Int, minimum: Double, maximum: Double)]
-    private let interval: TimeInterval
-
-    private var cached: FanUsage?
-    private var cachedAt: Date?
+    private var cache: ReadingCache<FanUsage>
 
     /// How many times the fans have actually been read. Internal, so a test can
     /// tell a reused reading from a fresh one without any hardware.
@@ -29,7 +26,7 @@ public final class FanSampler {
 
     init(smc: SMCService?, refreshInterval: TimeInterval = FanSampler.refreshInterval) {
         self.smc = smc
-        self.interval = refreshInterval
+        self.cache = ReadingCache(interval: refreshInterval)
 
         guard let smc, let count = smc.readNumber("FNum"), count > 0 else {
             descriptors = []
@@ -46,14 +43,7 @@ public final class FanSampler {
     }
 
     public func sample(at now: Date = Date()) -> FanUsage {
-        if let cached, let cachedAt, now.timeIntervalSince(cachedAt) < interval {
-            return cached
-        }
-
-        let usage = read()
-        cached = usage
-        cachedAt = now
-        return usage
+        cache.value(at: now) { read() }
     }
 
     private func read() -> FanUsage {
