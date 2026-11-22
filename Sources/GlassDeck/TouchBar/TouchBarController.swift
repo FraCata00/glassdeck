@@ -373,10 +373,15 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
 
     /// Re-renders whichever Touch Bar surfaces are on screen.
     private func refresh() {
+        // The three meters are slow surfaces whatever the bar's size: the
+        // Control Strip one stays up beside the expanded bar, where `refresh`
+        // runs at the sampling cadence, and fed the fine snapshot it showed
+        // the latest tick rather than the coarse reading — and redrew for it.
+        let coarse = monitor.coarseSnapshot
+        stripView.snapshot = coarse
+        miniStripView.snapshot = coarse
+        applicationStripView.snapshot = coarse
         let snapshot = monitor.snapshot
-        stripView.snapshot = snapshot
-        miniStripView.snapshot = snapshot
-        applicationStripView.snapshot = snapshot
         batteryView.battery = snapshot.battery
         if let kind = mode.expandedMetric {
             detailView.snapshot = snapshot
@@ -570,13 +575,13 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         case Self.applicationMeterItem:
             let item = NSCustomTouchBarItem(identifier: identifier)
             applicationStripView.metrics = preferences.touchBarMetrics
-            applicationStripView.snapshot = monitor.snapshot
+            applicationStripView.snapshot = monitor.coarseSnapshot
             item.view = applicationTapView
             return item
         case Self.miniMeterItem:
             let item = NSCustomTouchBarItem(identifier: identifier)
             miniStripView.metrics = preferences.touchBarMetrics
-            miniStripView.snapshot = monitor.snapshot
+            miniStripView.snapshot = monitor.coarseSnapshot
             item.view = miniStripView
             return item
         case Self.collapseItem:
