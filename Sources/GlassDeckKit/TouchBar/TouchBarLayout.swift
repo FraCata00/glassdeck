@@ -234,7 +234,12 @@ public struct TouchBarLayout: Equatable, Sendable {
         case .collapsed, .mini, .detail:
             return []
         case .expanded:
-            let chosen = selection.filter { ![.battery, .power, .fans, .temperature].contains($0) }
+            // Filtered by what the machine reports, as full width is: a Mac
+            // with no accelerator kept a GPU panel reading "n/a" on the shared
+            // bar, one of only four places, while full width dropped it.
+            let chosen = selection.filter {
+                supported.contains($0) && ![.battery, .power, .fans, .temperature].contains($0)
+            }
             return Array(chosen.prefix(maximumSharedPanels))
         case .fullscreen:
             // Hardware readings that only full width has room for join whatever
