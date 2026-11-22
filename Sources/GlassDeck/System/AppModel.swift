@@ -29,6 +29,10 @@ final class AppModel {
         let preferences = model.preferences
         _ = preferences.refreshInterval
         _ = preferences.isTouchBarEnabled
+        // `synchroniseWithPreferences()` is what presents or collapses the bar
+        // for the placement; unwatched, switching it in settings did nothing
+        // until some other setting happened to change.
+        _ = preferences.touchBarPresentation
         _ = preferences.touchBarMetrics
         _ = preferences.panelModules
         _ = preferences.clockZones
