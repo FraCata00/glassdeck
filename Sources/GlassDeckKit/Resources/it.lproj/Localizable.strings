@@ -15,6 +15,8 @@
 "clock.same" = "stessa ora";
 "clock.tomorrow" = "domani";
 "clock.yesterday" = "ieri";
+"clock.twoDaysAfter" = "dopodomani";
+"clock.twoDaysBefore" = "l’altro ieri";
 "cpu.caption" = "%1$@ utente · %2$@ sistema";
 "detail.adapter" = "alimentatore";
 "detail.battery" = "batteria";

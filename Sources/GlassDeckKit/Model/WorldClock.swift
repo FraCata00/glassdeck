@@ -49,15 +49,21 @@ public struct ClockZone: Sendable, Equatable, Codable, Identifiable, Hashable {
 
 /// Which day it is somewhere else, relative to here.
 public enum DayShift: Int, Sendable, Equatable {
+    // Two days either way is not a curiosity: Kiritimati (+14) is 25 hours
+    // ahead of Niue (-11), so for an hour each day it is two dates ahead.
+    case twoDaysBefore = -2
     case yesterday = -1
     case today = 0
     case tomorrow = 1
+    case twoDaysAfter = 2
 
     public var caption: String? {
         switch self {
+        case .twoDaysBefore: L.t("clock.twoDaysBefore", "2 days ago")
         case .yesterday: L.t("clock.yesterday", "yesterday")
         case .today: nil
         case .tomorrow: L.t("clock.tomorrow", "tomorrow")
+        case .twoDaysAfter: L.t("clock.twoDaysAfter", "in 2 days")
         }
     }
 }
@@ -142,17 +148,21 @@ public enum WorldClock {
     /// Compared as calendar dates in the two zones: no zone is a full day away
     /// from another, so the answer can only be one of three.
     public static func dayShift(of timeZone: TimeZone, from reference: TimeZone, at date: Date) -> DayShift {
-        let there = day(of: date, in: timeZone)
-        let here = day(of: date, in: reference)
-        if there == here { return .today }
-        return there > here ? .tomorrow : .yesterday
+        let days = day(of: date, in: timeZone) - day(of: date, in: reference)
+        // No two zones are more than two dates apart; clamped all the same, so
+        // a zone database that one day disagrees cannot leave the row blank.
+        return DayShift(rawValue: min(2, max(-2, days))) ?? .today
     }
 
-    /// The calendar date in a zone, as a tuple that sorts chronologically.
-    private static func day(of date: Date, in timeZone: TimeZone) -> (year: Int, month: Int, day: Int) {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = timeZone
-        let parts = calendar.dateComponents([.year, .month, .day], from: date)
-        return (parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    /// The calendar date in a zone, as a count of days, so two of them can be
+    /// subtracted across a month or a year end.
+    private static func day(of date: Date, in timeZone: TimeZone) -> Int {
+        var local = Calendar(identifier: .gregorian)
+        local.timeZone = timeZone
+        let parts = local.dateComponents([.year, .month, .day], from: date)
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC") ?? .gmt
+        let midnight = utc.date(from: DateComponents(year: parts.year, month: parts.month, day: parts.day)) ?? date
+        return Int((midnight.timeIntervalSinceReferenceDate / 86_400).rounded(.down))
     }
 }
