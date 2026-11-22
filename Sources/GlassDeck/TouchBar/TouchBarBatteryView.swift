@@ -145,15 +145,17 @@ final class TouchBarBatteryView: NSView {
     }
 
     private func drawPercentage(after x: CGFloat, tint: NSColor) {
+        ((battery.isAvailable ? "\(battery.percentage)%" : "–") as NSString).draw(
+            in: NSRect(x: x, y: 8, width: bounds.width - x - 6, height: 15),
+            withAttributes: [.font: Self.percentageFont, .foregroundColor: tint, .paragraphStyle: Self.rightAligned]
+        )
+    }
+
+    // Built once rather than on every redraw; only the tint varies.
+    private static let percentageFont = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .semibold)
+    private static let rightAligned: NSParagraphStyle = {
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .right
-        NSAttributedString(
-            string: battery.isAvailable ? "\(battery.percentage)%" : "–",
-            attributes: [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .semibold),
-                .foregroundColor: tint,
-                .paragraphStyle: paragraph,
-            ]
-        ).draw(in: NSRect(x: x, y: 8, width: bounds.width - x - 6, height: 15))
-    }
+        return paragraph
+    }()
 }
