@@ -33,9 +33,12 @@ struct DashboardView: View {
                                     isFocused: focusedMetric == kind
                                 )
                                 .glassMorph(id: kind, in: glass)
-                                .onTapGesture {
-                                    withAnimation(.smooth(duration: 0.4)) { focus = kind }
-                                }
+                                .onTapGesture { focus(on: kind) }
+                                // A tap gesture is invisible to VoiceOver, so
+                                // the card says it is a button and how to press it.
+                                .accessibilityElement(children: .combine)
+                                .accessibilityAddTraits(focusedMetric == kind ? [.isButton, .isSelected] : .isButton)
+                                .accessibilityAction { focus(on: kind) }
                             }
                         }
                         if !modules.isEmpty {
@@ -91,6 +94,10 @@ struct DashboardView: View {
     /// describing a card that is no longer in the grid.
     private var focusedMetric: MetricKind {
         metrics.contains(focus) ? focus : (metrics.first ?? .cpu)
+    }
+
+    private func focus(on kind: MetricKind) {
+        withAnimation(.smooth(duration: 0.4)) { focus = kind }
     }
 
     private var header: some View {
